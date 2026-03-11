@@ -1,0 +1,79 @@
+.container {
+  margin: 0 calc(-1 * var(--space-lg));
+}
+
+.scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.dateWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+.monthLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dateItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  gap: 4px;
+  transition: all var(--transition-fast);
+  background: var(--color-section-bg);
+}
+
+.dateItem:active {
+  transform: scale(0.95);
+}
+
+.dayName {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.dayNumber {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.selected {
+  background: var(--color-primary);
+}
+
+.selected .dayName,
+.selected .dayNumber {
+  color: var(--color-primary-text);
+}
+
+.today:not(.selected) {
+  border: 1.5px solid var(--color-primary);
+}
+
+.today:not(.selected) .dayNumber {
+  color: var(--color-primary);
+}

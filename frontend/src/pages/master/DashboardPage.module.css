@@ -1,0 +1,40 @@
+.emptyCard {
+  text-align: center;
+  padding: var(--space-2xl) !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.bookingCard {
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) !important;
+  margin-bottom: var(--space-sm);
+}
+
+.bookingTime {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  width: 48px;
+}
+
+.bookingInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bookingName {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

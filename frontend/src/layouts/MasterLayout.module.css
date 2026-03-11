@@ -1,0 +1,70 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: var(--bottom-nav-height);
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  background: var(--tg-bottom-bar);
+  border-top: 0.5px solid var(--color-separator);
+  height: var(--bottom-nav-height);
+  padding-bottom: var(--safe-bottom);
+  z-index: 50;
+}
+
+.navItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0;
+  text-decoration: none;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+  line-height: 1;
+}
+
+.active .navIcon {
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+.active .navLabel {
+  color: var(--color-primary);
+  font-weight: 600;
+}

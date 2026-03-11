@@ -1,0 +1,34 @@
+.bookingCard {
+  padding: var(--space-lg) !important;
+  margin-bottom: var(--space-sm);
+}
+
+.bookingTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.bookingService {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.bookingMeta {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.detailRow {
+  font-size: var(--font-size-md);
+}

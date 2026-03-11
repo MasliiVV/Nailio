@@ -1,0 +1,274 @@
+// docs/telegram/notifications.md — Job Processing
+// docs/backlog.md #72-#80 — Notification processor
+// docs/architecture/multi-tenancy.md — BullMQ Worker Tenant Context
+//
+// Worker picks up job:
+//   1. Load booking from DB (with client + tenant + bot)
+//   2. Check booking.status (skip if cancelled)
+//   3. Check client.bot_blocked (skip if true)
+//   4. Determine language (users.language_code)
+//   5. Render template with variables
+//   6. Decrypt bot_token
+//   7. Call Telegram Bot API sendMessage
+//   8. Handle response (200→sent, 403→bot_blocked, 429→retry)
+
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Injectable, Logger } from '@nestjs/common';
+import { Job } from 'bullmq';
+import { ClsService } from 'nestjs-cls';
+import { PrismaService, TENANT_ID_KEY } from '../../prisma/prisma.service';
+import { BotCryptoService } from '../telegram/bot-crypto.service';
+import { QUEUE_NAMES, NotificationJobData } from '../../common/bullmq/tenant-context';
+import { renderTemplate, TemplateVariables } from './templates';
+
+@Injectable()
+@Processor(QUEUE_NAMES.NOTIFICATIONS)
+export class NotificationsProcessor extends WorkerHost {
+  private readonly logger = new Logger(NotificationsProcessor.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cls: ClsService,
+    private readonly botCrypto: BotCryptoService,
+  ) {
+    super();
+  }
+
+  /**
+   * Process a notification job.
+   * docs/telegram/notifications.md — Job Processing flow
+   */
+  async process(job: Job<NotificationJobData>): Promise<void> {
+    const { tenantId, bookingId, clientId, type } = job.data;
+
+    // Set tenant context for CLS
+    // docs/architecture/multi-tenancy.md — BullMQ Worker Tenant Context
+    return this.cls.run(async () => {
+      this.cls.set(TENANT_ID_KEY, tenantId);
+
+      this.logger.debug(
+        `Processing notification ${type} for booking ${bookingId} in tenant ${tenantId}`,
+      );
+
+      try {
+        // 1. Load booking with related data
+        const booking = await this.prisma.tenantClient.booking.findFirst({
+          where: { id: bookingId, tenantId },
+          include: {
+            client: {
+              include: { user: true },
+            },
+            service: true,
+          },
+        });
+
+        if (!booking) {
+          this.logger.warn(`Booking ${bookingId} not found, skipping`);
+          await this.markNotification(job, 'cancelled');
+          return;
+        }
+
+        // 2. Check booking status
+        if (booking.status === 'cancelled' && type !== 'cancellation') {
+          this.logger.debug(
+            `Booking ${bookingId} is cancelled, skipping ${type} notification`,
+          );
+          await this.markNotification(job, 'cancelled');
+          return;
+        }
+
+        // 3. Check bot_blocked
+        if (booking.client.botBlocked && type !== 'new_booking') {
+          this.logger.debug(
+            `Client ${clientId} blocked bot, skipping notification`,
+          );
+          await this.markNotification(job, 'cancelled');
+          return;
+        }
+
+        // 4. Get bot for this tenant
+        const bot = await this.prisma.bot.findFirst({
+          where: { tenantId, isActive: true },
+        });
+
+        if (!bot) {
+          this.logger.warn(`No active bot for tenant ${tenantId}`);
+          await this.markNotification(job, 'failed', 'No active bot');
+          return;
+        }
+
+        // 5. Get tenant for timezone + settings
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: tenantId },
+        });
+
+        if (!tenant) {
+          await this.markNotification(job, 'failed', 'Tenant not found');
+          return;
+        }
+
+        const settings = (tenant.settings || {}) as Record<string, unknown>;
+
+        // 6. Determine recipient and language
+        let recipientTelegramId: bigint;
+        let langCode: string;
+
+        if (type === 'new_booking' || type === 'cancellation') {
+          // For new_booking → send to master
+          // For cancellation → we send two jobs, one for client, one for master
+          // Determine by checking if this is the "master" version
+          // Simple heuristic: new_booking always goes to master
+          if (type === 'new_booking') {
+            const master = await this.prisma.master.findFirst({
+              where: { tenantId },
+              include: { user: true },
+            });
+            if (!master) {
+              await this.markNotification(job, 'failed', 'Master not found');
+              return;
+            }
+            recipientTelegramId = master.user.telegramId;
+            langCode = master.user.languageCode;
+          } else {
+            // Cancellation to client
+            recipientTelegramId = booking.client.user.telegramId;
+            langCode = booking.client.user.languageCode;
+          }
+        } else {
+          // All other types → send to client
+          recipientTelegramId = booking.client.user.telegramId;
+          langCode = booking.client.user.languageCode;
+        }
+
+        // 7. Format date/time in tenant timezone
+        const dateFormatter = new Intl.DateTimeFormat(
+          langCode === 'en' ? 'en-US' : 'uk-UA',
+          {
+            timeZone: tenant.timezone || 'Europe/Kyiv',
+            day: 'numeric',
+            month: 'long',
+          },
+        );
+        const timeFormatter = new Intl.DateTimeFormat(
+          langCode === 'en' ? 'en-US' : 'uk-UA',
+          {
+            timeZone: tenant.timezone || 'Europe/Kyiv',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          },
+        );
+
+        const templateVars: TemplateVariables = {
+          serviceName: booking.serviceNameSnapshot,
+          date: dateFormatter.format(booking.startTime),
+          time: timeFormatter.format(booking.startTime),
+          duration: booking.durationAtBooking,
+          price: booking.priceAtBooking,
+          cancellationWindow:
+            (settings.cancellation_window_hours as number) || 24,
+          clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+          clientPhone: booking.client.phone || undefined,
+          reason: booking.cancelReason || undefined,
+        };
+
+        // 8. Render template
+        const templateType =
+          type === 'new_booking' ? 'new_booking' :
+          type === 'cancellation' ? 'cancellation' :
+          type;
+        const messageText = renderTemplate(templateType, langCode, templateVars);
+
+        // 9. Decrypt bot token
+        const botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
+
+        // 10. Send via Telegram Bot API
+        const response = await fetch(
+          `https://api.telegram.org/bot${botToken}/sendMessage`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: recipientTelegramId.toString(),
+              text: messageText,
+              parse_mode: 'HTML',
+            }),
+          },
+        );
+
+        if (response.ok) {
+          await this.markNotification(job, 'sent', undefined, messageText);
+          this.logger.log(
+            `Notification ${type} sent for booking ${bookingId}`,
+          );
+        } else {
+          const errorData = (await response.json()) as { description?: string; parameters?: { retry_after?: number } };
+          const errorMsg = errorData.description || `HTTP ${response.status}`;
+
+          if (response.status === 403) {
+            // docs/telegram/notifications.md — Edge Case #2: Client blocked bot
+            await this.prisma.tenantClient.client.update({
+              where: { id: clientId },
+              data: { botBlocked: true },
+            });
+            await this.markNotification(job, 'failed', errorMsg);
+            this.logger.warn(
+              `Client ${clientId} blocked bot, marking bot_blocked=true`,
+            );
+            // Don't retry 403
+            return;
+          }
+
+          if (response.status === 429) {
+            // Rate limited — let BullMQ retry with backoff
+            const retryAfter = errorData.parameters?.retry_after || 30;
+            throw new Error(`Rate limited, retry after ${retryAfter}s`);
+          }
+
+          if (response.status === 400) {
+            // Bad request — don't retry
+            await this.markNotification(job, 'failed', errorMsg);
+            return;
+          }
+
+          // Other errors — throw to trigger retry
+          throw new Error(`Telegram API error: ${errorMsg}`);
+        }
+      } catch (error) {
+        this.logger.error(
+          `Notification ${type} failed for booking ${bookingId}: ${error}`,
+        );
+        throw error; // BullMQ will retry based on job config
+      }
+    });
+  }
+
+  /**
+   * Update notification record in DB.
+   */
+  private async markNotification(
+    job: Job,
+    status: 'sent' | 'failed' | 'cancelled',
+    error?: string,
+    messageText?: string,
+  ) {
+    // Extract notification ID from jobId: "notif-{notification.id}"
+    const notifId = job.opts.jobId?.replace('notif-', '');
+    if (!notifId) return;
+
+    try {
+      await this.prisma.notification.update({
+        where: { id: notifId },
+        data: {
+          status,
+          ...(status === 'sent' && { sentAt: new Date() }),
+          ...(error && { error }),
+          ...(messageText && { messageText }),
+        },
+      });
+    } catch {
+      // Notification record may not exist (e.g., race condition)
+      this.logger.warn(`Failed to update notification ${notifId}`);
+    }
+  }
+}

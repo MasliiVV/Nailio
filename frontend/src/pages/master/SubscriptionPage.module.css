@@ -1,0 +1,57 @@
+.statusSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.statusEmoji {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+
+.statusText {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.daysLeft {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.planInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 0.5px solid var(--color-separator);
+}
+
+.planName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.planPrice {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.paymentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+}

@@ -1,0 +1,476 @@
+// Prisma schema — docs/database/schema.md
+// 16 таблиць, shared database, tenant_id isolation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// ENUM types (docs/database/schema.md — Повний список ENUM типів)
+// ──────────────────────────────────────────────
+
+enum OnboardingStatus {
+  pending_bot
+  bot_connected
+  setup_complete
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum BookingCreator {
+  master
+  client
+}
+
+enum PaymentMethod {
+  cash
+  card
+  online
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  refunded
+}
+
+enum NotificationType {
+  confirmation
+  reminder_24h
+  reminder_1h
+  cancellation
+  reschedule
+  new_booking
+}
+
+enum NotificationChannel {
+  telegram
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+  cancelled
+}
+
+enum SubscriptionStatus {
+  trial
+  active
+  past_due
+  cancelled
+  expired
+}
+
+enum SubscriptionPaymentStatus {
+  pending
+  success
+  failed
+}
+
+enum PaymentProvider {
+  monobank
+  liqpay
+}
+
+enum ActorType {
+  master
+  client
+  system
+  admin
+}
+
+// ──────────────────────────────────────────────
+// 1. users — Глобальна таблиця аутентифікації (БЕЗ tenant_id)
+// ──────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  telegramId   BigInt   @unique @map("telegram_id")
+  languageCode String   @default("uk") @map("language_code") @db.VarChar(5)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  masters Master[]
+  clients Client[]
+
+  @@map("users")
+}
+
+// ──────────────────────────────────────────────
+// 2. tenants — Акаунти майстрів
+// ──────────────────────────────────────────────
+
+model Tenant {
+  id                  String           @id @default(uuid()) @db.Uuid
+  slug                String           @unique @db.VarChar(50)
+  displayName         String           @map("display_name") @db.VarChar(100)
+  phone               String?          @db.VarChar(20)
+  email               String?          @db.VarChar(255)
+  timezone            String           @default("Europe/Kyiv") @db.VarChar(50)
+  locale              String           @default("uk") @db.VarChar(5)
+  logoUrl             String?          @map("logo_url") @db.VarChar(500)
+  branding            Json             @default("{}")
+  settings            Json             @default("{}")
+  onboardingStatus    OnboardingStatus @default(pending_bot) @map("onboarding_status")
+  onboardingChecklist Json             @default("{}") @map("onboarding_checklist")
+  trialEndsAt         DateTime?        @map("trial_ends_at") @db.Timestamptz()
+  isActive            Boolean          @default(true) @map("is_active")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  master              Master?
+  bot                 Bot?
+  clients             Client[]
+  services            Service[]
+  workingHours        WorkingHour[]
+  workingHourOverrides WorkingHourOverride[]
+  bookings            Booking[]
+  transactions        Transaction[]
+  notifications       Notification[]
+  subscription        Subscription?
+  paymentSettings     PaymentSetting?
+  analyticsDailies    AnalyticsDaily[]
+  auditLogs           AuditLog[]
+
+  @@map("tenants")
+}
+
+// ──────────────────────────────────────────────
+// 3. masters — Записи майстрів
+// ──────────────────────────────────────────────
+
+model Master {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @unique @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  firstName String   @map("first_name") @db.VarChar(100)
+  lastName  String?  @map("last_name") @db.VarChar(100)
+  phone     String?  @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("masters")
+}
+
+// ──────────────────────────────────────────────
+// 4. bots — Telegram боти
+// ──────────────────────────────────────────────
+
+model Bot {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @unique @map("tenant_id") @db.Uuid
+  botId             BigInt   @unique @map("bot_id")
+  botTokenEncrypted Bytes    @map("bot_token_encrypted")
+  botUsername        String   @unique @map("bot_username") @db.VarChar(100)
+  webhookSecret     String   @map("webhook_secret") @db.VarChar(256)
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("bots")
+}
+
+// ──────────────────────────────────────────────
+// 5. clients — CRM-записи клієнтів (tenant-scoped)
+// ──────────────────────────────────────────────
+
+model Client {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  firstName   String    @map("first_name") @db.VarChar(100)
+  lastName    String?   @map("last_name") @db.VarChar(100)
+  phone       String?   @db.VarChar(20)
+  notes       String?   @db.Text
+  tags        Json      @default("[]")
+  isBlocked   Boolean   @default(false) @map("is_blocked")
+  botBlocked  Boolean   @default(false) @map("bot_blocked")
+  lastVisitAt DateTime? @map("last_visit_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings     Booking[]
+  transactions Transaction[]
+  notifications Notification[]
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, phone])
+  @@index([tenantId, createdAt])
+  @@map("clients")
+}
+
+// ──────────────────────────────────────────────
+// 6. services — Послуги
+// ──────────────────────────────────────────────
+
+model Service {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  name            String   @db.VarChar(200)
+  description     String?  @db.Text
+  durationMinutes Int      @map("duration_minutes")
+  price           Int
+  currency        String   @default("UAH") @db.VarChar(3)
+  bufferMinutes   Int      @default(0) @map("buffer_minutes")
+  category        String?  @db.VarChar(100)
+  color           String?  @db.VarChar(7)
+  sortOrder       Int      @default(0) @map("sort_order")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([tenantId, isActive, sortOrder])
+  @@map("services")
+}
+
+// ──────────────────────────────────────────────
+// 7. working_hours — Регулярний графік роботи
+// ──────────────────────────────────────────────
+
+model WorkingHour {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  dayOfWeek Int    @map("day_of_week") // 0=Mon, 6=Sun
+  startTime String @map("start_time") @db.VarChar(5) // "09:00"
+  endTime   String @map("end_time") @db.VarChar(5)   // "18:00"
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dayOfWeek])
+  @@index([tenantId, dayOfWeek])
+  @@map("working_hours")
+}
+
+// ──────────────────────────────────────────────
+// 8. working_hour_overrides — Виключення з графіку
+// ──────────────────────────────────────────────
+
+model WorkingHourOverride {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  date      DateTime @db.Date
+  startTime String?  @map("start_time") @db.VarChar(5)
+  endTime   String?  @map("end_time") @db.VarChar(5)
+  isDayOff  Boolean  @default(false) @map("is_day_off")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@map("working_hour_overrides")
+}
+
+// ──────────────────────────────────────────────
+// 9. bookings — Записи (бронювання)
+// ──────────────────────────────────────────────
+
+model Booking {
+  id                  String        @id @default(uuid()) @db.Uuid
+  tenantId            String        @map("tenant_id") @db.Uuid
+  clientId            String        @map("client_id") @db.Uuid
+  serviceId           String        @map("service_id") @db.Uuid
+  serviceNameSnapshot String        @map("service_name_snapshot") @db.VarChar(200)
+  priceAtBooking      Int           @map("price_at_booking")
+  durationAtBooking   Int           @map("duration_at_booking")
+  startTime           DateTime      @map("start_time") @db.Timestamptz()
+  endTime             DateTime      @map("end_time") @db.Timestamptz()
+  status              BookingStatus @default(pending)
+  notes               String?       @db.Text
+  createdBy           BookingCreator @map("created_by")
+  cancelledAt         DateTime?     @map("cancelled_at") @db.Timestamptz()
+  cancelReason        String?       @map("cancel_reason") @db.VarChar(500)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  notifications Notification[]
+
+  @@index([tenantId, startTime])
+  @@index([tenantId, clientId])
+  @@index([tenantId, status, startTime])
+  @@map("bookings")
+}
+
+// ──────────────────────────────────────────────
+// 10. transactions — Фінансові операції
+// ──────────────────────────────────────────────
+
+model Transaction {
+  id                    String        @id @default(uuid()) @db.Uuid
+  tenantId              String        @map("tenant_id") @db.Uuid
+  bookingId             String?       @map("booking_id") @db.Uuid
+  clientId              String        @map("client_id") @db.Uuid
+  amount                Int
+  currency              String        @default("UAH") @db.VarChar(3)
+  paymentMethod         PaymentMethod @map("payment_method")
+  status                PaymentStatus @default(pending)
+  externalTransactionId String?       @map("external_transaction_id") @db.VarChar(255)
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, bookingId])
+  @@map("transactions")
+}
+
+// ──────────────────────────────────────────────
+// 11. notifications — Повідомлення
+// ──────────────────────────────────────────────
+
+model Notification {
+  id          String             @id @default(uuid()) @db.Uuid
+  tenantId    String             @map("tenant_id") @db.Uuid
+  bookingId   String             @map("booking_id") @db.Uuid
+  clientId    String             @map("client_id") @db.Uuid
+  type        NotificationType
+  channel     NotificationChannel @default(telegram)
+  status      NotificationStatus  @default(pending)
+  jobId       String?            @map("job_id") @db.VarChar(255)
+  messageText String?            @map("message_text") @db.Text
+  scheduledAt DateTime           @map("scheduled_at") @db.Timestamptz()
+  sentAt      DateTime?          @map("sent_at") @db.Timestamptz()
+  error       String?            @db.Text
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledAt])
+  @@index([tenantId, bookingId])
+  @@map("notifications")
+}
+
+// ──────────────────────────────────────────────
+// 12. subscriptions — Підписки SaaS
+// ──────────────────────────────────────────────
+
+model Subscription {
+  id                  String              @id @default(uuid()) @db.Uuid
+  tenantId            String              @unique @map("tenant_id") @db.Uuid
+  status              SubscriptionStatus  @default(trial)
+  paymentProvider     PaymentProvider?    @map("payment_provider")
+  cardTokenEncrypted  Bytes?              @map("card_token_encrypted")
+  cardLastFour        String?             @map("card_last_four") @db.VarChar(4)
+  walletId            String?             @map("wallet_id") @db.VarChar(255)
+  amount              Int?
+  currency            String              @default("UAH") @db.VarChar(3)
+  currentPeriodStart  DateTime?           @map("current_period_start") @db.Timestamptz()
+  currentPeriodEnd    DateTime?           @map("current_period_end") @db.Timestamptz()
+  retryCount          Int                 @default(0) @map("retry_count")
+  cancelReason        String?             @map("cancel_reason") @db.VarChar(500)
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments SubscriptionPayment[]
+
+  @@index([status, currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+// ──────────────────────────────────────────────
+// 13. subscription_payments — Платежі за підписку
+// ──────────────────────────────────────────────
+
+model SubscriptionPayment {
+  id              String                    @id @default(uuid()) @db.Uuid
+  subscriptionId  String                    @map("subscription_id") @db.Uuid
+  paymentProvider PaymentProvider           @map("payment_provider")
+  externalId      String?                   @map("external_id") @db.VarChar(255)
+  amount          Int
+  currency        String                    @default("UAH") @db.VarChar(3)
+  exchangeRate    Decimal?                  @map("exchange_rate") @db.Decimal(10, 4)
+  status          SubscriptionPaymentStatus @default(pending)
+  failureReason   String?                   @map("failure_reason") @db.VarChar(500)
+  paidAt          DateTime?                 @map("paid_at") @db.Timestamptz()
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz()
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt])
+  @@map("subscription_payments")
+}
+
+// ──────────────────────────────────────────────
+// 14. payment_settings — Налаштування оплати послуг (per tenant)
+// ──────────────────────────────────────────────
+
+model PaymentSetting {
+  id                 String          @id @default(uuid()) @db.Uuid
+  tenantId           String          @unique @map("tenant_id") @db.Uuid
+  provider           PaymentProvider
+  apiTokenEncrypted  Bytes           @map("api_token_encrypted")
+  apiSecretEncrypted Bytes?          @map("api_secret_encrypted")
+  isActive           Boolean         @default(true) @map("is_active")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("payment_settings")
+}
+
+// ──────────────────────────────────────────────
+// 15. analytics_daily — Щоденна агрегована аналітика
+// ──────────────────────────────────────────────
+
+model AnalyticsDaily {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  date          DateTime @db.Date
+  totalBookings Int      @default(0) @map("total_bookings")
+  completed     Int      @default(0)
+  cancelled     Int      @default(0)
+  noShows       Int      @default(0) @map("no_shows")
+  revenue       Int      @default(0)
+  newClients    Int      @default(0) @map("new_clients")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@map("analytics_daily")
+}
+
+// ──────────────────────────────────────────────
+// 16. audit_logs — Журнал аудиту
+// ──────────────────────────────────────────────
+
+model AuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String?   @map("tenant_id") @db.Uuid
+  actorType  ActorType @map("actor_type")
+  actorId    String?   @map("actor_id") @db.Uuid
+  action     String    @db.VarChar(100)
+  entityType String    @map("entity_type") @db.VarChar(50)
+  entityId   String?   @map("entity_id") @db.Uuid
+  changes    Json      @default("{}")
+  ip         String?   @db.VarChar(45)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

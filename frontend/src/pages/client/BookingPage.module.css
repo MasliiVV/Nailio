@@ -1,0 +1,71 @@
+.serviceHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.serviceColor {
+  width: 6px;
+  height: 48px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.serviceName {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.section {
+  margin-bottom: var(--space-2xl);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+
+.slot {
+  padding: 10px;
+  text-align: center;
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  background: var(--color-section-bg);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+  min-height: 44px;
+}
+
+.slot:active {
+  transform: scale(0.95);
+}
+
+.slotSelected {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+.confirmed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-lg);
+  min-height: 50vh;
+}
+
+.confirmedIcon {
+  font-size: 64px;
+}

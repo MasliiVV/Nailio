@@ -1,0 +1,193 @@
+.wizard {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px;
+  padding-top: calc(var(--safe-top, 0px) + 8px);
+  padding-bottom: calc(var(--safe-bottom, 0px) + 24px);
+  background: var(--color-bg);
+}
+
+.progressBar {
+  height: 4px;
+  background: var(--color-bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 2px;
+  transition: width 0.35s ease;
+}
+
+.stepIndicator {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.stepContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.stepEmoji {
+  font-size: 56px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.stepTitle {
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.stepDescription {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.videoLink {
+  display: block;
+  text-align: center;
+  color: var(--color-link);
+  font-size: 15px;
+  text-decoration: none;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.instructionStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.instructionNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.navButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.addedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.addedItem {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.scheduleList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.scheduleDay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.scheduleDay input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.scheduleTime {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.timeInput {
+  width: 80px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: center;
+}
+
+.botLink {
+  font-size: 14px;
+  color: var(--color-link);
+  margin-bottom: 8px;
+}
+
+.trialBadge {
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

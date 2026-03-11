@@ -1,0 +1,63 @@
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useIntl } from 'react-intl';
+import { Home, Calendar, Users, Scissors, Settings } from 'lucide-react';
+import styles from './MasterLayout.module.css';
+import { getTelegram } from '@/lib/telegram';
+import { type ReactNode, useEffect } from 'react';
+
+const ICON_SIZE = 20;
+
+const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
+  { path: '/master', icon: <Home size={ICON_SIZE} />, labelKey: 'master.dashboard' },
+  { path: '/master/calendar', icon: <Calendar size={ICON_SIZE} />, labelKey: 'master.calendar' },
+  { path: '/master/clients', icon: <Users size={ICON_SIZE} />, labelKey: 'master.clients' },
+  { path: '/master/services', icon: <Scissors size={ICON_SIZE} />, labelKey: 'master.services' },
+  { path: '/master/settings', icon: <Settings size={ICON_SIZE} />, labelKey: 'master.settings' },
+];
+
+export function MasterLayout() {
+  const intl = useIntl();
+  const location = useLocation();
+
+  // Show/hide Telegram BackButton based on route depth
+  useEffect(() => {
+    const tg = getTelegram();
+    if (!tg) return;
+
+    const isSubPage = location.pathname.split('/').length > 3;
+    if (isSubPage) {
+      tg.BackButton.show();
+    } else {
+      tg.BackButton.hide();
+    }
+  }, [location.pathname]);
+
+  return (
+    <div className={styles.layout}>
+      <main className={styles.content}>
+        <Outlet />
+      </main>
+
+      <nav className={styles.nav}>
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === '/master'}
+            className={({ isActive }) =>
+              `${styles.navItem} ${isActive ? styles.active : ''}`
+            }
+            onClick={() => {
+              getTelegram()?.HapticFeedback.selectionChanged();
+            }}
+          >
+            <div className={styles.navIcon}>{item.icon}</div>
+            <span className={styles.navLabel}>
+              {intl.formatMessage({ id: item.labelKey })}
+            </span>
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  );
+}
