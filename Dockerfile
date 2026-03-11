@@ -5,6 +5,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 FROM base AS dependencies
+RUN apk add --no-cache openssl1.1-compat
 RUN npm ci --omit=dev
 RUN npx prisma generate
 
@@ -14,6 +15,7 @@ COPY . .
 RUN npm run build
 
 FROM node:20-alpine AS production
+RUN apk add --no-cache openssl
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
