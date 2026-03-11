@@ -18,9 +18,6 @@ async function main() {
     update: {},
     create: {
       telegramId: BigInt(100000001),
-      firstName: 'Admin',
-      lastName: 'Nailio',
-      username: 'nailio_admin',
       languageCode: 'uk',
     },
   });
@@ -32,9 +29,6 @@ async function main() {
     update: {},
     create: {
       telegramId: BigInt(100000002),
-      firstName: 'Олена',
-      lastName: 'Коваленко',
-      username: 'olena_nails',
       languageCode: 'uk',
     },
   });
@@ -42,13 +36,13 @@ async function main() {
 
   // ─── Demo Tenant (Master's salon) ───
   const tenant = await prisma.tenant.upsert({
-    where: { id: masterUser.id }, // Will create with a specific slug
+    where: { slug: 'olena-nails' },
     update: {},
     create: {
-      ownerId: masterUser.id,
       slug: 'olena-nails',
       displayName: 'Манікюр Олена',
       onboardingStatus: OnboardingStatus.setup_complete,
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       settings: {
         timezone: 'Europe/Kyiv',
         language: 'uk',
@@ -63,6 +57,20 @@ async function main() {
     },
   });
   console.log('  ✅ Demo tenant created:', tenant.id, '— slug:', tenant.slug);
+
+  // ─── Link Master to Tenant ───
+  await prisma.master.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      userId: masterUser.id,
+      firstName: 'Олена',
+      lastName: 'Коваленко',
+      phone: '+380501234567',
+    },
+  });
+  console.log('  ✅ Master linked to tenant');
 
   // ─── Demo Services ───
   const services = [
@@ -114,19 +122,19 @@ async function main() {
   ];
 
   for (const wh of workingHours) {
-    await prisma.workingHours.create({ data: wh });
+    await prisma.workingHour.create({ data: wh });
   }
   console.log('  ✅ Working hours set (Mon-Fri 9-18, Sat 10-15)');
 
   // ─── Demo Subscription (trial) ───
-  await prisma.subscription.create({
-    data: {
+  await prisma.subscription.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: {
       tenantId: tenant.id,
       status: SubscriptionStatus.trial,
-      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 days
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      priceUsd: 1000, // $10.00 in cents
     },
   });
   console.log('  ✅ Trial subscription created (7 days)');
@@ -137,9 +145,6 @@ async function main() {
     update: {},
     create: {
       telegramId: BigInt(100000003),
-      firstName: 'Марія',
-      lastName: 'Петренко',
-      username: 'maria_p',
       languageCode: 'uk',
     },
   });
