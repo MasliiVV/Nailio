@@ -46,16 +46,16 @@ export function ClientsPage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-              <Avatar
-                name={`${client.firstName} ${client.lastName || ''}`}
-                size="md"
-              />
+              <Avatar name={`${client.firstName} ${client.lastName || ''}`} size="md" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 500, fontSize: 15 }}>
                   {client.firstName} {client.lastName || ''}
                 </div>
                 <div className="text-secondary" style={{ fontSize: 13 }}>
-                  {intl.formatMessage({ id: 'clients.totalVisits' }, { count: client.stats.totalBookings })}
+                  {intl.formatMessage(
+                    { id: 'clients.totalVisits' },
+                    { count: client.stats.totalBookings },
+                  )}
                 </div>
               </div>
               {client.isBlocked && (
@@ -63,7 +63,9 @@ export function ClientsPage() {
                   {intl.formatMessage({ id: 'clients.blocked' })}
                 </span>
               )}
-              <span style={{ color: 'var(--color-text-secondary)', opacity: 0.5, fontSize: 20 }}>›</span>
+              <span style={{ color: 'var(--color-text-secondary)', opacity: 0.5, fontSize: 20 }}>
+                ›
+              </span>
             </div>
           </Card>
         ))}

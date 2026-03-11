@@ -46,9 +46,7 @@ export function DashboardPage() {
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-card__value">
-                {(dashboard.today.revenue / 100).toFixed(0)}₴
-              </div>
+              <div className="stat-card__value">{(dashboard.today.revenue / 100).toFixed(0)}₴</div>
               <div className="stat-card__label">
                 {intl.formatMessage({ id: 'master.todayRevenue' })}
               </div>
@@ -89,9 +87,7 @@ export function DashboardPage() {
         {!bookingsLoading && todayBookings.length === 0 && (
           <Card className={styles.emptyCard}>
             <Sparkles size={32} color="var(--color-primary)" />
-            <p className="text-secondary">
-              {intl.formatMessage({ id: 'master.noBookingsToday' })}
-            </p>
+            <p className="text-secondary">{intl.formatMessage({ id: 'master.noBookingsToday' })}</p>
           </Card>
         )}
 
@@ -106,7 +102,9 @@ export function DashboardPage() {
                 </span>
               )}
             </div>
-            <span className={`badge badge--${booking.status === 'confirmed' ? 'success' : 'warning'}`}>
+            <span
+              className={`badge badge--${booking.status === 'confirmed' ? 'success' : 'warning'}`}
+            >
               {intl.formatMessage({ id: `booking.status.${booking.status}` })}
             </span>
           </Card>

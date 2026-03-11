@@ -37,10 +37,7 @@ export class BookingsController {
    * docs/api/endpoints.md — query: date, serviceId
    */
   @Get('slots')
-  async getSlots(
-    @CurrentTenant() tenantId: string,
-    @Query() query: SlotsQueryDto,
-  ) {
+  async getSlots(@CurrentTenant() tenantId: string, @Query() query: SlotsQueryDto) {
     return this.bookingsService.getAvailableSlots(tenantId, query);
   }
 
@@ -104,10 +101,7 @@ export class BookingsController {
    */
   @Post(':id/confirm')
   @Roles('master')
-  async confirm(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async confirm(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.confirm(tenantId, id);
   }
 
@@ -117,10 +111,7 @@ export class BookingsController {
    */
   @Post(':id/complete')
   @Roles('master')
-  async complete(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async complete(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.complete(tenantId, id);
   }
 
@@ -130,10 +121,7 @@ export class BookingsController {
    */
   @Post(':id/no-show')
   @Roles('master')
-  async noShow(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async noShow(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.noShow(tenantId, id);
   }
 }

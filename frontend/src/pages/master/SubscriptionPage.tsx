@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react';
 import { useIntl } from 'react-intl';
 import { Gift, CheckCircle, AlertTriangle, XCircle, Ban, Crown, HelpCircle } from 'lucide-react';
-import { useSubscription, useSubscriptionPayments, useCheckout, useCancelSubscription } from '@/hooks';
+import {
+  useSubscription,
+  useSubscriptionPayments,
+  useCheckout,
+  useCancelSubscription,
+} from '@/hooks';
 import { Card, Button, EmptyState, SkeletonList } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { SubscriptionPayment } from '@/types';
@@ -35,7 +40,11 @@ export function SubscriptionPage() {
   };
 
   if (isLoading) {
-    return <div className="page"><SkeletonList count={3} /></div>;
+    return (
+      <div className="page">
+        <SkeletonList count={3} />
+      </div>
+    );
   }
 
   if (!subscription) {
@@ -55,7 +64,10 @@ export function SubscriptionPage() {
   }
 
   const daysLeft = subscription.currentPeriodEnd
-    ? Math.max(0, Math.ceil((new Date(subscription.currentPeriodEnd).getTime() - Date.now()) / 86400000))
+    ? Math.max(
+        0,
+        Math.ceil((new Date(subscription.currentPeriodEnd).getTime() - Date.now()) / 86400000),
+      )
     : 0;
 
   const statusKey = subscription.status;
@@ -66,7 +78,9 @@ export function SubscriptionPage() {
 
       <Card style={{ marginBottom: 16, textAlign: 'center' as const }}>
         <div className={styles.statusSection}>
-          <span className={styles.statusEmoji}>{STATUS_ICON[statusKey] || <HelpCircle size={28} />}</span>
+          <span className={styles.statusEmoji}>
+            {STATUS_ICON[statusKey] || <HelpCircle size={28} />}
+          </span>
           <span className={styles.statusText}>
             {intl.formatMessage({ id: `subscription.status.${statusKey}` })}
           </span>
@@ -82,7 +96,8 @@ export function SubscriptionPage() {
             <span className={styles.planName}>{subscription.plan}</span>
             {subscription.pricePerMonth && (
               <span className={styles.planPrice}>
-                {(subscription.pricePerMonth / 100).toFixed(0)} ₴/{intl.formatMessage({ id: 'analytics.month' })}
+                {(subscription.pricePerMonth / 100).toFixed(0)} ₴/
+                {intl.formatMessage({ id: 'analytics.month' })}
               </span>
             )}
           </div>
@@ -104,19 +119,21 @@ export function SubscriptionPage() {
 
       {payments && payments.length > 0 && (
         <section>
-          <h2 className={styles.sectionTitle}>{intl.formatMessage({ id: 'subscription.payments' })}</h2>
+          <h2 className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'subscription.payments' })}
+          </h2>
           {payments.map((payment: SubscriptionPayment) => (
             <Card key={payment.id} style={{ marginBottom: 6 }}>
               <div className={styles.paymentRow}>
                 <div>
-                  <div style={{ fontWeight: 500 }}>
-                    {(payment.amount / 100).toFixed(0)} ₴
-                  </div>
+                  <div style={{ fontWeight: 500 }}>{(payment.amount / 100).toFixed(0)} ₴</div>
                   <div className="text-secondary" style={{ fontSize: 12 }}>
                     {new Date(payment.createdAt).toLocaleDateString('uk-UA')}
                   </div>
                 </div>
-                <span className={`badge badge-${payment.status === 'success' ? 'success' : payment.status === 'pending' ? 'warning' : 'destructive'}`}>
+                <span
+                  className={`badge badge-${payment.status === 'success' ? 'success' : payment.status === 'pending' ? 'warning' : 'destructive'}`}
+                >
                   {payment.status}
                 </span>
               </div>

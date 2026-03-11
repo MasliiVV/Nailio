@@ -1,14 +1,7 @@
 // docs/api/endpoints.md — Finance endpoints
 // 🔑👑 = JWT + Master only, ⚡ = Active subscription
 
-import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { FinanceService } from './finance.service';
 import { CreateTransactionDto, TransactionListQueryDto } from './dto/finance.dto';
@@ -28,10 +21,7 @@ export class FinanceController {
    * GET /api/v1/finance/transactions 🔑👑
    */
   @Get('transactions')
-  async list(
-    @CurrentTenant() tenantId: string,
-    @Query() query: TransactionListQueryDto,
-  ) {
+  async list(@CurrentTenant() tenantId: string, @Query() query: TransactionListQueryDto) {
     return this.financeService.findAll(tenantId, query);
   }
 
@@ -40,10 +30,7 @@ export class FinanceController {
    */
   @Post('transactions')
   @RequiresActiveSubscription()
-  async create(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: CreateTransactionDto,
-  ) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateTransactionDto) {
     return this.financeService.create(tenantId, dto);
   }
 

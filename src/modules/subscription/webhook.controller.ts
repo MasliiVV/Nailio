@@ -37,10 +37,7 @@ export class WebhookController {
    */
   @Post('monobank')
   @HttpCode(HttpStatus.OK)
-  async handleMonobankWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Res() res: Response,
-  ) {
+  async handleMonobankWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response) {
     try {
       const rawBody = req.rawBody;
       if (!rawBody) {
@@ -90,10 +87,7 @@ export class WebhookController {
    */
   @Post('liqpay')
   @HttpCode(HttpStatus.OK)
-  async handleLiqPayWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Res() res: Response,
-  ) {
+  async handleLiqPayWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response) {
     try {
       const rawBody = req.rawBody;
       if (!rawBody) {

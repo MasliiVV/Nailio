@@ -1,17 +1,10 @@
 // docs/backlog.md #102 — Tenant settings API
 // docs/architecture/multi-tenancy.md — Tenant management
 
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  UpdateBrandingDto,
-  UpdateGeneralSettingsDto,
-} from './dto/tenants.dto';
+import { UpdateBrandingDto, UpdateGeneralSettingsDto } from './dto/tenants.dto';
 
 @Injectable()
 export class TenantsService {
@@ -114,8 +107,10 @@ export class TenantsService {
     const updatedSettings = { ...existingSettings };
 
     if (dto.slotStepMinutes !== undefined) updatedSettings.slot_step_minutes = dto.slotStepMinutes;
-    if (dto.cancellationWindowHours !== undefined) updatedSettings.cancellation_window_hours = dto.cancellationWindowHours;
-    if (dto.allowClientReschedule !== undefined) updatedSettings.allow_client_reschedule = dto.allowClientReschedule;
+    if (dto.cancellationWindowHours !== undefined)
+      updatedSettings.cancellation_window_hours = dto.cancellationWindowHours;
+    if (dto.allowClientReschedule !== undefined)
+      updatedSettings.allow_client_reschedule = dto.allowClientReschedule;
 
     updateData.settings = updatedSettings as Prisma.InputJsonValue;
 
@@ -129,10 +124,7 @@ export class TenantsService {
    * Update onboarding checklist
    * docs/backlog.md #32 — Onboarding checklist (JSONB in tenants)
    */
-  async updateOnboardingChecklist(
-    tenantId: string,
-    checklist: Record<string, boolean>,
-  ) {
+  async updateOnboardingChecklist(tenantId: string, checklist: Record<string, boolean>) {
     const tenant = await this.findById(tenantId);
     const existing = (tenant.onboardingChecklist as Record<string, boolean>) || {};
     const updated = { ...existing, ...checklist };
@@ -203,13 +195,39 @@ export class TenantsService {
    */
   private transliterate(text: string): string {
     const map: Record<string, string> = {
-      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g',
-      'д': 'd', 'е': 'e', 'є': 'ye', 'ж': 'zh', 'з': 'z',
-      'и': 'y', 'і': 'i', 'ї': 'yi', 'й': 'y', 'к': 'k',
-      'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p',
-      'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f',
-      'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
-      'ь': '', 'ю': 'yu', 'я': 'ya',
+      а: 'a',
+      б: 'b',
+      в: 'v',
+      г: 'h',
+      ґ: 'g',
+      д: 'd',
+      е: 'e',
+      є: 'ye',
+      ж: 'zh',
+      з: 'z',
+      и: 'y',
+      і: 'i',
+      ї: 'yi',
+      й: 'y',
+      к: 'k',
+      л: 'l',
+      м: 'm',
+      н: 'n',
+      о: 'o',
+      п: 'p',
+      р: 'r',
+      с: 's',
+      т: 't',
+      у: 'u',
+      ф: 'f',
+      х: 'kh',
+      ц: 'ts',
+      ч: 'ch',
+      ш: 'sh',
+      щ: 'shch',
+      ь: '',
+      ю: 'yu',
+      я: 'ya',
     };
 
     return text

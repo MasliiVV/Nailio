@@ -70,18 +70,14 @@ export class NotificationsProcessor extends WorkerHost {
 
         // 2. Check booking status
         if (booking.status === 'cancelled' && type !== 'cancellation') {
-          this.logger.debug(
-            `Booking ${bookingId} is cancelled, skipping ${type} notification`,
-          );
+          this.logger.debug(`Booking ${bookingId} is cancelled, skipping ${type} notification`);
           await this.markNotification(job, 'cancelled');
           return;
         }
 
         // 3. Check bot_blocked
         if (booking.client.botBlocked && type !== 'new_booking') {
-          this.logger.debug(
-            `Client ${clientId} blocked bot, skipping notification`,
-          );
+          this.logger.debug(`Client ${clientId} blocked bot, skipping notification`);
           await this.markNotification(job, 'cancelled');
           return;
         }
@@ -141,23 +137,17 @@ export class NotificationsProcessor extends WorkerHost {
         }
 
         // 7. Format date/time in tenant timezone
-        const dateFormatter = new Intl.DateTimeFormat(
-          langCode === 'en' ? 'en-US' : 'uk-UA',
-          {
-            timeZone: tenant.timezone || 'Europe/Kyiv',
-            day: 'numeric',
-            month: 'long',
-          },
-        );
-        const timeFormatter = new Intl.DateTimeFormat(
-          langCode === 'en' ? 'en-US' : 'uk-UA',
-          {
-            timeZone: tenant.timezone || 'Europe/Kyiv',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          },
-        );
+        const dateFormatter = new Intl.DateTimeFormat(langCode === 'en' ? 'en-US' : 'uk-UA', {
+          timeZone: tenant.timezone || 'Europe/Kyiv',
+          day: 'numeric',
+          month: 'long',
+        });
+        const timeFormatter = new Intl.DateTimeFormat(langCode === 'en' ? 'en-US' : 'uk-UA', {
+          timeZone: tenant.timezone || 'Europe/Kyiv',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
 
         const templateVars: TemplateVariables = {
           serviceName: booking.serviceNameSnapshot,
@@ -165,8 +155,7 @@ export class NotificationsProcessor extends WorkerHost {
           time: timeFormatter.format(booking.startTime),
           duration: booking.durationAtBooking,
           price: booking.priceAtBooking,
-          cancellationWindow:
-            (settings.cancellation_window_hours as number) || 24,
+          cancellationWindow: (settings.cancellation_window_hours as number) || 24,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
           clientPhone: booking.client.phone || undefined,
           reason: booking.cancelReason || undefined,
@@ -174,35 +163,31 @@ export class NotificationsProcessor extends WorkerHost {
 
         // 8. Render template
         const templateType =
-          type === 'new_booking' ? 'new_booking' :
-          type === 'cancellation' ? 'cancellation' :
-          type;
+          type === 'new_booking' ? 'new_booking' : type === 'cancellation' ? 'cancellation' : type;
         const messageText = renderTemplate(templateType, langCode, templateVars);
 
         // 9. Decrypt bot token
         const botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
 
         // 10. Send via Telegram Bot API
-        const response = await fetch(
-          `https://api.telegram.org/bot${botToken}/sendMessage`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: recipientTelegramId.toString(),
-              text: messageText,
-              parse_mode: 'HTML',
-            }),
-          },
-        );
+        const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: recipientTelegramId.toString(),
+            text: messageText,
+            parse_mode: 'HTML',
+          }),
+        });
 
         if (response.ok) {
           await this.markNotification(job, 'sent', undefined, messageText);
-          this.logger.log(
-            `Notification ${type} sent for booking ${bookingId}`,
-          );
+          this.logger.log(`Notification ${type} sent for booking ${bookingId}`);
         } else {
-          const errorData = (await response.json()) as { description?: string; parameters?: { retry_after?: number } };
+          const errorData = (await response.json()) as {
+            description?: string;
+            parameters?: { retry_after?: number };
+          };
           const errorMsg = errorData.description || `HTTP ${response.status}`;
 
           if (response.status === 403) {
@@ -212,9 +197,7 @@ export class NotificationsProcessor extends WorkerHost {
               data: { botBlocked: true },
             });
             await this.markNotification(job, 'failed', errorMsg);
-            this.logger.warn(
-              `Client ${clientId} blocked bot, marking bot_blocked=true`,
-            );
+            this.logger.warn(`Client ${clientId} blocked bot, marking bot_blocked=true`);
             // Don't retry 403
             return;
           }
@@ -235,9 +218,7 @@ export class NotificationsProcessor extends WorkerHost {
           throw new Error(`Telegram API error: ${errorMsg}`);
         }
       } catch (error) {
-        this.logger.error(
-          `Notification ${type} failed for booking ${bookingId}: ${error}`,
-        );
+        this.logger.error(`Notification ${type} failed for booking ${bookingId}: ${error}`);
         throw error; // BullMQ will retry based on job config
       }
     });

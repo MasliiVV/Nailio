@@ -24,13 +24,7 @@ export {
   useDeleteOverride,
   scheduleKeys,
 } from './useSchedule';
-export {
-  useClients,
-  useClient,
-  useBlockClient,
-  useUnblockClient,
-  clientKeys,
-} from './useClients';
+export { useClients, useClient, useBlockClient, useUnblockClient, clientKeys } from './useClients';
 export { useDashboard, analyticsKeys } from './useAnalytics';
 export {
   useTransactions,

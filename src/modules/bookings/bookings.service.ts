@@ -16,7 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
-import { Booking, Service, BookingStatus, Prisma } from '@prisma/client';
+import { Booking, Prisma } from '@prisma/client';
 import {
   CreateBookingDto,
   CancelBookingDto,
@@ -51,10 +51,7 @@ export class BookingsService {
    * 4. Generate slots at slot_step_minutes intervals (from tenant settings, default 30)
    * 5. Mark each slot as available/unavailable
    */
-  async getAvailableSlots(
-    tenantId: string,
-    query: SlotsQueryDto,
-  ): Promise<SlotsResponseDto> {
+  async getAvailableSlots(tenantId: string, query: SlotsQueryDto): Promise<SlotsResponseDto> {
     // 1. Get tenant settings (timezone, slot_step_minutes)
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -75,10 +72,7 @@ export class BookingsService {
 
     // 3. Get working hours for the date
     const dateObj = new Date(query.date + 'T00:00:00');
-    const workingHours = await this.scheduleService.getWorkingHoursForDate(
-      tenantId,
-      dateObj,
-    );
+    const workingHours = await this.scheduleService.getWorkingHoursForDate(tenantId, dateObj);
 
     if (!workingHours) {
       // Day off — no slots
@@ -118,11 +112,7 @@ export class BookingsService {
       const slotEndStr = this.minutesToTime(slotStart + service.durationMinutes);
 
       const slotStartDt = this.buildDateTimeInTz(query.date, slotStartStr, timezone);
-      const slotEndDt = this.buildDateTimeInTz(
-        query.date,
-        this.minutesToTime(slotEnd),
-        timezone,
-      );
+      const slotEndDt = this.buildDateTimeInTz(query.date, this.minutesToTime(slotEnd), timezone);
 
       // Check if slot is in the past
       if (slotStartDt <= now) {
@@ -131,8 +121,7 @@ export class BookingsService {
 
       // Check overlap with existing bookings
       const isOverlapping = existingBookings.some(
-        (b: Booking) =>
-          slotStartDt < b.endTime && slotEndDt > b.startTime,
+        (b: Booking) => slotStartDt < b.endTime && slotEndDt > b.startTime,
       );
 
       slots.push({
@@ -164,9 +153,7 @@ export class BookingsService {
 
     if (user.role === 'master') {
       if (!dto.clientId) {
-        throw new BadRequestException(
-          'clientId is required when master creates a booking',
-        );
+        throw new BadRequestException('clientId is required when master creates a booking');
       }
       clientId = dto.clientId;
     } else {
@@ -194,8 +181,7 @@ export class BookingsService {
 
     // 4. Calculate times
     const startTime = new Date(dto.startTime);
-    const endMinutes =
-      service.durationMinutes + service.bufferMinutes;
+    const endMinutes = service.durationMinutes + service.bufferMinutes;
     const endTime = new Date(startTime.getTime() + endMinutes * 60 * 1000);
 
     // 5. Validate: not in the past
@@ -211,10 +197,7 @@ export class BookingsService {
 
     const dateStr = startTime.toISOString().split('T')[0];
     const dateObj = new Date(dateStr + 'T00:00:00');
-    const workingHours = await this.scheduleService.getWorkingHoursForDate(
-      tenantId,
-      dateObj,
-    );
+    const workingHours = await this.scheduleService.getWorkingHoursForDate(tenantId, dateObj);
 
     if (!workingHours) {
       throw new BadRequestException('Selected date is a day off');
@@ -278,10 +261,7 @@ export class BookingsService {
       return this.formatBookingResponse(booking);
     } catch (error: unknown) {
       // Handle DB exclusion constraint violation (concurrent booking)
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('Time slot is already booked');
       }
       throw error;
@@ -298,11 +278,7 @@ export class BookingsService {
    * Master sees all bookings for tenant.
    * Client sees only their own bookings.
    */
-  async findAll(
-    tenantId: string,
-    user: JwtPayload,
-    query: BookingListQueryDto,
-  ) {
+  async findAll(tenantId: string, user: JwtPayload, query: BookingListQueryDto) {
     const limit = Math.min(parseInt(query.limit || '20'), 100);
     const where: Prisma.BookingWhereInput = { tenantId };
 
@@ -364,8 +340,17 @@ export class BookingsService {
     const nextCursor = hasMore ? items[items.length - 1].id : undefined;
 
     return {
-      items: items.map((b: Booking & { client?: { id: string; firstName: string; lastName: string | null; phone: string | null } }) =>
-        this.formatBookingResponse(b),
+      items: items.map(
+        (
+          b: Booking & {
+            client?: {
+              id: string;
+              firstName: string;
+              lastName: string | null;
+              phone: string | null;
+            };
+          },
+        ) => this.formatBookingResponse(b),
       ),
       nextCursor,
       hasMore,
@@ -417,12 +402,7 @@ export class BookingsService {
    * Client has cancellation_window_hours restriction (from tenant settings).
    * Master can cancel anytime.
    */
-  async cancel(
-    tenantId: string,
-    bookingId: string,
-    user: JwtPayload,
-    dto: CancelBookingDto,
-  ) {
+  async cancel(tenantId: string, bookingId: string, user: JwtPayload, dto: CancelBookingDto) {
     const booking = await this.prisma.tenantClient.booking.findFirst({
       where: { id: bookingId, tenantId },
     });
@@ -431,9 +411,7 @@ export class BookingsService {
 
     // Validate transition: only pending/confirmed can be cancelled
     if (!['pending', 'confirmed'].includes(booking.status)) {
-      throw new BadRequestException(
-        `Cannot cancel booking with status "${booking.status}"`,
-      );
+      throw new BadRequestException(`Cannot cancel booking with status "${booking.status}"`);
     }
 
     // Client: check cancellation window
@@ -447,11 +425,9 @@ export class BookingsService {
         where: { id: tenantId },
       });
       const settings = (tenant?.settings || {}) as Record<string, unknown>;
-      const cancellationWindowHours =
-        (settings.cancellation_window_hours as number) || 24;
+      const cancellationWindowHours = (settings.cancellation_window_hours as number) || 24;
 
-      const hoursUntilBooking =
-        (booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
+      const hoursUntilBooking = (booking.startTime.getTime() - Date.now()) / (1000 * 60 * 60);
 
       if (hoursUntilBooking < cancellationWindowHours) {
         throw new UnprocessableEntityException({
@@ -472,9 +448,7 @@ export class BookingsService {
       },
     });
 
-    this.logger.log(
-      `Booking cancelled: ${bookingId} by ${user.role} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Booking cancelled: ${bookingId} by ${user.role} in tenant ${tenantId}`);
 
     // Cancel scheduled notifications + send cancellation notification
     await this.notificationsService.cancelBookingNotifications(
@@ -502,9 +476,7 @@ export class BookingsService {
 
     // Transition: only pending/confirmed → completed
     if (!['pending', 'confirmed'].includes(booking.status)) {
-      throw new BadRequestException(
-        `Cannot complete booking with status "${booking.status}"`,
-      );
+      throw new BadRequestException(`Cannot complete booking with status "${booking.status}"`);
     }
 
     const updated = await this.prisma.tenantClient.booking.update({
@@ -523,9 +495,7 @@ export class BookingsService {
       data: { lastVisitAt: new Date() },
     });
 
-    this.logger.log(
-      `Booking completed: ${bookingId} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Booking completed: ${bookingId} in tenant ${tenantId}`);
 
     return this.formatBookingResponse(updated);
   }
@@ -555,9 +525,7 @@ export class BookingsService {
       data: { status: 'no_show' },
     });
 
-    this.logger.log(
-      `Booking no-show: ${bookingId} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Booking no-show: ${bookingId} in tenant ${tenantId}`);
 
     return this.formatBookingResponse(updated);
   }
@@ -575,9 +543,7 @@ export class BookingsService {
     if (!booking) throw new NotFoundException('Booking not found');
 
     if (booking.status !== 'pending') {
-      throw new BadRequestException(
-        `Cannot confirm booking with status "${booking.status}"`,
-      );
+      throw new BadRequestException(`Cannot confirm booking with status "${booking.status}"`);
     }
 
     const updated = await this.prisma.tenantClient.booking.update({
@@ -585,9 +551,7 @@ export class BookingsService {
       data: { status: 'confirmed' },
     });
 
-    this.logger.log(
-      `Booking confirmed: ${bookingId} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Booking confirmed: ${bookingId} in tenant ${tenantId}`);
 
     return this.formatBookingResponse(updated);
   }
@@ -600,11 +564,7 @@ export class BookingsService {
    * Build a Date object from date string + time string in a given timezone.
    * e.g. buildDateTimeInTz("2026-03-15", "09:00", "Europe/Kyiv")
    */
-  private buildDateTimeInTz(
-    dateStr: string,
-    timeStr: string,
-    timezone: string,
-  ): Date {
+  private buildDateTimeInTz(dateStr: string, timeStr: string, timezone: string): Date {
     // Create a date string interpreted in the given timezone
     const dateTimeStr = `${dateStr}T${timeStr}:00`;
     // Use Intl to get the UTC offset for this timezone on this date
@@ -638,9 +598,7 @@ export class BookingsService {
    * Format booking for API response
    * docs/api/endpoints.md — Booking response format
    */
-  private formatBookingResponse(
-    booking: Record<string, unknown>,
-  ): Record<string, unknown> {
+  private formatBookingResponse(booking: Record<string, unknown>): Record<string, unknown> {
     return {
       id: booking.id,
       serviceNameSnapshot: booking.serviceNameSnapshot,
@@ -652,7 +610,7 @@ export class BookingsService {
       notes: booking.notes || undefined,
       createdBy: booking.createdBy,
       cancelledAt: booking.cancelledAt
-        ? (booking.cancelledAt as Date)?.toISOString?.() ?? booking.cancelledAt
+        ? ((booking.cancelledAt as Date)?.toISOString?.() ?? booking.cancelledAt)
         : undefined,
       cancelReason: booking.cancelReason || undefined,
       createdAt: (booking.createdAt as Date)?.toISOString?.() ?? booking.createdAt,

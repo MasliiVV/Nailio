@@ -66,9 +66,7 @@ export class ExchangeRateService implements OnModuleInit {
 
       const rates: MonobankCurrencyRate[] = await response.json();
       const usdUah = rates.find(
-        (r) =>
-          r.currencyCodeA === this.USD_CODE &&
-          r.currencyCodeB === this.UAH_CODE,
+        (r) => r.currencyCodeA === this.USD_CODE && r.currencyCodeB === this.UAH_CODE,
       );
 
       if (!usdUah || (!usdUah.rateSell && !usdUah.rateCross)) {

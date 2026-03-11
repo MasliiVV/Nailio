@@ -10,7 +10,11 @@ function formatTime(iso: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', weekday: 'short' });
+  return new Date(iso).toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+  });
 }
 
 export function CalendarPage() {

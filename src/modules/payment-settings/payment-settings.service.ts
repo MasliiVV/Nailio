@@ -52,9 +52,7 @@ export class PaymentSettingsService {
    */
   async connect(tenantId: string, dto: ConnectPaymentSettingsDto) {
     const apiTokenEncrypted = this.botCrypto.encrypt(dto.apiToken);
-    const apiSecretEncrypted = dto.apiSecret
-      ? this.botCrypto.encrypt(dto.apiSecret)
-      : null;
+    const apiSecretEncrypted = dto.apiSecret ? this.botCrypto.encrypt(dto.apiSecret) : null;
 
     const settings = await this.prisma.paymentSetting.upsert({
       where: { tenantId },
@@ -73,9 +71,7 @@ export class PaymentSettingsService {
       },
     });
 
-    this.logger.log(
-      `Payment settings connected: tenant=${tenantId}, provider=${dto.provider}`,
-    );
+    this.logger.log(`Payment settings connected: tenant=${tenantId}, provider=${dto.provider}`);
 
     return {
       id: settings.id,

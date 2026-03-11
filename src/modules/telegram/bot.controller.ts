@@ -1,28 +1,11 @@
 // docs/backlog.md #22 — Bot CRUD controller
 // docs/guides/master-onboarding.md — Bot connection flow
 
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Post, Get, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BotService } from './bot.service';
 import { ConnectBotDto, ReconnectBotDto, BotResponseDto } from './dto/bot.dto';
-import {
-  Roles,
-  RequiresActiveSubscription,
-  CurrentTenant,
-} from '../../common/decorators';
+import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
 
 @ApiTags('Bot')
@@ -42,10 +25,7 @@ export class BotController {
   @ApiOperation({ summary: 'Connect Telegram bot to tenant' })
   @ApiResponse({ status: 201, type: BotResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid bot token or already connected' })
-  async connectBot(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: ConnectBotDto,
-  ) {
+  async connectBot(@CurrentTenant() tenantId: string, @Body() dto: ConnectBotDto) {
     return this.botService.connectBot(tenantId, dto);
   }
 
@@ -81,10 +61,7 @@ export class BotController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reconnect bot with new token' })
   @ApiResponse({ status: 200, type: BotResponseDto })
-  async reconnectBot(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: ReconnectBotDto,
-  ) {
+  async reconnectBot(@CurrentTenant() tenantId: string, @Body() dto: ReconnectBotDto) {
     return this.botService.reconnectBot(tenantId, dto.botToken);
   }
 }

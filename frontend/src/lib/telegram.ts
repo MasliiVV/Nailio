@@ -64,11 +64,14 @@ interface WebApp {
   openLink(url: string, options?: { try_instant_view?: boolean }): void;
   openTelegramLink(url: string): void;
   openInvoice(url: string, callback?: (status: string) => void): void;
-  showPopup(params: {
-    title?: string;
-    message: string;
-    buttons?: Array<{ id?: string; type?: string; text?: string }>;
-  }, callback?: (buttonId: string) => void): void;
+  showPopup(
+    params: {
+      title?: string;
+      message: string;
+      buttons?: Array<{ id?: string; type?: string; text?: string }>;
+    },
+    callback?: (buttonId: string) => void,
+  ): void;
   showAlert(message: string, callback?: () => void): void;
   showConfirm(message: string, callback?: (confirmed: boolean) => void): void;
 
@@ -117,9 +120,16 @@ interface WebApp {
   };
 
   CloudStorage: {
-    setItem(key: string, value: string, callback?: (err: Error | null, stored?: boolean) => void): void;
+    setItem(
+      key: string,
+      value: string,
+      callback?: (err: Error | null, stored?: boolean) => void,
+    ): void;
     getItem(key: string, callback: (err: Error | null, value?: string) => void): void;
-    getItems(keys: string[], callback: (err: Error | null, values?: Record<string, string>) => void): void;
+    getItems(
+      keys: string[],
+      callback: (err: Error | null, values?: Record<string, string>) => void,
+    ): void;
     removeItem(key: string, callback?: (err: Error | null, removed?: boolean) => void): void;
     getKeys(callback: (err: Error | null, keys?: string[]) => void): void;
   };

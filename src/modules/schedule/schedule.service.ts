@@ -1,18 +1,10 @@
 // docs/backlog.md #40-#42 — Working hours CRUD + overrides + slot config
 // docs/database/schema.md — working_hours, working_hour_overrides
 
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WorkingHour, WorkingHourOverride } from '@prisma/client';
-import {
-  UpdateWorkingHoursDto,
-  CreateOverrideDto,
-} from './dto/schedule.dto';
+import { UpdateWorkingHoursDto, CreateOverrideDto } from './dto/schedule.dto';
 
 @Injectable()
 export class ScheduleService {
@@ -96,9 +88,7 @@ export class ScheduleService {
       }
     });
 
-    this.logger.log(
-      `Working hours updated: ${dto.hours.length} days for tenant ${tenantId}`,
-    );
+    this.logger.log(`Working hours updated: ${dto.hours.length} days for tenant ${tenantId}`);
 
     return this.getSchedule(tenantId);
   }
@@ -110,9 +100,7 @@ export class ScheduleService {
   async createOverride(tenantId: string, dto: CreateOverrideDto) {
     // Validate: if not day off, must have start/end time
     if (!dto.isDayOff && (!dto.startTime || !dto.endTime)) {
-      throw new BadRequestException(
-        'Start time and end time are required when isDayOff is false',
-      );
+      throw new BadRequestException('Start time and end time are required when isDayOff is false');
     }
 
     // Validate: endTime > startTime (when not day off)

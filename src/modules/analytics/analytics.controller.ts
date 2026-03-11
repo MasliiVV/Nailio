@@ -1,12 +1,7 @@
 // docs/api/endpoints.md — Analytics endpoints
 // 🔑👑 = JWT + Master only
 
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { AnalyticsService } from './analytics.service';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -42,7 +37,8 @@ export class AnalyticsController {
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
-    const from = dateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const from =
+      dateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const to = dateTo || new Date().toISOString().split('T')[0];
     return this.analyticsService.getDailyStats(tenantId, from, to);
   }

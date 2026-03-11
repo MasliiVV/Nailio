@@ -3,20 +3,8 @@
 // POST /api/v1/auth/refresh 🔓
 // POST /api/v1/auth/logout 🔑
 
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { TelegramAuthDto, RefreshTokenDto, AuthResponseDto } from './dto/auth.dto';
@@ -45,9 +33,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid initData or bot not found' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
-  async authenticateTelegram(
-    @Body() dto: TelegramAuthDto,
-  ): Promise<AuthResponseDto> {
+  async authenticateTelegram(@Body() dto: TelegramAuthDto): Promise<AuthResponseDto> {
     return this.authService.authenticateTelegram(dto);
   }
 
@@ -66,9 +52,7 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  async refreshToken(
-    @Body() dto: RefreshTokenDto,
-  ): Promise<AuthResponseDto> {
+  async refreshToken(@Body() dto: RefreshTokenDto): Promise<AuthResponseDto> {
     return this.authService.refreshAccessToken(dto.refreshToken);
   }
 
@@ -82,10 +66,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout — revoke refresh token' })
   @ApiResponse({ status: 204, description: 'Token revoked' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async logout(
-    @Body() dto: RefreshTokenDto,
-    @CurrentUser() _user: JwtPayload,
-  ): Promise<void> {
+  async logout(@Body() dto: RefreshTokenDto, @CurrentUser() _user: JwtPayload): Promise<void> {
     await this.authService.revokeRefreshToken(dto.refreshToken);
   }
 }

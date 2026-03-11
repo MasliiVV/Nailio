@@ -7,18 +7,13 @@
 // POST /api/v1/subscription/cancel    → Cancel subscription
 // GET  /api/v1/subscription/payments  → Payment history
 
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { SubscriptionService } from './subscription.service';
-import { SubscriptionCheckoutDto, SubscriptionCancelDto, UpdateCardDto } from './dto/subscription.dto';
+import {
+  SubscriptionCheckoutDto,
+  SubscriptionCancelDto,
+  UpdateCardDto,
+} from './dto/subscription.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -45,10 +40,7 @@ export class SubscriptionController {
    */
   @Post('checkout')
   @HttpCode(HttpStatus.OK)
-  async checkout(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: SubscriptionCheckoutDto,
-  ) {
+  async checkout(@CurrentTenant() tenantId: string, @Body() dto: SubscriptionCheckoutDto) {
     return this.subscriptionService.checkout(tenantId, dto.provider);
   }
 
@@ -57,10 +49,7 @@ export class SubscriptionController {
    * docs/api/endpoints.md — PUT /api/v1/subscription/card
    */
   @Put('card')
-  async updateCard(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: UpdateCardDto,
-  ) {
+  async updateCard(@CurrentTenant() tenantId: string, @Body() dto: UpdateCardDto) {
     return this.subscriptionService.updateCard(tenantId, dto.provider);
   }
 
@@ -70,10 +59,7 @@ export class SubscriptionController {
    */
   @Post('cancel')
   @HttpCode(HttpStatus.OK)
-  async cancel(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: SubscriptionCancelDto,
-  ) {
+  async cancel(@CurrentTenant() tenantId: string, @Body() dto: SubscriptionCancelDto) {
     return this.subscriptionService.cancel(tenantId, dto.reason);
   }
 

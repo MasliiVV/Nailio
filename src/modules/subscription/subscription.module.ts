@@ -15,10 +15,7 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { QUEUE_NAMES } from '../../common/bullmq/tenant-context';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: QUEUE_NAMES.SUBSCRIPTIONS }),
-    TelegramModule,
-  ],
+  imports: [BullModule.registerQueue({ name: QUEUE_NAMES.SUBSCRIPTIONS }), TelegramModule],
   controllers: [SubscriptionController, WebhookController],
   providers: [
     SubscriptionService,

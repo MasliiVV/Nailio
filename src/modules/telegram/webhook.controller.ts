@@ -13,7 +13,7 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeController } from '@nestjs/swagger';
+import { ApiOperation, ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '../../common/decorators';
 import { BotService } from './bot.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -79,10 +79,7 @@ export class WebhookController {
     // In production, this should be enqueued to BullMQ
     // For now, process inline (lightweight operations only)
     this.processUpdate(bot.id, bot.tenant.slug, update).catch((error) => {
-      this.logger.error(
-        `Webhook processing error: bot=${bot.botUsername}`,
-        error,
-      );
+      this.logger.error(`Webhook processing error: bot=${bot.botUsername}`, error);
     });
 
     return { ok: true };

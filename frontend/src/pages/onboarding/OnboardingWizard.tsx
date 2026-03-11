@@ -1,7 +1,19 @@
 import { useState, useCallback } from 'react';
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Bot, KeyRound, CheckCircle, Scissors, Calendar, Palette, PartyPopper, Copy, Smartphone, Video } from 'lucide-react';
+import {
+  Sparkles,
+  Bot,
+  KeyRound,
+  CheckCircle,
+  Scissors,
+  Calendar,
+  Palette,
+  PartyPopper,
+  Copy,
+  Smartphone,
+  Video,
+} from 'lucide-react';
 import { useAuth, useCreateService, useUpdateWorkingHours } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -75,7 +87,9 @@ export function OnboardingWizard() {
     setTokenError('');
     setLoading(true);
     try {
-      const res = await api.post<{ botUsername: string; botName: string }>('/api/v1/bot/connect', { token: botToken });
+      const res = await api.post<{ botUsername: string; botName: string }>('/api/v1/bot/connect', {
+        token: botToken,
+      });
       setBotInfo({ username: res.botUsername, name: res.botName });
       getTelegram()?.HapticFeedback.notificationOccurred('success');
     } catch {
@@ -94,7 +108,10 @@ export function OnboardingWizard() {
       durationMinutes: Number(serviceDuration),
     };
     await createService.mutateAsync(dto);
-    setAddedServices((prev) => [...prev, { name: serviceName, price: Number(servicePrice), durationMinutes: Number(serviceDuration) }]);
+    setAddedServices((prev) => [
+      ...prev,
+      { name: serviceName, price: Number(servicePrice), durationMinutes: Number(serviceDuration) },
+    ]);
     setServiceName('');
     setServicePrice('');
     setServiceDuration('60');
@@ -160,9 +177,13 @@ export function OnboardingWizard() {
       {/* Step 1: Welcome */}
       {step === 1 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><Sparkles size={48} /></div>
+          <div className={styles.stepEmoji}>
+            <Sparkles size={48} />
+          </div>
           <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.welcome' })}</h1>
-          <p className={styles.stepDescription}>{intl.formatMessage({ id: 'onboarding.welcomeDesc' })}</p>
+          <p className={styles.stepDescription}>
+            {intl.formatMessage({ id: 'onboarding.welcomeDesc' })}
+          </p>
           <a
             href="https://youtube.com"
             target="_blank"
@@ -173,7 +194,11 @@ export function OnboardingWizard() {
               getTelegram()?.openLink?.('https://youtube.com');
             }}
           >
-                        <Video size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{intl.formatMessage({ id: 'onboarding.watchVideo' })}
+            <Video
+              size={16}
+              style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
+            />
+            {intl.formatMessage({ id: 'onboarding.watchVideo' })}
           </a>
           <Button fullWidth onClick={next}>
             {intl.formatMessage({ id: 'onboarding.start' })} →
@@ -184,7 +209,9 @@ export function OnboardingWizard() {
       {/* Step 2: BotFather instructions */}
       {step === 2 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><Bot size={48} /></div>
+          <div className={styles.stepEmoji}>
+            <Bot size={48} />
+          </div>
           <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.createBot' })}</h1>
           <div className={styles.instructions}>
             <div className={styles.instructionStep}>
@@ -216,7 +243,9 @@ export function OnboardingWizard() {
             </div>
           </div>
           <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>←</Button>
+            <Button variant="ghost" onClick={prev}>
+              ←
+            </Button>
             <Button fullWidth onClick={next}>
               {intl.formatMessage({ id: 'onboarding.copied' })} →
             </Button>
@@ -227,8 +256,12 @@ export function OnboardingWizard() {
       {/* Step 3: Enter token */}
       {step === 3 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><KeyRound size={48} /></div>
-          <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.enterToken' })}</h1>
+          <div className={styles.stepEmoji}>
+            <KeyRound size={48} />
+          </div>
+          <h1 className={styles.stepTitle}>
+            {intl.formatMessage({ id: 'onboarding.enterToken' })}
+          </h1>
           <Input
             label={intl.formatMessage({ id: 'onboarding.tokenLabel' })}
             value={botToken}
@@ -249,14 +282,21 @@ export function OnboardingWizard() {
           {botInfo && (
             <Card style={{ marginTop: 12, textAlign: 'center' as const }}>
               <div style={{ padding: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={16} color="var(--color-success)" /> {intl.formatMessage({ id: 'onboarding.botFound' })}</div>
-                <div style={{ fontWeight: 700, fontSize: 18, margin: '4px 0' }}>@{botInfo.username}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <CheckCircle size={16} color="var(--color-success)" />{' '}
+                  {intl.formatMessage({ id: 'onboarding.botFound' })}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 18, margin: '4px 0' }}>
+                  @{botInfo.username}
+                </div>
                 <div className="text-secondary">{botInfo.name}</div>
               </div>
             </Card>
           )}
           <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>←</Button>
+            <Button variant="ghost" onClick={prev}>
+              ←
+            </Button>
             <Button fullWidth onClick={next} disabled={!botInfo}>
               {intl.formatMessage({ id: 'common.next' })} →
             </Button>
@@ -267,14 +307,24 @@ export function OnboardingWizard() {
       {/* Step 4: Services */}
       {step === 4 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><Scissors size={48} /></div>
-          <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.addServices' })}</h1>
+          <div className={styles.stepEmoji}>
+            <Scissors size={48} />
+          </div>
+          <h1 className={styles.stepTitle}>
+            {intl.formatMessage({ id: 'onboarding.addServices' })}
+          </h1>
 
           {addedServices.length > 0 && (
             <div className={styles.addedList}>
               {addedServices.map((s, i) => (
                 <div key={i} className={styles.addedItem}>
-                  <CheckCircle size={14} color="var(--color-success)" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{s.name} — {s.price} ₴ · {s.durationMinutes} {intl.formatMessage({ id: 'common.min' })}
+                  <CheckCircle
+                    size={14}
+                    color="var(--color-success)"
+                    style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
+                  />
+                  {s.name} — {s.price} ₴ · {s.durationMinutes}{' '}
+                  {intl.formatMessage({ id: 'common.min' })}
                 </div>
               ))}
             </div>
@@ -312,7 +362,9 @@ export function OnboardingWizard() {
           </div>
 
           <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>←</Button>
+            <Button variant="ghost" onClick={prev}>
+              ←
+            </Button>
             <Button fullWidth onClick={next}>
               {addedServices.length > 0
                 ? `${intl.formatMessage({ id: 'common.next' })} →`
@@ -325,64 +377,70 @@ export function OnboardingWizard() {
       {/* Step 5: Schedule */}
       {step === 5 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><Calendar size={48} /></div>
-          <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.setupSchedule' })}</h1>
+          <div className={styles.stepEmoji}>
+            <Calendar size={48} />
+          </div>
+          <h1 className={styles.stepTitle}>
+            {intl.formatMessage({ id: 'onboarding.setupSchedule' })}
+          </h1>
 
           <div className={styles.scheduleList}>
             {DAY_KEYS.map((dayKey, index) => {
               const day = schedule[index]!;
               return (
-              <div key={dayKey} className={styles.scheduleRow}>
-                <label className={styles.scheduleDay}>
-                  <input
-                    type="checkbox"
-                    checked={day.isWorking}
-                    onChange={() => {
-                      setSchedule((prev) => {
-                        const updated = [...prev];
-                        updated[index] = { ...day, isWorking: !day.isWorking };
-                        return updated;
-                      });
-                    }}
-                  />
-                  <span>{intl.formatMessage({ id: `schedule.${dayKey}` })}</span>
-                </label>
-                {day.isWorking && (
-                  <div className={styles.scheduleTime}>
+                <div key={dayKey} className={styles.scheduleRow}>
+                  <label className={styles.scheduleDay}>
                     <input
-                      type="time"
-                      className={styles.timeInput}
-                      value={day.startTime}
-                      onChange={(e) => {
+                      type="checkbox"
+                      checked={day.isWorking}
+                      onChange={() => {
                         setSchedule((prev) => {
                           const updated = [...prev];
-                          updated[index] = { ...day, startTime: e.target.value };
+                          updated[index] = { ...day, isWorking: !day.isWorking };
                           return updated;
                         });
                       }}
                     />
-                    <span>—</span>
-                    <input
-                      type="time"
-                      className={styles.timeInput}
-                      value={day.endTime}
-                      onChange={(e) => {
-                        setSchedule((prev) => {
-                          const updated = [...prev];
-                          updated[index] = { ...day, endTime: e.target.value };
-                          return updated;
-                        });
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+                    <span>{intl.formatMessage({ id: `schedule.${dayKey}` })}</span>
+                  </label>
+                  {day.isWorking && (
+                    <div className={styles.scheduleTime}>
+                      <input
+                        type="time"
+                        className={styles.timeInput}
+                        value={day.startTime}
+                        onChange={(e) => {
+                          setSchedule((prev) => {
+                            const updated = [...prev];
+                            updated[index] = { ...day, startTime: e.target.value };
+                            return updated;
+                          });
+                        }}
+                      />
+                      <span>—</span>
+                      <input
+                        type="time"
+                        className={styles.timeInput}
+                        value={day.endTime}
+                        onChange={(e) => {
+                          setSchedule((prev) => {
+                            const updated = [...prev];
+                            updated[index] = { ...day, endTime: e.target.value };
+                            return updated;
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
 
           <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>←</Button>
+            <Button variant="ghost" onClick={prev}>
+              ←
+            </Button>
             <Button fullWidth loading={loading} onClick={handleSaveSchedule}>
               {intl.formatMessage({ id: 'common.next' })} →
             </Button>
@@ -393,7 +451,9 @@ export function OnboardingWizard() {
       {/* Step 6: Branding */}
       {step === 6 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><Palette size={48} /></div>
+          <div className={styles.stepEmoji}>
+            <Palette size={48} />
+          </div>
           <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.branding' })}</h1>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Input
@@ -407,7 +467,14 @@ export function OnboardingWizard() {
               onChange={(e) => setWelcomeMessage(e.target.value)}
             />
             <div>
-              <label style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>
+              <label
+                style={{
+                  fontSize: 13,
+                  color: 'var(--color-text-secondary)',
+                  display: 'block',
+                  marginBottom: 4,
+                }}
+              >
                 {intl.formatMessage({ id: 'settings.primaryColor' })}
               </label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -415,14 +482,22 @@ export function OnboardingWizard() {
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  style={{ width: 48, height: 48, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                  }}
                 />
                 <span className="text-secondary">{primaryColor}</span>
               </div>
             </div>
           </div>
           <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>←</Button>
+            <Button variant="ghost" onClick={prev}>
+              ←
+            </Button>
             <Button fullWidth onClick={handleSaveBranding}>
               {displayName || welcomeMessage
                 ? `${intl.formatMessage({ id: 'common.next' })} →`
@@ -435,17 +510,21 @@ export function OnboardingWizard() {
       {/* Step 7: Done */}
       {step === 7 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}><PartyPopper size={48} /></div>
+          <div className={styles.stepEmoji}>
+            <PartyPopper size={48} />
+          </div>
           <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.done' })}</h1>
-          <p className={styles.stepDescription}>{intl.formatMessage({ id: 'onboarding.doneDesc' })}</p>
+          <p className={styles.stepDescription}>
+            {intl.formatMessage({ id: 'onboarding.doneDesc' })}
+          </p>
 
           {botInfo && (
             <Card style={{ textAlign: 'center' as const, marginBottom: 16 }}>
               <div style={{ padding: 16 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>@{botInfo.username}</div>
-                <div className={styles.botLink}>
-                  t.me/{botInfo.username}
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+                  @{botInfo.username}
                 </div>
+                <div className={styles.botLink}>t.me/{botInfo.username}</div>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -454,14 +533,22 @@ export function OnboardingWizard() {
                     getTelegram()?.HapticFeedback.notificationOccurred('success');
                   }}
                 >
-                                    <Copy size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{intl.formatMessage({ id: 'onboarding.copyLink' })}
+                  <Copy
+                    size={14}
+                    style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
+                  />
+                  {intl.formatMessage({ id: 'onboarding.copyLink' })}
                 </Button>
               </div>
             </Card>
           )}
 
           <div className={styles.trialBadge}>
-                        <Smartphone size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />{intl.formatMessage({ id: 'onboarding.trialInfo' })}
+            <Smartphone
+              size={16}
+              style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
+            />
+            {intl.formatMessage({ id: 'onboarding.trialInfo' })}
           </div>
 
           <Button fullWidth onClick={handleFinish}>

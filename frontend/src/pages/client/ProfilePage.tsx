@@ -54,11 +54,7 @@ export function ClientProfilePage() {
           type="tel"
           placeholder="+380..."
         />
-        <Button
-          fullWidth
-          loading={saving}
-          onClick={handleSave}
-        >
+        <Button fullWidth loading={saving} onClick={handleSave}>
           {intl.formatMessage({ id: 'common.save' })}
         </Button>
       </div>

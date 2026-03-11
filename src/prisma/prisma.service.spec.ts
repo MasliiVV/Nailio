@@ -8,6 +8,7 @@ import { ClsService } from 'nestjs-cls';
 
 describe('PrismaService — Cross-Tenant Isolation', () => {
   let prisma: PrismaService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cls: any;
 
   beforeEach(async () => {
@@ -17,10 +18,7 @@ describe('PrismaService — Cross-Tenant Isolation', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        PrismaService,
-        { provide: ClsService, useValue: cls },
-      ],
+      providers: [PrismaService, { provide: ClsService, useValue: cls }],
     }).compile();
 
     prisma = module.get<PrismaService>(PrismaService);
@@ -66,10 +64,21 @@ describe('PrismaService — Cross-Tenant Isolation', () => {
     it('should include all expected models in tenant scope', () => {
       // Verify against docs/architecture/multi-tenancy.md
       const expectedModels = [
-        'tenant', 'master', 'bot', 'client', 'service',
-        'workingHour', 'workingHourOverride', 'booking',
-        'transaction', 'notification', 'subscription',
-        'subscriptionPayment', 'paymentSetting', 'analyticsDaily', 'auditLog',
+        'tenant',
+        'master',
+        'bot',
+        'client',
+        'service',
+        'workingHour',
+        'workingHourOverride',
+        'booking',
+        'transaction',
+        'notification',
+        'subscription',
+        'subscriptionPayment',
+        'paymentSetting',
+        'analyticsDaily',
+        'auditLog',
       ];
 
       // Read the TENANT_SCOPED_MODELS from the source

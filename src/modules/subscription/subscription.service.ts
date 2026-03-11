@@ -12,12 +12,7 @@
 //   expired → active (reactivation with new payment)
 //   cancelled → expired (period end)
 
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -236,11 +231,7 @@ export class SubscriptionService {
     await this.cancelPendingJobs(payment.subscription.tenantId);
 
     // Schedule next billing job (in 30 days)
-    await this.scheduleChargeJob(
-      payment.subscription.tenantId,
-      payment.subscriptionId,
-      periodEnd,
-    );
+    await this.scheduleChargeJob(payment.subscription.tenantId, payment.subscriptionId, periodEnd);
 
     this.logger.log(
       `Subscription activated: tenant=${payment.subscription.tenantId}, period_end=${periodEnd.toISOString()}`,
@@ -352,7 +343,6 @@ export class SubscriptionService {
       this.logger.log(`Subscription renewed: ${subscriptionId}`);
     } else {
       // docs/payments/subscription-lifecycle.md — Failed → past_due
-      const graceEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // +7 days
 
       await this.prisma.$transaction([
         this.prisma.subscriptionPayment.update({
@@ -481,9 +471,7 @@ export class SubscriptionService {
         await this.scheduleExpireJob(subscription.tenantId, subscriptionId, graceDelayMs);
       }
 
-      this.logger.warn(
-        `Subscription retry failed: ${subscriptionId}, attempt=${attempt}`,
-      );
+      this.logger.warn(`Subscription retry failed: ${subscriptionId}, attempt=${attempt}`);
     }
   }
 
@@ -678,11 +666,7 @@ export class SubscriptionService {
 
   // ─── Private: Job Scheduling ───
 
-  private async scheduleChargeJob(
-    tenantId: string,
-    subscriptionId: string,
-    chargeAt: Date,
-  ) {
+  private async scheduleChargeJob(tenantId: string, subscriptionId: string, chargeAt: Date) {
     const delay = chargeAt.getTime() - Date.now();
     await this.subsQueue.add(
       'charge-subscription',
@@ -716,11 +700,7 @@ export class SubscriptionService {
     );
   }
 
-  private async scheduleExpireJob(
-    tenantId: string,
-    subscriptionId: string,
-    delayMs: number,
-  ) {
+  private async scheduleExpireJob(tenantId: string, subscriptionId: string, delayMs: number) {
     await this.subsQueue.add(
       'expire-subscription',
       { tenantId, subscriptionId } as SubscriptionJobData,

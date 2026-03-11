@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import { ClipboardList, Archive, Calendar, Clock, Scissors, Timer, Wallet, FileText } from 'lucide-react';
+import {
+  ClipboardList,
+  Archive,
+  Calendar,
+  Clock,
+  Scissors,
+  Timer,
+  Wallet,
+  FileText,
+} from 'lucide-react';
 import { useBookings, useCancelBooking } from '@/hooks';
 import { Card, Tabs, EmptyState, SkeletonList, BottomSheet, Button } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
@@ -35,9 +44,7 @@ export function MyBookingsPage() {
 
   const bookings = bookingsData?.items || [];
 
-  const upcoming = bookings.filter(
-    (b) => b.status === 'pending' || b.status === 'confirmed',
-  );
+  const upcoming = bookings.filter((b) => b.status === 'pending' || b.status === 'confirmed');
   const history = bookings.filter(
     (b) => b.status === 'completed' || b.status === 'cancelled' || b.status === 'no_show',
   );
@@ -90,16 +97,19 @@ export function MyBookingsPage() {
               <div className={styles.bookingTop}>
                 <span className={styles.bookingService}>{booking.serviceNameSnapshot}</span>
                 {badge && (
-                  <span className={badge.className}>
-                    {intl.formatMessage({ id: badge.label })}
-                  </span>
+                  <span className={badge.className}>{intl.formatMessage({ id: badge.label })}</span>
                 )}
               </div>
               <div className={styles.bookingMeta}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> {formatDate(booking.startTime)}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> {formatTime(booking.startTime)}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Calendar size={14} /> {formatDate(booking.startTime)}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Clock size={14} /> {formatTime(booking.startTime)}
+                </span>
                 <span>
-                  {(booking.priceAtBooking / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+                  {(booking.priceAtBooking / 100).toFixed(0)}{' '}
+                  {intl.formatMessage({ id: 'common.uah' })}
                 </span>
               </div>
             </Card>
@@ -116,19 +126,38 @@ export function MyBookingsPage() {
         {selected && (
           <div className={styles.details}>
             <p className={styles.detailRow}>
-              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Scissors size={16} /> {selected.serviceNameSnapshot}</strong>
+              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Scissors size={16} /> {selected.serviceNameSnapshot}
+              </strong>
             </p>
-            <p className={styles.detailRow} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Calendar size={16} /> {formatDate(selected.startTime)}, {formatTime(selected.startTime)}
+            <p
+              className={styles.detailRow}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Calendar size={16} /> {formatDate(selected.startTime)},{' '}
+              {formatTime(selected.startTime)}
             </p>
-            <p className={styles.detailRow} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Timer size={16} /> {selected.durationAtBooking} {intl.formatMessage({ id: 'common.min' })}
+            <p
+              className={styles.detailRow}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Timer size={16} /> {selected.durationAtBooking}{' '}
+              {intl.formatMessage({ id: 'common.min' })}
             </p>
-            <p className={styles.detailRow} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Wallet size={16} /> {(selected.priceAtBooking / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+            <p
+              className={styles.detailRow}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <Wallet size={16} /> {(selected.priceAtBooking / 100).toFixed(0)}{' '}
+              {intl.formatMessage({ id: 'common.uah' })}
             </p>
             {selected.notes && (
-              <p className={styles.detailRow} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FileText size={16} /> {selected.notes}</p>
+              <p
+                className={styles.detailRow}
+                style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <FileText size={16} /> {selected.notes}
+              </p>
             )}
 
             {(selected.status === 'pending' || selected.status === 'confirmed') && (

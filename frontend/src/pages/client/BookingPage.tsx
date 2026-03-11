@@ -108,7 +108,10 @@ export function BookingPage() {
           <div>
             <h2 className={styles.serviceName}>{service.name}</h2>
             <p className="text-secondary">
-              {intl.formatMessage({ id: 'booking.duration' }, { duration: service.durationMinutes })}
+              {intl.formatMessage(
+                { id: 'booking.duration' },
+                { duration: service.durationMinutes },
+              )}
               {' · '}
               {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
             </p>
@@ -118,21 +121,13 @@ export function BookingPage() {
 
       {/* Step 1: Select date */}
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>
-          {intl.formatMessage({ id: 'booking.selectDate' })}
-        </h3>
-        <DatePicker
-          selectedDate={selectedDate}
-          onSelect={setSelectedDate}
-          daysAhead={30}
-        />
+        <h3 className={styles.sectionTitle}>{intl.formatMessage({ id: 'booking.selectDate' })}</h3>
+        <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={30} />
       </div>
 
       {/* Step 2: Select time */}
       <div className={styles.section}>
-        <h3 className={styles.sectionTitle}>
-          {intl.formatMessage({ id: 'booking.selectTime' })}
-        </h3>
+        <h3 className={styles.sectionTitle}>{intl.formatMessage({ id: 'booking.selectTime' })}</h3>
 
         {slotsLoading && (
           <div className="center" style={{ padding: 32 }}>

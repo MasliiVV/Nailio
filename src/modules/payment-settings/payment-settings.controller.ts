@@ -44,10 +44,7 @@ export class PaymentSettingsController {
   @Post()
   @RequiresActiveSubscription()
   @HttpCode(HttpStatus.CREATED)
-  async connect(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: ConnectPaymentSettingsDto,
-  ) {
+  async connect(@CurrentTenant() tenantId: string, @Body() dto: ConnectPaymentSettingsDto) {
     return this.paymentSettingsService.connect(tenantId, dto);
   }
 

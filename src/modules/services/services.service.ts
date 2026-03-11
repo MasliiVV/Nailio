@@ -1,11 +1,7 @@
 // docs/backlog.md #36-#38 — Services CRUD, soft-delete, validation
 // docs/api/endpoints.md — Services endpoints
 
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateServiceDto, UpdateServiceDto } from './dto/services.dto';
 

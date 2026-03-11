@@ -2,12 +2,7 @@
 // docs/backlog.md #25 — Bot auto-setup
 // docs/telegram/bot-architecture.md — Full bot lifecycle
 
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -36,10 +31,7 @@ export class BotService {
     private readonly configService: ConfigService,
   ) {
     this.appUrl = this.configService.get<string>('MINI_APP_URL', 'https://app.platform.com');
-    this.webhookBaseUrl = this.configService.get<string>(
-      'API_URL',
-      'https://api.platform.com',
-    );
+    this.webhookBaseUrl = this.configService.get<string>('API_URL', 'https://api.platform.com');
   }
 
   /**
@@ -49,10 +41,7 @@ export class BotService {
    */
   async connectBot(tenantId: string, dto: ConnectBotDto) {
     // Step 1: Validate token with getMe
-    const botInfo = await this.callTelegramApi<TelegramBotInfo>(
-      dto.botToken,
-      'getMe',
-    );
+    const botInfo = await this.callTelegramApi<TelegramBotInfo>(dto.botToken, 'getMe');
 
     if (!botInfo.is_bot) {
       throw new BadRequestException('Invalid bot token');
@@ -123,9 +112,7 @@ export class BotService {
     // Step 10: Update onboarding status
     await this.tenantsService.updateOnboardingStatus(tenantId, 'bot_connected');
 
-    this.logger.log(
-      `Bot connected: @${botInfo.username} for tenant ${tenant.slug}`,
-    );
+    this.logger.log(`Bot connected: @${botInfo.username} for tenant ${tenant.slug}`);
 
     return {
       id: bot.id,
@@ -196,18 +183,14 @@ export class BotService {
         chat_id: Number(chatId),
         text,
         parse_mode: options?.parseMode || 'HTML',
-        ...(options?.replyMarkup
-          ? { reply_markup: options.replyMarkup }
-          : {}),
+        ...(options?.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
       });
 
       return true;
     } catch (error: unknown) {
       // Handle 403 — bot blocked by user
       if (error instanceof Error && error.message.includes('403')) {
-        this.logger.warn(
-          `Bot blocked by user chat_id=${chatId}, bot=${botDbId}`,
-        );
+        this.logger.warn(`Bot blocked by user chat_id=${chatId}, bot=${botDbId}`);
         return false;
       }
       throw error;
@@ -225,10 +208,7 @@ export class BotService {
     }
 
     // Validate new token
-    const botInfo = await this.callTelegramApi<TelegramBotInfo>(
-      newToken,
-      'getMe',
-    );
+    const botInfo = await this.callTelegramApi<TelegramBotInfo>(newToken, 'getMe');
 
     // Delete old webhook
     try {
@@ -289,9 +269,7 @@ export class BotService {
     const data = (await response.json()) as { ok: boolean; result: T; description?: string };
 
     if (!data.ok) {
-      throw new BadRequestException(
-        `Telegram API error: ${data.description || 'Unknown error'}`,
-      );
+      throw new BadRequestException(`Telegram API error: ${data.description || 'Unknown error'}`);
     }
 
     return data.result;

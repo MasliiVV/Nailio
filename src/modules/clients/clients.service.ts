@@ -2,19 +2,10 @@
 // docs/api/endpoints.md — Clients endpoints
 // docs/database/schema.md — clients table
 
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Client } from '@prisma/client';
-import {
-  UpdateClientDto,
-  ClientListQueryDto,
-  ClientOnboardingDto,
-} from './dto/clients.dto';
+import { UpdateClientDto, ClientListQueryDto, ClientOnboardingDto } from './dto/clients.dto';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 
 @Injectable()
@@ -78,25 +69,24 @@ export class ClientsService {
     if (!client) throw new NotFoundException('Client not found');
 
     // Booking stats
-    const [totalBookings, completed, cancelled, noShows, totalSpent] =
-      await Promise.all([
-        this.prisma.tenantClient.booking.count({
-          where: { tenantId, clientId },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: { tenantId, clientId, status: 'completed' },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: { tenantId, clientId, status: 'cancelled' },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: { tenantId, clientId, status: 'no_show' },
-        }),
-        this.prisma.tenantClient.booking.aggregate({
-          where: { tenantId, clientId, status: 'completed' },
-          _sum: { priceAtBooking: true },
-        }),
-      ]);
+    const [totalBookings, completed, cancelled, noShows, totalSpent] = await Promise.all([
+      this.prisma.tenantClient.booking.count({
+        where: { tenantId, clientId },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: { tenantId, clientId, status: 'completed' },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: { tenantId, clientId, status: 'cancelled' },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: { tenantId, clientId, status: 'no_show' },
+      }),
+      this.prisma.tenantClient.booking.aggregate({
+        where: { tenantId, clientId, status: 'completed' },
+        _sum: { priceAtBooking: true },
+      }),
+    ]);
 
     // Recent bookings (#55)
     const recentBookings = await this.prisma.tenantClient.booking.findMany({
@@ -148,11 +138,7 @@ export class ClientsService {
   // docs/api/endpoints.md — PUT /api/v1/clients/:id
   // ──────────────────────────────────────────────
 
-  async update(
-    tenantId: string,
-    clientId: string,
-    dto: UpdateClientDto,
-  ) {
+  async update(tenantId: string, clientId: string, dto: UpdateClientDto) {
     const client = await this.prisma.tenantClient.client.findFirst({
       where: { id: clientId, tenantId },
     });
@@ -216,11 +202,7 @@ export class ClientsService {
   // Auto-creates client record on first interaction
   // ──────────────────────────────────────────────
 
-  async onboarding(
-    tenantId: string,
-    user: JwtPayload,
-    dto: ClientOnboardingDto,
-  ) {
+  async onboarding(tenantId: string, user: JwtPayload, dto: ClientOnboardingDto) {
     if (!user.clientId) {
       throw new BadRequestException('Client context required');
     }
@@ -242,9 +224,7 @@ export class ClientsService {
       },
     });
 
-    this.logger.log(
-      `Client onboarding completed: ${updated.id} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Client onboarding completed: ${updated.id} in tenant ${tenantId}`);
 
     return {
       id: updated.id,

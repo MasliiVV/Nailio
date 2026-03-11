@@ -33,8 +33,7 @@ export class OnboardingService {
     ]);
 
     const hasBranding = !!(
-      (tenant.branding as Record<string, unknown>)?.primary_color ||
-      tenant.logoUrl
+      (tenant.branding as Record<string, unknown>)?.primary_color || tenant.logoUrl
     );
 
     return {

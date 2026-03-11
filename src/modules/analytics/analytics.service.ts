@@ -2,12 +2,8 @@
 // docs/api/endpoints.md — GET /api/v1/analytics/dashboard, GET /api/v1/analytics/daily
 // BullMQ daily aggregation + dashboard API
 
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AnalyticsService {
@@ -20,10 +16,7 @@ export class AnalyticsService {
    * docs/api/endpoints.md — GET /api/v1/analytics/dashboard
    * Returns today's stats + period stats
    */
-  async getDashboard(
-    tenantId: string,
-    period: 'week' | 'month' | 'year' = 'month',
-  ) {
+  async getDashboard(tenantId: string, period: 'week' | 'month' | 'year' = 'month') {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
@@ -39,12 +32,7 @@ export class AnalyticsService {
     }
 
     // Today's stats (real-time from bookings)
-    const [
-      todayBookings,
-      todayCompleted,
-      todayRevenue,
-      nextBooking,
-    ] = await Promise.all([
+    const [todayBookings, todayCompleted, todayRevenue, nextBooking] = await Promise.all([
       this.prisma.tenantClient.booking.count({
         where: {
           tenantId,
@@ -103,7 +91,8 @@ export class AnalyticsService {
               serviceName: nextBooking.serviceNameSnapshot,
               startTime: nextBooking.startTime.toISOString(),
               endTime: nextBooking.endTime.toISOString(),
-              clientName: `${nextBooking.client.firstName} ${nextBooking.client.lastName || ''}`.trim(),
+              clientName:
+                `${nextBooking.client.firstName} ${nextBooking.client.lastName || ''}`.trim(),
             }
           : null,
       },
@@ -118,11 +107,7 @@ export class AnalyticsService {
    * Daily analytics for a date range.
    * docs/api/endpoints.md — GET /api/v1/analytics/daily
    */
-  async getDailyStats(
-    tenantId: string,
-    dateFrom: string,
-    dateTo: string,
-  ) {
+  async getDailyStats(tenantId: string, dateFrom: string, dateTo: string) {
     const records = await this.prisma.tenantClient.analyticsDaily.findMany({
       where: {
         tenantId,
@@ -153,47 +138,46 @@ export class AnalyticsService {
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-    const [total, completed, cancelled, noShow, revenue, newClients] =
-      await Promise.all([
-        this.prisma.tenantClient.booking.count({
-          where: { tenantId, startTime: { gte: dayStart, lt: dayEnd } },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: dayStart, lt: dayEnd },
-            status: 'completed',
-          },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: dayStart, lt: dayEnd },
-            status: 'cancelled',
-          },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: dayStart, lt: dayEnd },
-            status: 'no_show',
-          },
-        }),
-        this.prisma.tenantClient.booking.aggregate({
-          where: {
-            tenantId,
-            startTime: { gte: dayStart, lt: dayEnd },
-            status: 'completed',
-          },
-          _sum: { priceAtBooking: true },
-        }),
-        this.prisma.tenantClient.client.count({
-          where: {
-            tenantId,
-            createdAt: { gte: dayStart, lt: dayEnd },
-          },
-        }),
-      ]);
+    const [total, completed, cancelled, noShow, revenue, newClients] = await Promise.all([
+      this.prisma.tenantClient.booking.count({
+        where: { tenantId, startTime: { gte: dayStart, lt: dayEnd } },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: dayStart, lt: dayEnd },
+          status: 'completed',
+        },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: dayStart, lt: dayEnd },
+          status: 'cancelled',
+        },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: dayStart, lt: dayEnd },
+          status: 'no_show',
+        },
+      }),
+      this.prisma.tenantClient.booking.aggregate({
+        where: {
+          tenantId,
+          startTime: { gte: dayStart, lt: dayEnd },
+          status: 'completed',
+        },
+        _sum: { priceAtBooking: true },
+      }),
+      this.prisma.tenantClient.client.count({
+        where: {
+          tenantId,
+          createdAt: { gte: dayStart, lt: dayEnd },
+        },
+      }),
+    ]);
 
     // Upsert analytics record
     await this.prisma.tenantClient.analyticsDaily.upsert({
@@ -229,56 +213,51 @@ export class AnalyticsService {
   // Helpers
   // ──────────────────────────────────────────────
 
-  private async getPeriodStats(
-    tenantId: string,
-    from: Date,
-    to: Date,
-  ) {
-    const [totalBookings, completed, cancelled, noShows, revenue, newClients] =
-      await Promise.all([
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: from, lt: to },
-            status: { notIn: ['cancelled'] },
-          },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: from, lt: to },
-            status: 'completed',
-          },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: from, lt: to },
-            status: 'cancelled',
-          },
-        }),
-        this.prisma.tenantClient.booking.count({
-          where: {
-            tenantId,
-            startTime: { gte: from, lt: to },
-            status: 'no_show',
-          },
-        }),
-        this.prisma.tenantClient.booking.aggregate({
-          where: {
-            tenantId,
-            startTime: { gte: from, lt: to },
-            status: 'completed',
-          },
-          _sum: { priceAtBooking: true },
-        }),
-        this.prisma.tenantClient.client.count({
-          where: {
-            tenantId,
-            createdAt: { gte: from, lt: to },
-          },
-        }),
-      ]);
+  private async getPeriodStats(tenantId: string, from: Date, to: Date) {
+    const [totalBookings, completed, cancelled, noShows, revenue, newClients] = await Promise.all([
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: from, lt: to },
+          status: { notIn: ['cancelled'] },
+        },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: from, lt: to },
+          status: 'completed',
+        },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: from, lt: to },
+          status: 'cancelled',
+        },
+      }),
+      this.prisma.tenantClient.booking.count({
+        where: {
+          tenantId,
+          startTime: { gte: from, lt: to },
+          status: 'no_show',
+        },
+      }),
+      this.prisma.tenantClient.booking.aggregate({
+        where: {
+          tenantId,
+          startTime: { gte: from, lt: to },
+          status: 'completed',
+        },
+        _sum: { priceAtBooking: true },
+      }),
+      this.prisma.tenantClient.client.count({
+        where: {
+          tenantId,
+          createdAt: { gte: from, lt: to },
+        },
+      }),
+    ]);
 
     return {
       totalBookings,
@@ -290,11 +269,7 @@ export class AnalyticsService {
     };
   }
 
-  private async getPopularServices(
-    tenantId: string,
-    from: Date,
-    to: Date,
-  ) {
+  private async getPopularServices(tenantId: string, from: Date, to: Date) {
     const services = await this.prisma.tenantClient.booking.groupBy({
       by: ['serviceNameSnapshot'],
       where: {

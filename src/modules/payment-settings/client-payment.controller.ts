@@ -29,7 +29,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
-import { createHash, createVerify } from 'crypto';
+import { createHash } from 'crypto';
 import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 
@@ -82,10 +82,7 @@ export class ClientPaymentController {
   @Post('webhooks/client-payment/monobank')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async handleMonobankClientWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Res() res: Response,
-  ) {
+  async handleMonobankClientWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response) {
     try {
       const rawBody = req.rawBody;
       if (!rawBody) return res.status(400).send('Missing body');
@@ -101,6 +98,7 @@ export class ClientPaymentController {
       }
 
       const ref = JSON.parse(refStr);
+      void ref; // parsed to validate JSON
 
       const status = payload.status === 'success' ? 'success' : 'failure';
 
@@ -125,10 +123,7 @@ export class ClientPaymentController {
   @Post('webhooks/client-payment/liqpay')
   @Public()
   @HttpCode(HttpStatus.OK)
-  async handleLiqPayClientWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Res() res: Response,
-  ) {
+  async handleLiqPayClientWebhook(@Req() req: RawBodyRequest<Request>, @Res() res: Response) {
     try {
       const rawBody = req.rawBody;
       if (!rawBody) return res.status(400).send('Missing body');
@@ -167,9 +162,7 @@ export class ClientPaymentController {
       }
 
       const status =
-        decoded.status === 'success' || decoded.status === 'sandbox'
-          ? 'success'
-          : 'failure';
+        decoded.status === 'success' || decoded.status === 'sandbox' ? 'success' : 'failure';
 
       await this.clientPaymentService.handleClientPaymentWebhook(
         'liqpay',

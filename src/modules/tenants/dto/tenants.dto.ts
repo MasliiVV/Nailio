@@ -1,15 +1,7 @@
 // docs/database/schema.md — tenants table
 // docs/api/endpoints.md — Tenant Settings
 
-import {
-  IsString,
-  IsOptional,
-  IsEmail,
-  IsObject,
-  MaxLength,
-  MinLength,
-  Matches,
-} from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsObject, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**

@@ -17,23 +17,10 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ScheduleService } from './schedule.service';
-import {
-  UpdateWorkingHoursDto,
-  CreateOverrideDto,
-  ScheduleResponseDto,
-} from './dto/schedule.dto';
-import {
-  Roles,
-  RequiresActiveSubscription,
-  CurrentTenant,
-} from '../../common/decorators';
+import { UpdateWorkingHoursDto, CreateOverrideDto, ScheduleResponseDto } from './dto/schedule.dto';
+import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
 
 @ApiTags('Schedule')
@@ -63,10 +50,7 @@ export class ScheduleController {
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Update weekly working hours' })
   @ApiResponse({ status: 200, type: ScheduleResponseDto })
-  async updateHours(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: UpdateWorkingHoursDto,
-  ) {
+  async updateHours(@CurrentTenant() tenantId: string, @Body() dto: UpdateWorkingHoursDto) {
     return this.scheduleService.updateWorkingHours(tenantId, dto);
   }
 
@@ -80,10 +64,7 @@ export class ScheduleController {
   @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add schedule override' })
-  async createOverride(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: CreateOverrideDto,
-  ) {
+  async createOverride(@CurrentTenant() tenantId: string, @Body() dto: CreateOverrideDto) {
     return this.scheduleService.createOverride(tenantId, dto);
   }
 
@@ -99,10 +80,7 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Delete schedule override' })
   @ApiResponse({ status: 204 })
   @ApiResponse({ status: 404, description: 'Override not found' })
-  async deleteOverride(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async deleteOverride(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.scheduleService.deleteOverride(tenantId, id);
   }
 }

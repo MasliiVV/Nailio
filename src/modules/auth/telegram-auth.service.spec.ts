@@ -46,14 +46,10 @@ describe('TelegramAuthService', () => {
       .join('\n');
 
     // secret_key = HMAC_SHA256("WebAppData", bot_token)
-    const secretKey = createHmac('sha256', 'WebAppData')
-      .update(token)
-      .digest();
+    const secretKey = createHmac('sha256', 'WebAppData').update(token).digest();
 
     // hash = hex(HMAC_SHA256(data_check_string, secret_key))
-    const hash = createHmac('sha256', secretKey)
-      .update(dataCheckString)
-      .digest('hex');
+    const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
     const searchParams = new URLSearchParams({
       ...params,
@@ -95,9 +91,7 @@ describe('TelegramAuthService', () => {
         user: JSON.stringify({ id: 1, first_name: 'Test' }),
       });
 
-      expect(() => service.validate(params.toString(), botToken)).toThrow(
-        UnauthorizedException,
-      );
+      expect(() => service.validate(params.toString(), botToken)).toThrow(UnauthorizedException);
     });
 
     it('should throw on invalid hash (tampered data)', () => {
@@ -105,26 +99,20 @@ describe('TelegramAuthService', () => {
       // Tamper with the data
       const tampered = initData.replace('hash=', 'hash=deadbeef');
 
-      expect(() => service.validate(tampered, botToken)).toThrow(
-        UnauthorizedException,
-      );
+      expect(() => service.validate(tampered, botToken)).toThrow(UnauthorizedException);
     });
 
     it('should throw on wrong bot token', () => {
       const initData = buildInitData();
 
-      expect(() =>
-        service.validate(initData, 'wrong:token'),
-      ).toThrow(UnauthorizedException);
+      expect(() => service.validate(initData, 'wrong:token')).toThrow(UnauthorizedException);
     });
 
     it('should throw on expired initData (>5 minutes)', () => {
       const oldAuthDate = Math.floor(Date.now() / 1000) - 400; // 6+ minutes ago
       const initData = buildInitData({ authDate: oldAuthDate });
 
-      expect(() => service.validate(initData, botToken)).toThrow(
-        UnauthorizedException,
-      );
+      expect(() => service.validate(initData, botToken)).toThrow(UnauthorizedException);
     });
 
     it('should accept initData within 5 minute window', () => {
@@ -146,12 +134,8 @@ describe('TelegramAuthService', () => {
         .map(([k, v]) => `${k}=${v}`)
         .join('\n');
 
-      const secretKey = createHmac('sha256', 'WebAppData')
-        .update(botToken)
-        .digest();
-      const hash = createHmac('sha256', secretKey)
-        .update(dataCheckString)
-        .digest('hex');
+      const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+      const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
       const searchParams = new URLSearchParams({ ...params, hash });
 
@@ -172,12 +156,8 @@ describe('TelegramAuthService', () => {
         .map(([k, v]) => `${k}=${v}`)
         .join('\n');
 
-      const secretKey = createHmac('sha256', 'WebAppData')
-        .update(botToken)
-        .digest();
-      const hash = createHmac('sha256', secretKey)
-        .update(dataCheckString)
-        .digest('hex');
+      const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
+      const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
       const searchParams = new URLSearchParams({ ...params, hash });
 

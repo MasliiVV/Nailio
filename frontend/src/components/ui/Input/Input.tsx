@@ -14,13 +14,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && <label className={styles.label}>{label}</label>}
         <input
           ref={ref}
-          className={[
-            styles.input,
-            error ? styles.error : '',
-            className,
-          ]
-            .filter(Boolean)
-            .join(' ')}
+          className={[styles.input, error ? styles.error : '', className].filter(Boolean).join(' ')}
           {...props}
         />
         {error && <span className={styles.errorText}>{error}</span>}

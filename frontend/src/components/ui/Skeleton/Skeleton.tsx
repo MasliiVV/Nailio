@@ -14,10 +14,7 @@ export function Skeleton({
   className = '',
 }: SkeletonProps) {
   return (
-    <div
-      className={`${styles.skeleton} ${className}`}
-      style={{ width, height, borderRadius }}
-    />
+    <div className={`${styles.skeleton} ${className}`} style={{ width, height, borderRadius }} />
   );
 }
 

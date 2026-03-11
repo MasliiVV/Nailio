@@ -64,17 +64,14 @@ export class MonobankProvider implements PaymentProvider {
       };
     }
 
-    const response = await fetch(
-      `${this.baseUrl}/api/merchant/invoice/create`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Token': this.merchantToken,
-        },
-        body: JSON.stringify(body),
+    const response = await fetch(`${this.baseUrl}/api/merchant/invoice/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Token': this.merchantToken,
       },
-    );
+      body: JSON.stringify(body),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -96,10 +93,7 @@ export class MonobankProvider implements PaymentProvider {
    *   Header: X-Sign: {ECDSA signature of body}
    *   Verify with public key (GET /api/merchant/pubkey, cached 24h)
    */
-  async verifyWebhook(
-    headers: Record<string, string>,
-    body: Buffer,
-  ): Promise<WebhookPayload> {
+  async verifyWebhook(headers: Record<string, string>, body: Buffer): Promise<WebhookPayload> {
     const signature = headers['x-sign'];
     if (!signature) {
       throw new Error('Missing X-Sign header');
@@ -156,25 +150,22 @@ export class MonobankProvider implements PaymentProvider {
    * docs/payments/overview.md — POST /api/merchant/wallet/payment
    */
   async chargeToken(params: ChargeTokenParams): Promise<ChargeResult> {
-    const response = await fetch(
-      `${this.baseUrl}/api/merchant/wallet/payment`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Token': this.merchantToken,
-        },
-        body: JSON.stringify({
-          walletId: params.cardToken,
-          amount: params.amountKopecks,
-          ccy: 980,
-          merchantPaymInfo: {
-            reference: params.orderId,
-            destination: params.description,
-          },
-        }),
+    const response = await fetch(`${this.baseUrl}/api/merchant/wallet/payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Token': this.merchantToken,
       },
-    );
+      body: JSON.stringify({
+        walletId: params.cardToken,
+        amount: params.amountKopecks,
+        ccy: 980,
+        merchantPaymInfo: {
+          reference: params.orderId,
+          destination: params.description,
+        },
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text();

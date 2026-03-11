@@ -6,19 +6,16 @@ import { BookingsService } from './bookings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import {
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SlotsQueryDto } from './dto/bookings.dto';
 
 describe('BookingsService', () => {
   let service: BookingsService;
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   let prisma: any;
   let scheduleService: any;
   let notificationsService: any;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const tenantId = 'tenant-uuid-1';
 
@@ -150,6 +147,7 @@ describe('BookingsService', () => {
 
       const result = await service.getAvailableSlots(tenantId, query);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const slot1000 = result.slots.find((s: any) => s.startTime === '10:00');
       expect(slot1000?.available).toBe(false);
     });
@@ -163,9 +161,7 @@ describe('BookingsService', () => {
 
       prisma.tenantClient.service.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.getAvailableSlots(tenantId, query),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.getAvailableSlots(tenantId, query)).rejects.toThrow(NotFoundException);
     });
 
     it('should account for buffer time between bookings', async () => {
@@ -231,17 +227,13 @@ describe('BookingsService', () => {
         status: 'cancelled',
       });
 
-      await expect(
-        service.complete(tenantId, 'booking-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.complete(tenantId, 'booking-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw if booking not found', async () => {
       prisma.tenantClient.booking.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.complete(tenantId, 'nonexistent'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.complete(tenantId, 'nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -293,9 +285,7 @@ describe('BookingsService', () => {
         status: 'completed',
       });
 
-      await expect(
-        service.confirm(tenantId, 'booking-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.confirm(tenantId, 'booking-1')).rejects.toThrow(BadRequestException);
     });
   });
 });

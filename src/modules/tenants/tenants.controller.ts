@@ -4,27 +4,10 @@
 // PUT /api/v1/settings/general 🔑👑⚡
 // POST /api/v1/settings/logo 🔑👑⚡
 
-import {
-  Controller,
-  Get,
-  Put,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Put, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
-import {
-  UpdateBrandingDto,
-  UpdateGeneralSettingsDto,
-  TenantResponseDto,
-} from './dto/tenants.dto';
+import { UpdateBrandingDto, UpdateGeneralSettingsDto, TenantResponseDto } from './dto/tenants.dto';
 import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
 
@@ -58,10 +41,7 @@ export class TenantsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update branding settings' })
   @ApiResponse({ status: 200, type: TenantResponseDto })
-  async updateBranding(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: UpdateBrandingDto,
-  ) {
+  async updateBranding(@CurrentTenant() tenantId: string, @Body() dto: UpdateBrandingDto) {
     return this.tenantsService.updateBranding(tenantId, dto);
   }
 

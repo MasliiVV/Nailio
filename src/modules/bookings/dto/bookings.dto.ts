@@ -2,14 +2,7 @@
 // docs/database/schema.md — bookings table
 // docs/backlog.md #44-#50 — Booking system DTOs
 
-import {
-  IsString,
-  IsUUID,
-  IsOptional,
-  IsDateString,
-  MaxLength,
-  IsEnum,
-} from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsDateString, MaxLength, IsEnum } from 'class-validator';
 import { BookingStatus } from '@prisma/client';
 
 // ──────────────────────────────────────────────
@@ -30,7 +23,7 @@ export class SlotsQueryDto {
 
 export class SlotDto {
   startTime!: string; // "09:00"
-  endTime!: string;   // "10:00"
+  endTime!: string; // "10:00"
   available!: boolean;
 }
 

@@ -56,7 +56,10 @@ export function ServicesPage() {
 
   return (
     <div className="page animate-fade-in">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className="page-header"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
         <h1 className="page-title">{intl.formatMessage({ id: 'services.title' })}</h1>
         <Button
           size="sm"
@@ -84,28 +87,50 @@ export function ServicesPage() {
         />
       )}
 
-      {services && services.map((service: Service) => (
-        <Card key={service.id} style={{ marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-            <div style={{ width: 6, height: 40, borderRadius: 3, background: service.color || 'var(--color-primary)', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{service.name}</div>
-              <div className="text-secondary" style={{ fontSize: 13 }}>
-                {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} · {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+      {services &&
+        services.map((service: Service) => (
+          <Card key={service.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+              <div
+                style={{
+                  width: 6,
+                  height: 40,
+                  borderRadius: 3,
+                  background: service.color || 'var(--color-primary)',
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{service.name}</div>
+                <div className="text-secondary" style={{ fontSize: 13 }}>
+                  {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} ·{' '}
+                  {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="touchable" onClick={() => handleEdit(service)} aria-label="Edit">
+                  <Pencil size={18} />
+                </button>
+                <button
+                  className="touchable"
+                  onClick={() => deleteService.mutate(service.id)}
+                  aria-label="Delete"
+                >
+                  <Trash2 size={18} />
+                </button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="touchable" onClick={() => handleEdit(service)} aria-label="Edit"><Pencil size={18} /></button>
-              <button className="touchable" onClick={() => deleteService.mutate(service.id)} aria-label="Delete"><Trash2 size={18} /></button>
-            </div>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ))}
 
       <BottomSheet
         open={showForm}
         onClose={resetForm}
-        title={editing ? intl.formatMessage({ id: 'common.edit' }) : intl.formatMessage({ id: 'services.addService' })}
+        title={
+          editing
+            ? intl.formatMessage({ id: 'common.edit' })
+            : intl.formatMessage({ id: 'services.addService' })
+        }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Input

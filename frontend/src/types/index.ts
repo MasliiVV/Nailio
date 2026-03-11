@@ -91,7 +91,7 @@ export interface WorkingHours {
   dayOfWeek: number; // 0=Mon ... 6=Sun
   isWorking: boolean;
   startTime: string; // "09:00"
-  endTime: string;   // "18:00"
+  endTime: string; // "18:00"
 }
 
 export interface ScheduleOverride {
@@ -117,7 +117,7 @@ export interface CreateOverrideDto {
 // ---- Slots ----
 export interface TimeSlot {
   startTime: string; // "09:00"
-  endTime: string;   // "10:00"
+  endTime: string; // "10:00"
   available: boolean;
 }
 

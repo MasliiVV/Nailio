@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type {
-  ApiResponse,
-  Client,
-  ClientDetail,
-  PaginatedResponse,
-} from '@/types';
+import type { ApiResponse, Client, ClientDetail, PaginatedResponse } from '@/types';
 import { getTelegram } from '@/lib/telegram';
 
 export const clientKeys = {

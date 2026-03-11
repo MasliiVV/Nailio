@@ -10,6 +10,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 describe('SubscriptionGuard', () => {
   let guard: SubscriptionGuard;
   let reflector: Reflector;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prisma: any;
 
   beforeEach(() => {
@@ -22,7 +23,11 @@ describe('SubscriptionGuard', () => {
     guard = new SubscriptionGuard(reflector, prisma);
   });
 
-  function createMockContext(user: any = null, overrides: { isPublic?: boolean; requiresActive?: boolean } = {}) {
+  function createMockContext(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    user: any = null,
+    overrides: { isPublic?: boolean; requiresActive?: boolean } = {},
+  ) {
     const handler = jest.fn();
     const cls = jest.fn();
 
@@ -38,6 +43,7 @@ describe('SubscriptionGuard', () => {
       switchToHttp: () => ({
         getRequest: () => ({ user }),
       }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   }
 

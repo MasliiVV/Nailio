@@ -34,10 +34,7 @@ export class BotCryptoService {
     const iv = randomBytes(12); // GCM standard: 12 bytes IV
     const cipher = createCipheriv('aes-256-gcm', this.encryptionKey, iv);
 
-    const encrypted = Buffer.concat([
-      cipher.update(plainText, 'utf8'),
-      cipher.final(),
-    ]);
+    const encrypted = Buffer.concat([cipher.update(plainText, 'utf8'), cipher.final()]);
 
     const authTag = cipher.getAuthTag(); // 16 bytes
 
@@ -57,10 +54,7 @@ export class BotCryptoService {
     const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
     decipher.setAuthTag(authTag);
 
-    const decrypted = Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(),
-    ]);
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 
     return decrypted.toString('utf8');
   }

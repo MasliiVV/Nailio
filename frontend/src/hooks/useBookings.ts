@@ -15,7 +15,8 @@ export const bookingKeys = {
   all: ['bookings'] as const,
   list: (params?: Record<string, string>) => [...bookingKeys.all, 'list', params] as const,
   detail: (id: string) => [...bookingKeys.all, id] as const,
-  slots: (date: string, serviceId: string) => [...bookingKeys.all, 'slots', date, serviceId] as const,
+  slots: (date: string, serviceId: string) =>
+    [...bookingKeys.all, 'slots', date, serviceId] as const,
 };
 
 // ---- Fetch slots ----

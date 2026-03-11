@@ -37,10 +37,7 @@ export class HealthService {
   }
 
   async check(): Promise<HealthStatus> {
-    const [database, redis] = await Promise.all([
-      this.checkDatabase(),
-      this.checkRedis(),
-    ]);
+    const [database, redis] = await Promise.all([this.checkDatabase(), this.checkRedis()]);
 
     const allOk = database.status === 'ok' && redis.status === 'ok';
     const allDown = database.status === 'down' && redis.status === 'down';

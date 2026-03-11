@@ -37,7 +37,11 @@ export function FinancePage() {
   const isLoading = loadingTx || loadingSummary;
 
   if (isLoading) {
-    return <div className="page"><SkeletonList count={5} /></div>;
+    return (
+      <div className="page">
+        <SkeletonList count={5} />
+      </div>
+    );
   }
 
   return (
@@ -52,11 +56,15 @@ export function FinancePage() {
       {summary && (
         <div className={styles.summaryGrid}>
           <div className={styles.summaryCard} data-type="income">
-            <span className={styles.summaryLabel}>{intl.formatMessage({ id: 'finance.income' })}</span>
+            <span className={styles.summaryLabel}>
+              {intl.formatMessage({ id: 'finance.income' })}
+            </span>
             <span className={styles.summaryValue}>+{(summary.income / 100).toFixed(0)} ₴</span>
           </div>
           <div className={styles.summaryCard} data-type="expense">
-            <span className={styles.summaryLabel}>{intl.formatMessage({ id: 'finance.expenses' })}</span>
+            <span className={styles.summaryLabel}>
+              {intl.formatMessage({ id: 'finance.expenses' })}
+            </span>
             <span className={styles.summaryValue}>-{(summary.expense / 100).toFixed(0)} ₴</span>
           </div>
           <div className={styles.summaryCard} data-type="net">
@@ -75,24 +83,30 @@ export function FinancePage() {
         />
       )}
 
-      {transactions && transactions.items.map((tx: Transaction) => (
-        <Card key={tx.id} style={{ marginBottom: 6 }}>
-          <div className={styles.txRow}>
-            <div className={styles.txIcon}>
-              {tx.type === 'income' ? <TrendingUp size={20} color="var(--color-success)" /> : <TrendingDown size={20} color="var(--color-destructive)" />}
-            </div>
-            <div className={styles.txInfo}>
-              <span className={styles.txDesc}>{tx.description}</span>
-              <span className={styles.txDate}>
-                {new Date(tx.createdAt).toLocaleDateString('uk-UA')}
+      {transactions &&
+        transactions.items.map((tx: Transaction) => (
+          <Card key={tx.id} style={{ marginBottom: 6 }}>
+            <div className={styles.txRow}>
+              <div className={styles.txIcon}>
+                {tx.type === 'income' ? (
+                  <TrendingUp size={20} color="var(--color-success)" />
+                ) : (
+                  <TrendingDown size={20} color="var(--color-destructive)" />
+                )}
+              </div>
+              <div className={styles.txInfo}>
+                <span className={styles.txDesc}>{tx.description}</span>
+                <span className={styles.txDate}>
+                  {new Date(tx.createdAt).toLocaleDateString('uk-UA')}
+                </span>
+              </div>
+              <span className={styles.txAmount} data-type={tx.type}>
+                {tx.type === 'income' ? '+' : '-'}
+                {(tx.amount / 100).toFixed(0)} ₴
               </span>
             </div>
-            <span className={styles.txAmount} data-type={tx.type}>
-              {tx.type === 'income' ? '+' : '-'}{(tx.amount / 100).toFixed(0)} ₴
-            </span>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        ))}
 
       <BottomSheet
         open={showForm}

@@ -96,7 +96,14 @@ export function SettingsPage() {
             onChange={(e) => setWelcomeMessage(e.target.value)}
           />
           <div>
-            <label style={{ display: 'block', fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                color: 'var(--color-text-secondary)',
+                marginBottom: 4,
+              }}
+            >
               {intl.formatMessage({ id: 'settings.primaryColor' })}
             </label>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -104,9 +111,17 @@ export function SettingsPage() {
                 type="color"
                 value={primaryColor}
                 onChange={(e) => setPrimaryColor(e.target.value)}
-                style={{ width: 48, height: 48, border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                }}
               />
-              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>{primaryColor}</span>
+              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                {primaryColor}
+              </span>
             </div>
           </div>
           <Button fullWidth loading={saving} onClick={handleSaveBranding}>

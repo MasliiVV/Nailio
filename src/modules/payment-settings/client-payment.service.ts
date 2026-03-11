@@ -12,23 +12,12 @@
 //   4. Client pays on Monobank/LiqPay page
 //   5. Webhook → update booking payment status + create transaction
 
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentSettingsService } from '../payment-settings/payment-settings.service';
-import {
-  CreatePaymentParams,
-  PaymentProvider,
-  WebhookPayload,
-} from '../subscription/providers/payment-provider.interface';
-import { MonobankProvider } from '../subscription/providers/monobank.provider';
-import { LiqPayProvider } from '../subscription/providers/liqpay.provider';
-import { createHash, createVerify } from 'crypto';
+import { CreatePaymentParams } from '../subscription/providers/payment-provider.interface';
+import { createHash } from 'crypto';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -208,26 +197,23 @@ export class ClientPaymentService {
   ) {
     if (provider === 'monobank') {
       // Monobank: POST /api/merchant/invoice/create with master's X-Token
-      const response = await fetch(
-        'https://api.monobank.ua/api/merchant/invoice/create',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Token': apiToken,
-          },
-          body: JSON.stringify({
-            amount: params.amountKopecks,
-            ccy: 980,
-            merchantPaymInfo: {
-              reference: params.orderId,
-              destination: params.description,
-            },
-            redirectUrl: params.redirectUrl,
-            webHookUrl: params.webhookUrl,
-          }),
+      const response = await fetch('https://api.monobank.ua/api/merchant/invoice/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Token': apiToken,
         },
-      );
+        body: JSON.stringify({
+          amount: params.amountKopecks,
+          ccy: 980,
+          merchantPaymInfo: {
+            reference: params.orderId,
+            destination: params.description,
+          },
+          redirectUrl: params.redirectUrl,
+          webHookUrl: params.webhookUrl,
+        }),
+      });
 
       if (!response.ok) {
         throw new BadRequestException('Failed to create Monobank payment');

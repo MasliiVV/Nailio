@@ -11,10 +11,7 @@ export type { AuthResponse };
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
 /** Authenticate via Telegram initData */
-export async function authenticate(
-  initData: string,
-  startParam?: string,
-): Promise<AuthResponse> {
+export async function authenticate(initData: string, startParam?: string): Promise<AuthResponse> {
   const data = await api.post<AuthResponse>(
     '/auth/telegram',
     { initData, startParam },

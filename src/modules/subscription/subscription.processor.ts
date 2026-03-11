@@ -17,7 +17,12 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ClsService } from 'nestjs-cls';
-import { SubscriptionService, SubscriptionJobData, TrialReminderJobData, RetryJobData } from './subscription.service';
+import {
+  SubscriptionService,
+  SubscriptionJobData,
+  TrialReminderJobData,
+  RetryJobData,
+} from './subscription.service';
 import { QUEUE_NAMES, withTenantContext, TenantJobData } from '../../common/bullmq/tenant-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BotCryptoService } from '../telegram/bot-crypto.service';
@@ -37,32 +42,28 @@ export class SubscriptionProcessor extends WorkerHost {
 
   async process(job: Job): Promise<void> {
     // Wrap with tenant context for Prisma auto-scoping
-    const handler = withTenantContext<TenantJobData>(
-      this.cls,
-      this.logger,
-      async (j) => {
-        const data = j.data;
-        switch (j.name) {
-          case 'check-trial-end':
-            await this.handleTrialEnd(data as unknown as SubscriptionJobData);
-            break;
-          case 'trial-reminder':
-            await this.handleTrialReminder(data as unknown as TrialReminderJobData);
-            break;
-          case 'charge-subscription':
-            await this.handleCharge(data as unknown as SubscriptionJobData);
-            break;
-          case 'retry-subscription-payment':
-            await this.handleRetry(data as unknown as RetryJobData);
-            break;
-          case 'expire-subscription':
-            await this.handleExpire(data as unknown as SubscriptionJobData);
-            break;
-          default:
-            this.logger.warn(`Unknown job name: ${j.name}`);
-        }
-      },
-    );
+    const handler = withTenantContext<TenantJobData>(this.cls, this.logger, async (j) => {
+      const data = j.data;
+      switch (j.name) {
+        case 'check-trial-end':
+          await this.handleTrialEnd(data as unknown as SubscriptionJobData);
+          break;
+        case 'trial-reminder':
+          await this.handleTrialReminder(data as unknown as TrialReminderJobData);
+          break;
+        case 'charge-subscription':
+          await this.handleCharge(data as unknown as SubscriptionJobData);
+          break;
+        case 'retry-subscription-payment':
+          await this.handleRetry(data as unknown as RetryJobData);
+          break;
+        case 'expire-subscription':
+          await this.handleExpire(data as unknown as SubscriptionJobData);
+          break;
+        default:
+          this.logger.warn(`Unknown job name: ${j.name}`);
+      }
+    });
 
     await handler(job as Job<TenantJobData>);
   }
@@ -136,10 +137,7 @@ export class SubscriptionProcessor extends WorkerHost {
    * Send subscription notification to master via their Telegram bot.
    * Uses same pattern as notifications processor.
    */
-  private async sendSubscriptionNotification(
-    tenantId: string,
-    message: string,
-  ) {
+  private async sendSubscriptionNotification(tenantId: string, message: string) {
     try {
       // Find master's telegram user
       const master = await this.prisma.master.findFirst({
@@ -157,25 +155,19 @@ export class SubscriptionProcessor extends WorkerHost {
       if (!bot) return;
 
       // Decrypt bot token and send message
-      const botToken = await this.botCrypto.getCachedToken(
-        bot.id,
-        bot.botTokenEncrypted,
-      );
+      const botToken = await this.botCrypto.getCachedToken(bot.id, bot.botTokenEncrypted);
 
       const telegramId = master.user.telegramId.toString();
 
-      const response = await fetch(
-        `https://api.telegram.org/bot${botToken}/sendMessage`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: telegramId,
-            text: message,
-            parse_mode: 'HTML',
-          }),
-        },
-      );
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: telegramId,
+          text: message,
+          parse_mode: 'HTML',
+        }),
+      });
 
       if (!response.ok) {
         const errData = await response.json();

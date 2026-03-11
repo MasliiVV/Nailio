@@ -66,7 +66,11 @@ export function SchedulePage() {
   };
 
   if (isLoading) {
-    return <div className="page"><SkeletonList count={7} /></div>;
+    return (
+      <div className="page">
+        <SkeletonList count={7} />
+      </div>
+    );
   }
 
   return (
@@ -74,7 +78,9 @@ export function SchedulePage() {
       <h1 className="page-title">{intl.formatMessage({ id: 'schedule.title' })}</h1>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>{intl.formatMessage({ id: 'schedule.workingHours' })}</h2>
+        <h2 className={styles.sectionTitle}>
+          {intl.formatMessage({ id: 'schedule.workingHours' })}
+        </h2>
         <Card padding="none">
           {DAY_KEYS.map((dayKey, index) => {
             const hours = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === index);
@@ -120,7 +126,9 @@ export function SchedulePage() {
 
       <section className={styles.section}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className={styles.sectionTitle}>{intl.formatMessage({ id: 'schedule.overrides' })}</h2>
+          <h2 className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'schedule.overrides' })}
+          </h2>
           <Button size="sm" variant="secondary" onClick={() => setShowOverrideForm(true)}>
             + {intl.formatMessage({ id: 'common.add' })}
           </Button>
@@ -129,7 +137,14 @@ export function SchedulePage() {
         {schedule?.overrides && schedule.overrides.length > 0 ? (
           schedule.overrides.map((override) => (
             <Card key={override.id} style={{ marginTop: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                }}
+              >
                 <div>
                   <div style={{ fontWeight: 600 }}>{override.date}</div>
                   <div className="text-secondary" style={{ fontSize: 13 }}>
@@ -138,7 +153,11 @@ export function SchedulePage() {
                       : `${override.startTime} — ${override.endTime}`}
                   </div>
                 </div>
-                <button className="touchable" onClick={() => deleteOverride.mutate(override.id)} aria-label="Delete">
+                <button
+                  className="touchable"
+                  onClick={() => deleteOverride.mutate(override.id)}
+                  aria-label="Delete"
+                >
                   <Trash2 size={18} />
                 </button>
               </div>

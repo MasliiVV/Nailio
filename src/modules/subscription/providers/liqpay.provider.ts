@@ -79,10 +79,7 @@ export class LiqPayProvider implements PaymentProvider {
    *   POST body: data=...&signature=...
    *   expected = Base64(SHA1(private_key + data + private_key))
    */
-  async verifyWebhook(
-    headers: Record<string, string>,
-    body: Buffer,
-  ): Promise<WebhookPayload> {
+  async verifyWebhook(headers: Record<string, string>, body: Buffer): Promise<WebhookPayload> {
     // Parse URL-encoded body: data=...&signature=...
     const bodyStr = body.toString('utf8');
     const params = new URLSearchParams(bodyStr);
@@ -124,9 +121,7 @@ export class LiqPayProvider implements PaymentProvider {
       orderId: payload.order_id || '',
       amountKopecks: Math.round((payload.amount || 0) * 100),
       cardToken: payload.card_token || undefined,
-      cardLastFour: payload.sender_card_mask2
-        ? payload.sender_card_mask2.slice(-4)
-        : undefined,
+      cardLastFour: payload.sender_card_mask2 ? payload.sender_card_mask2.slice(-4) : undefined,
     };
   }
 
@@ -169,12 +164,11 @@ export class LiqPayProvider implements PaymentProvider {
 
     return {
       providerPaymentId: result.payment_id?.toString() || '',
-      status: result.status === 'success' || result.status === 'sandbox'
-        ? 'success'
-        : 'failure',
-      errorMessage: result.status !== 'success' && result.status !== 'sandbox'
-        ? result.err_description || result.status
-        : undefined,
+      status: result.status === 'success' || result.status === 'sandbox' ? 'success' : 'failure',
+      errorMessage:
+        result.status !== 'success' && result.status !== 'sandbox'
+          ? result.err_description || result.status
+          : undefined,
     };
   }
 

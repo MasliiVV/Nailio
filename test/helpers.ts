@@ -1,9 +1,6 @@
 // docs/backlog.md #116 — Integration tests (API endpoints)
 // Test helpers for creating NestJS test app with mocked dependencies
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { PrismaService } from '../src/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -44,6 +41,7 @@ export function createMockPrismaService() {
       unscopedClient: modelProxy,
       $connect: jest.fn(),
       $disconnect: jest.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       $transaction: jest.fn((fn: (tx: any) => any) => fn(modelProxy)),
       setTenantId: jest.fn(),
       getTenantId: jest.fn().mockReturnValue('test-tenant-id'),

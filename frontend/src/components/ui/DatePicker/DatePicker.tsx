@@ -10,8 +10,18 @@ interface DatePickerProps {
 
 const DAY_NAMES_UK = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTH_NAMES_UK = [
-  'Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер',
-  'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру',
+  'Січ',
+  'Лют',
+  'Бер',
+  'Кві',
+  'Тра',
+  'Чер',
+  'Лип',
+  'Сер',
+  'Вер',
+  'Жов',
+  'Лис',
+  'Гру',
 ];
 
 function formatDateKey(d: Date): string {
@@ -30,11 +40,7 @@ function isToday(d: Date): boolean {
   );
 }
 
-export function DatePicker({
-  selectedDate,
-  onSelect,
-  daysAhead = 30,
-}: DatePickerProps) {
+export function DatePicker({ selectedDate, onSelect, daysAhead = 30 }: DatePickerProps) {
   const dates = useMemo(() => {
     const result: Date[] = [];
     const today = new Date();
@@ -68,11 +74,7 @@ export function DatePicker({
 
           return (
             <div key={key} className={styles.dateWrapper}>
-              {showMonth && (
-                <div className={styles.monthLabel}>
-                  {MONTH_NAMES_UK[d.getMonth()]}
-                </div>
-              )}
+              {showMonth && <div className={styles.monthLabel}>{MONTH_NAMES_UK[d.getMonth()]}</div>}
               <button
                 className={[
                   styles.dateItem,
@@ -83,9 +85,7 @@ export function DatePicker({
                   .join(' ')}
                 onClick={() => handleSelect(key)}
               >
-                <span className={styles.dayName}>
-                  {DAY_NAMES_UK[d.getDay()]}
-                </span>
+                <span className={styles.dayName}>{DAY_NAMES_UK[d.getDay()]}</span>
                 <span className={styles.dayNumber}>{d.getDate()}</span>
               </button>
             </div>

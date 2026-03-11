@@ -36,53 +36,27 @@ export class NotificationsService {
     const bookingTime = startTime.getTime();
 
     // 1. Confirmation to client (immediate)
-    const confirmJob = await this.addNotificationJob(
-      tenantId,
-      bookingId,
-      clientId,
-      'confirmation',
-      0,
-    );
+    await this.addNotificationJob(tenantId, bookingId, clientId, 'confirmation', 0);
 
     // 2. New booking to master (if created by client)
     if (createdBy === 'client') {
-      await this.addNotificationJob(
-        tenantId,
-        bookingId,
-        clientId,
-        'new_booking',
-        0,
-      );
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'new_booking', 0);
     }
 
     // 3. Reminder 24h before (only if > 24h from now)
     const delay24h = bookingTime - 24 * 60 * 60 * 1000 - now;
     if (delay24h > 60000) {
       // At least 1 minute in the future
-      await this.addNotificationJob(
-        tenantId,
-        bookingId,
-        clientId,
-        'reminder_24h',
-        delay24h,
-      );
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'reminder_24h', delay24h);
     }
 
     // 4. Reminder 1h before (only if > 1h from now)
     const delay1h = bookingTime - 1 * 60 * 60 * 1000 - now;
     if (delay1h > 60000) {
-      await this.addNotificationJob(
-        tenantId,
-        bookingId,
-        clientId,
-        'reminder_1h',
-        delay1h,
-      );
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'reminder_1h', delay1h);
     }
 
-    this.logger.log(
-      `Notifications scheduled for booking ${bookingId} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Notifications scheduled for booking ${bookingId} in tenant ${tenantId}`);
   }
 
   /**
@@ -125,13 +99,7 @@ export class NotificationsService {
     }
 
     // Schedule cancellation notification (immediate)
-    await this.addNotificationJob(
-      tenantId,
-      bookingId,
-      clientId,
-      'cancellation',
-      0,
-    );
+    await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation', 0);
 
     // If cancelled by client, also notify master
     if (cancelledBy === 'client') {
@@ -145,9 +113,7 @@ export class NotificationsService {
       );
     }
 
-    this.logger.log(
-      `Notifications cancelled for booking ${bookingId} in tenant ${tenantId}`,
-    );
+    this.logger.log(`Notifications cancelled for booking ${bookingId} in tenant ${tenantId}`);
   }
 
   /**
@@ -184,21 +150,17 @@ export class NotificationsService {
       type,
     };
 
-    const job = await this.notifQueue.add(
-      `notify:${type}`,
-      jobData,
-      {
-        delay: Math.max(0, delay),
-        jobId: `notif-${notification.id}`,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 30000, // 30s → 60s → 120s
-        },
-        removeOnComplete: { count: 1000 },
-        removeOnFail: { count: 5000 },
+    const job = await this.notifQueue.add(`notify:${type}`, jobData, {
+      delay: Math.max(0, delay),
+      jobId: `notif-${notification.id}`,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 30000, // 30s → 60s → 120s
       },
-    );
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
+    });
 
     // Update notification with job ID
     await this.prisma.tenantClient.notification.update({

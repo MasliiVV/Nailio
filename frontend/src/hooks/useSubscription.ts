@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type {
-  ApiResponse,
-  Subscription,
-  SubscriptionPayment,
-  CheckoutResponse,
-} from '@/types';
+import type { ApiResponse, Subscription, SubscriptionPayment, CheckoutResponse } from '@/types';
 import { getTelegram } from '@/lib/telegram';
 
 export const subscriptionKeys = {
@@ -40,10 +35,9 @@ export function useSubscriptionPayments() {
 export function useCheckout() {
   return useMutation({
     mutationFn: async (provider: 'monobank' | 'liqpay') => {
-      const res = await api.post<ApiResponse<CheckoutResponse>>(
-        '/api/v1/subscription/checkout',
-        { provider },
-      );
+      const res = await api.post<ApiResponse<CheckoutResponse>>('/api/v1/subscription/checkout', {
+        provider,
+      });
       return res.data;
     },
     onSuccess: (data) => {

@@ -55,9 +55,7 @@ describe('LiqPayProvider', () => {
       expect(url).toContain('signature=');
 
       // Verify data decodes correctly
-      const decoded = JSON.parse(
-        Buffer.from(data, 'base64').toString('utf8'),
-      );
+      const decoded = JSON.parse(Buffer.from(data, 'base64').toString('utf8'));
       expect(decoded.action).toBe('pay');
       expect(decoded.amount).toBe(415);
       expect(decoded.currency).toBe('UAH');
@@ -142,9 +140,7 @@ describe('LiqPayProvider', () => {
     });
 
     it('should map LiqPay statuses correctly', () => {
-      const mapStatus = (
-        status: string,
-      ): 'success' | 'failure' | 'processing' => {
+      const mapStatus = (status: string): 'success' | 'failure' | 'processing' => {
         switch (status) {
           case 'success':
           case 'sandbox':
@@ -194,9 +190,7 @@ describe('LiqPayProvider', () => {
       };
 
       const encoded = encodeData(original);
-      const decoded = JSON.parse(
-        Buffer.from(encoded, 'base64').toString('utf8'),
-      );
+      const decoded = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
 
       expect(decoded).toEqual(original);
     });
@@ -228,14 +222,11 @@ describe('LiqPayProvider', () => {
         }),
       });
 
-      const response = await mockFetch(
-        'https://www.liqpay.ua/api/request',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `data=${encodeURIComponent(data)}&signature=${encodeURIComponent(signature)}`,
-        },
-      );
+      const response = await mockFetch('https://www.liqpay.ua/api/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(data)}&signature=${encodeURIComponent(signature)}`,
+      });
 
       const result = await response.json();
       expect(result.status).toBe('success');
@@ -252,10 +243,7 @@ describe('LiqPayProvider', () => {
         }),
       });
 
-      const response = await mockFetch(
-        'https://www.liqpay.ua/api/request',
-        {},
-      );
+      const response = await mockFetch('https://www.liqpay.ua/api/request', {});
 
       const result = await response.json();
       expect(result.status).toBe('failure');
@@ -269,10 +257,7 @@ describe('LiqPayProvider', () => {
         text: async () => 'Internal Server Error',
       });
 
-      const response = await mockFetch(
-        'https://www.liqpay.ua/api/request',
-        {},
-      );
+      const response = await mockFetch('https://www.liqpay.ua/api/request', {});
 
       expect(response.ok).toBe(false);
       expect(response.status).toBe(500);

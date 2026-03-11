@@ -9,7 +9,11 @@ const ICON_SIZE = 20;
 
 const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
   { path: '/client', icon: <Home size={ICON_SIZE} />, labelKey: 'booking.title' },
-  { path: '/client/bookings', icon: <ClipboardList size={ICON_SIZE} />, labelKey: 'client.myBookings' },
+  {
+    path: '/client/bookings',
+    icon: <ClipboardList size={ICON_SIZE} />,
+    labelKey: 'client.myBookings',
+  },
   { path: '/client/profile', icon: <User size={ICON_SIZE} />, labelKey: 'client.profile' },
 ];
 
@@ -41,17 +45,13 @@ export function ClientLayout() {
             key={item.path}
             to={item.path}
             end={item.path === '/client'}
-            className={({ isActive }) =>
-              `${styles.navItem} ${isActive ? styles.active : ''}`
-            }
+            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
             onClick={() => {
               getTelegram()?.HapticFeedback.selectionChanged();
             }}
           >
             <div className={styles.navIcon}>{item.icon}</div>
-            <span className={styles.navLabel}>
-              {intl.formatMessage({ id: item.labelKey })}
-            </span>
+            <span className={styles.navLabel}>{intl.formatMessage({ id: item.labelKey })}</span>
           </NavLink>
         ))}
       </nav>

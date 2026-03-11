@@ -2,13 +2,7 @@
 // GET /api/v1/profile 🔑 — Get current user profile
 // PUT /api/v1/profile 🔑 — Update current user profile
 
-import {
-  Controller,
-  Get,
-  Put,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
 import { UpdateProfileDto } from './dto/profile.dto';
@@ -26,10 +20,7 @@ export class ProfileController {
   }
 
   @Put()
-  async updateProfile(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: UpdateProfileDto,
-  ) {
+  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
     return this.profileService.updateProfile(user, dto);
   }
 }

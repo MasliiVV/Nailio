@@ -1,26 +1,10 @@
 // docs/backlog.md #31 — Onboarding wizard API endpoints
 // docs/guides/master-onboarding.md — Onboarding flow
 
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OnboardingService } from './onboarding.service';
-import {
-  ValidateTokenDto,
-  OnboardingStatusDto,
-} from './dto/onboarding.dto';
+import { ValidateTokenDto, OnboardingStatusDto } from './dto/onboarding.dto';
 import { Roles, CurrentTenant } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
 
@@ -54,10 +38,7 @@ export class OnboardingController {
   @ApiOperation({ summary: 'Validate and connect bot token' })
   @ApiResponse({ status: 201, description: 'Bot connected successfully' })
   @ApiResponse({ status: 400, description: 'Invalid token or bot already registered' })
-  async connectBot(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: ValidateTokenDto,
-  ) {
+  async connectBot(@CurrentTenant() tenantId: string, @Body() dto: ValidateTokenDto) {
     return this.onboardingService.connectBot(tenantId, dto.botToken);
   }
 

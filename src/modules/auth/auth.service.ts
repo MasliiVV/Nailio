@@ -2,12 +2,7 @@
 // docs/backlog.md #15-#18 — Auth service
 // docs/security/overview.md — JWT Security
 
-import {
-  Injectable,
-  UnauthorizedException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuidv4 } from 'uuid';
@@ -147,7 +142,7 @@ export class AuthService {
     userId: string,
     data: ValidatedInitData,
     botId?: string,
-    startParam?: string,
+    _startParam?: string,
   ): Promise<{ role: 'master' | 'client'; tenantId: string | null; clientId?: string }> {
     // Platform bot → user is master (or becoming one)
     if (!botId) {
@@ -160,9 +155,7 @@ export class AuthService {
       }
 
       // New master — create tenant + master record
-      const slug = await this.tenantsService.generateUniqueSlug(
-        data.user.first_name,
-      );
+      const slug = await this.tenantsService.generateUniqueSlug(data.user.first_name);
 
       const tenant = await this.prisma.tenant.create({
         data: {
@@ -218,9 +211,7 @@ export class AuthService {
           lastName: data.user.last_name || null,
         },
       });
-      this.logger.log(
-        `New client created: tenant=${bot.tenantId}, telegram_id=${data.user.id}`,
-      );
+      this.logger.log(`New client created: tenant=${bot.tenantId}, telegram_id=${data.user.id}`);
     }
 
     return { role: 'client', tenantId: bot.tenantId, clientId: client.id };
@@ -241,24 +232,22 @@ export class AuthService {
 
     // Refresh token (30d, stored in Redis)
     const refreshToken = uuidv4();
-    await this.redis.setex(
-      `refresh:${refreshToken}`,
-      this.refreshTtl,
-      JSON.stringify(payload),
-    );
+    await this.redis.setex(`refresh:${refreshToken}`, this.refreshTtl, JSON.stringify(payload));
 
     // Fetch user info for response
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });
 
-    const master = payload.role === 'master' && payload.tenantId
-      ? await this.prisma.master.findFirst({ where: { userId: payload.sub } })
-      : null;
+    const master =
+      payload.role === 'master' && payload.tenantId
+        ? await this.prisma.master.findFirst({ where: { userId: payload.sub } })
+        : null;
 
-    const client = payload.role === 'client' && payload.clientId
-      ? await this.prisma.client.findUnique({ where: { id: payload.clientId } })
-      : null;
+    const client =
+      payload.role === 'client' && payload.clientId
+        ? await this.prisma.client.findUnique({ where: { id: payload.clientId } })
+        : null;
 
     return {
       accessToken,

@@ -1,8 +1,6 @@
 // docs/backlog.md #115 — Unit tests (notifications service + templates)
 // Tests: Template rendering, language fallback, BullMQ job scheduling
 
-import { renderTemplate, resolveLanguage } from './templates';
-
 // Re-implement helpers locally for isolated testing
 // (mirrors src/modules/notifications/templates.ts logic)
 
@@ -184,9 +182,7 @@ describe('NotificationsService (scheduling)', () => {
       const baseDelay = 1000;
       const maxRetries = 3;
 
-      const delays = Array.from({ length: maxRetries }, (_, i) =>
-        baseDelay * Math.pow(2, i),
-      );
+      const delays = Array.from({ length: maxRetries }, (_, i) => baseDelay * Math.pow(2, i));
 
       expect(delays).toEqual([1000, 2000, 4000]);
     });

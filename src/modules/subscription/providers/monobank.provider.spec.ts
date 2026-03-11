@@ -5,20 +5,17 @@ import { createSign, generateKeyPairSync } from 'crypto';
 
 describe('MonobankProvider', () => {
   // ─── ECDSA helpers ───
-  const { publicKey: ecdsaPubKeyObj, privateKey: ecdsaPrivKeyObj } =
-    generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const { publicKey: ecdsaPubKeyObj, privateKey: ecdsaPrivKeyObj } = generateKeyPairSync('ec', {
+    namedCurve: 'prime256v1',
+  });
 
-  const ecdsaPubKeyPem = ecdsaPubKeyObj
-    .export({ type: 'spki', format: 'pem' })
-    .toString();
+  const ecdsaPubKeyPem = ecdsaPubKeyObj.export({ type: 'spki', format: 'pem' }).toString();
 
   function signEcdsa(payload: Buffer): string {
     const sign = createSign('SHA256');
     sign.update(payload);
     sign.end();
-    return sign.sign(
-      { key: ecdsaPrivKeyObj, dsaEncoding: 'ieee-p1363' },
-    ).toString('base64');
+    return sign.sign({ key: ecdsaPrivKeyObj, dsaEncoding: 'ieee-p1363' }).toString('base64');
   }
 
   // ─── Mocks ───
@@ -56,26 +53,23 @@ describe('MonobankProvider', () => {
         webhookUrl: 'https://api.example.com/webhooks/monobank',
       };
 
-      const response = await mockFetch(
-        'https://api.monobank.ua/api/merchant/invoice/create',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Token': 'test_merchant_token',
-          },
-          body: JSON.stringify({
-            amount: params.amountKopecks,
-            ccy: 980,
-            merchantPaymInfo: {
-              reference: params.orderId,
-              destination: params.description,
-            },
-            redirectUrl: params.redirectUrl,
-            webHookUrl: params.webhookUrl,
-          }),
+      const response = await mockFetch('https://api.monobank.ua/api/merchant/invoice/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Token': 'test_merchant_token',
         },
-      );
+        body: JSON.stringify({
+          amount: params.amountKopecks,
+          ccy: 980,
+          merchantPaymInfo: {
+            reference: params.orderId,
+            destination: params.description,
+          },
+          redirectUrl: params.redirectUrl,
+          webHookUrl: params.webhookUrl,
+        }),
+      });
 
       expect(response.ok).toBe(true);
       const data = await response.json();
@@ -116,10 +110,7 @@ describe('MonobankProvider', () => {
         text: async () => 'Forbidden',
       });
 
-      const response = await mockFetch(
-        'https://api.monobank.ua/api/merchant/invoice/create',
-        {},
-      );
+      const response = await mockFetch('https://api.monobank.ua/api/merchant/invoice/create', {});
 
       expect(response.ok).toBe(false);
       expect(response.status).toBe(403);
@@ -195,9 +186,7 @@ describe('MonobankProvider', () => {
     });
 
     it('should map Monobank statuses correctly', () => {
-      const mapStatus = (
-        status: string,
-      ): 'success' | 'failure' | 'processing' => {
+      const mapStatus = (status: string): 'success' | 'failure' | 'processing' => {
         switch (status) {
           case 'success':
             return 'success';
@@ -239,17 +228,14 @@ describe('MonobankProvider', () => {
         },
       };
 
-      const response = await mockFetch(
-        'https://api.monobank.ua/api/merchant/wallet/payment',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Token': 'test_merchant_token',
-          },
-          body: JSON.stringify(chargeBody),
+      const response = await mockFetch('https://api.monobank.ua/api/merchant/wallet/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Token': 'test_merchant_token',
         },
-      );
+        body: JSON.stringify(chargeBody),
+      });
 
       expect(response.ok).toBe(true);
       const data = await response.json();
@@ -264,10 +250,7 @@ describe('MonobankProvider', () => {
         text: async () => 'Insufficient funds',
       });
 
-      const response = await mockFetch(
-        'https://api.monobank.ua/api/merchant/wallet/payment',
-        {},
-      );
+      const response = await mockFetch('https://api.monobank.ua/api/merchant/wallet/payment', {});
 
       expect(response.ok).toBe(false);
       expect(response.status).toBe(400);
@@ -289,21 +272,16 @@ describe('MonobankProvider', () => {
       // Simulate getPublicKey flow
       let pubKey = await mockRedisGet('monobank:pubkey');
       if (!pubKey) {
-        const response = await mockFetch(
-          'https://api.monobank.ua/api/merchant/pubkey',
-          { headers: { 'X-Token': 'test_token' } },
-        );
+        const response = await mockFetch('https://api.monobank.ua/api/merchant/pubkey', {
+          headers: { 'X-Token': 'test_token' },
+        });
         const data = await response.json();
         pubKey = data.key;
         await mockRedisSetex('monobank:pubkey', 86400, pubKey);
       }
 
       expect(mockRedisGet).toHaveBeenCalledWith('monobank:pubkey');
-      expect(mockRedisSetex).toHaveBeenCalledWith(
-        'monobank:pubkey',
-        86400,
-        ecdsaPubKeyPem,
-      );
+      expect(mockRedisSetex).toHaveBeenCalledWith('monobank:pubkey', 86400, ecdsaPubKeyPem);
     });
 
     it('should use cached key on second call', async () => {

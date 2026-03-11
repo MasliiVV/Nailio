@@ -18,18 +18,9 @@ import {
   UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ServicesService } from './services.service';
-import {
-  CreateServiceDto,
-  UpdateServiceDto,
-  ServiceResponseDto,
-} from './dto/services.dto';
+import { CreateServiceDto, UpdateServiceDto, ServiceResponseDto } from './dto/services.dto';
 import {
   Roles,
   RequiresActiveSubscription,
@@ -53,10 +44,7 @@ export class ServicesController {
   @Get()
   @ApiOperation({ summary: 'List services' })
   @ApiResponse({ status: 200, type: [ServiceResponseDto] })
-  async findAll(
-    @CurrentTenant() tenantId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  async findAll(@CurrentTenant() tenantId: string, @CurrentUser() user: JwtPayload) {
     return this.servicesService.findAll(tenantId, user.role);
   }
 
@@ -67,10 +55,7 @@ export class ServicesController {
   @ApiOperation({ summary: 'Get service details' })
   @ApiResponse({ status: 200, type: ServiceResponseDto })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  async findOne(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async findOne(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicesService.findById(tenantId, id);
   }
 
@@ -85,10 +70,7 @@ export class ServicesController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create service' })
   @ApiResponse({ status: 201, type: ServiceResponseDto })
-  async create(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: CreateServiceDto,
-  ) {
+  async create(@CurrentTenant() tenantId: string, @Body() dto: CreateServiceDto) {
     return this.servicesService.create(tenantId, dto);
   }
 
@@ -124,10 +106,7 @@ export class ServicesController {
   @ApiOperation({ summary: 'Deactivate service (soft delete)' })
   @ApiResponse({ status: 204, description: 'Service deactivated' })
   @ApiResponse({ status: 404, description: 'Service not found' })
-  async remove(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async remove(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicesService.softDelete(tenantId, id);
   }
 }

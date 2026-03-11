@@ -1,14 +1,7 @@
 // docs/api/endpoints.md — Clients CRM DTOs
 // docs/database/schema.md — clients table
 
-import {
-  IsString,
-  IsOptional,
-  IsArray,
-  MaxLength,
-  Matches,
-  IsBoolean,
-} from 'class-validator';
+import { IsString, IsOptional, IsArray, MaxLength, Matches } from 'class-validator';
 
 // ──────────────────────────────────────────────
 // Query: GET /api/v1/clients

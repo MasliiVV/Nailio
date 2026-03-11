@@ -32,9 +32,7 @@ export function useFinanceSummary(period?: string) {
     queryKey: financeKeys.summary(period),
     queryFn: async () => {
       const params = period ? `?period=${period}` : '';
-      const res = await api.get<ApiResponse<FinanceSummary>>(
-        `/api/v1/finance/summary${params}`,
-      );
+      const res = await api.get<ApiResponse<FinanceSummary>>(`/api/v1/finance/summary${params}`);
       return res.data;
     },
   });

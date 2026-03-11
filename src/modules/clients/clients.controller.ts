@@ -14,11 +14,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ClientsService } from './clients.service';
-import {
-  ClientListQueryDto,
-  UpdateClientDto,
-  ClientOnboardingDto,
-} from './dto/clients.dto';
+import { ClientListQueryDto, UpdateClientDto, ClientOnboardingDto } from './dto/clients.dto';
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -37,10 +33,7 @@ export class ClientsController {
    */
   @Get()
   @Roles('master')
-  async list(
-    @CurrentTenant() tenantId: string,
-    @Query() query: ClientListQueryDto,
-  ) {
+  async list(@CurrentTenant() tenantId: string, @Query() query: ClientListQueryDto) {
     return this.clientsService.findAll(tenantId, query);
   }
 
@@ -50,10 +43,7 @@ export class ClientsController {
    */
   @Get(':id')
   @Roles('master')
-  async findById(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async findById(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.clientsService.findById(tenantId, id);
   }
 
@@ -78,10 +68,7 @@ export class ClientsController {
   @Post(':id/block')
   @Roles('master')
   @RequiresActiveSubscription()
-  async block(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async block(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.clientsService.block(tenantId, id);
   }
 
@@ -91,10 +78,7 @@ export class ClientsController {
   @Post(':id/unblock')
   @Roles('master')
   @RequiresActiveSubscription()
-  async unblock(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async unblock(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.clientsService.unblock(tenantId, id);
   }
 

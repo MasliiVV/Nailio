@@ -1,17 +1,7 @@
 // docs/api/endpoints.md — Services endpoints
 // docs/database/schema.md — services table
 
-import {
-  IsString,
-  IsInt,
-  IsOptional,
-  IsBoolean,
-  IsNumber,
-  Min,
-  MaxLength,
-  MinLength,
-  Matches,
-} from 'class-validator';
+import { IsString, IsInt, IsOptional, Min, MaxLength, MinLength, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 /**

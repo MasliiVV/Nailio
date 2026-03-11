@@ -10,7 +10,7 @@
 
 import { Logger } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
-import { PrismaService, TENANT_ID_KEY } from '../../prisma/prisma.service';
+import { TENANT_ID_KEY } from '../../prisma/prisma.service';
 import { Job } from 'bullmq';
 
 /**
@@ -41,25 +41,19 @@ export function withTenantContext<T extends TenantJobData>(
     const tenantId = job.data.tenantId;
 
     if (!tenantId) {
-      logger.error(
-        `Job ${job.id} (${job.name}) missing tenantId in job data`,
-      );
+      logger.error(`Job ${job.id} (${job.name}) missing tenantId in job data`);
       throw new Error('Job data must include tenantId');
     }
 
     // Run within CLS context so PrismaService.tenantClient auto-scopes queries
     return cls.run(async () => {
       cls.set(TENANT_ID_KEY, tenantId);
-      logger.debug(
-        `Processing job ${job.id} (${job.name}) for tenant ${tenantId}`,
-      );
+      logger.debug(`Processing job ${job.id} (${job.name}) for tenant ${tenantId}`);
 
       try {
         await handler(job);
       } catch (error) {
-        logger.error(
-          `Job ${job.id} (${job.name}) failed for tenant ${tenantId}: ${error}`,
-        );
+        logger.error(`Job ${job.id} (${job.name}) failed for tenant ${tenantId}: ${error}`);
         throw error;
       }
     });
@@ -83,7 +77,13 @@ export const QUEUE_NAMES = {
 export interface NotificationJobData extends TenantJobData {
   bookingId: string;
   clientId: string;
-  type: 'confirmation' | 'reminder_24h' | 'reminder_1h' | 'cancellation' | 'reschedule' | 'new_booking';
+  type:
+    | 'confirmation'
+    | 'reminder_24h'
+    | 'reminder_1h'
+    | 'cancellation'
+    | 'reschedule'
+    | 'new_booking';
 }
 
 /**

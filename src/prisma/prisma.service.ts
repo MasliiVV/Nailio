@@ -64,6 +64,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       return this; // No tenant context — return unscoped client (for global operations)
     }
 
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
     return this.$extends({
       query: {
         $allModels: {
@@ -112,6 +113,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         },
       },
     }) as unknown as PrismaClient;
+    /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
   }
 
   /**

@@ -33,9 +33,7 @@ export function ClientHomePage() {
 
       {/* Services list */}
       <div className={styles.section}>
-        <h2 className="section-title">
-          {intl.formatMessage({ id: 'client.selectService' })}
-        </h2>
+        <h2 className="section-title">{intl.formatMessage({ id: 'client.selectService' })}</h2>
 
         {isLoading && <SkeletonList count={3} />}
 
@@ -61,14 +59,22 @@ export function ClientHomePage() {
                 onClick={() => handleSelectService(service.id)}
                 className={styles.serviceCard}
               >
-                <div className={styles.serviceColor} style={{ backgroundColor: service.color || 'var(--color-primary)' }} />
+                <div
+                  className={styles.serviceColor}
+                  style={{ backgroundColor: service.color || 'var(--color-primary)' }}
+                />
                 <div className={styles.serviceInfo}>
                   <span className={styles.serviceName}>{service.name}</span>
                   {service.description && (
                     <span className={styles.serviceDesc}>{service.description}</span>
                   )}
                   <div className={styles.serviceMeta}>
-                    <span>{intl.formatMessage({ id: 'booking.duration' }, { duration: service.durationMinutes })}</span>
+                    <span>
+                      {intl.formatMessage(
+                        { id: 'booking.duration' },
+                        { duration: service.durationMinutes },
+                      )}
+                    </span>
                     <span className={styles.servicePrice}>
                       {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
                     </span>

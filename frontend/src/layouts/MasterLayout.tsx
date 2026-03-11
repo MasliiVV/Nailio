@@ -44,17 +44,13 @@ export function MasterLayout() {
             key={item.path}
             to={item.path}
             end={item.path === '/master'}
-            className={({ isActive }) =>
-              `${styles.navItem} ${isActive ? styles.active : ''}`
-            }
+            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
             onClick={() => {
               getTelegram()?.HapticFeedback.selectionChanged();
             }}
           >
             <div className={styles.navIcon}>{item.icon}</div>
-            <span className={styles.navLabel}>
-              {intl.formatMessage({ id: item.labelKey })}
-            </span>
+            <span className={styles.navLabel}>{intl.formatMessage({ id: item.labelKey })}</span>
           </NavLink>
         ))}
       </nav>
