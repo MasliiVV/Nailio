@@ -8,6 +8,10 @@ dist
 docs
 coverage
 test
+frontend
+nginx
+scripts
+certbot
 *.md
 .prettierrc
 eslint.config.js
