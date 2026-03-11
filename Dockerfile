@@ -5,7 +5,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 FROM base AS dependencies
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl
 RUN npm ci --omit=dev
 RUN npx prisma generate
 
