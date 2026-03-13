@@ -49,12 +49,17 @@ export function SettingsPage() {
       updateTenant(res.data);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       setShowBranding(false);
-    } catch {
+    } catch (err) {
       // Revert color on error
       const prev = tenant?.branding?.primaryColor || '#6C5CE7';
       document.documentElement.style.setProperty('--tenant-primary', prev);
       setPrimaryColor(prev);
       getTelegram()?.HapticFeedback.notificationOccurred('error');
+      getTelegram()?.showAlert?.(
+        intl.formatMessage({ id: 'common.error' }) +
+          ': ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
     } finally {
       setSaving(false);
     }

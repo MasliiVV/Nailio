@@ -14,12 +14,13 @@ import {
   AdminTenantSummaryDto,
   AdminTenantDetailDto,
 } from './dto/tenants.dto';
-import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { Roles, CurrentTenant } from '../../common/decorators';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
 @ApiTags('Settings')
 @Controller('settings')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
@@ -29,7 +30,6 @@ export class TenantsController {
    */
   @Get()
   @Roles('master')
-  @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get tenant settings' })
   @ApiResponse({ status: 200, type: TenantResponseDto })
   async getSettings(@CurrentTenant() tenantId: string) {
@@ -42,8 +42,6 @@ export class TenantsController {
    */
   @Put('branding')
   @Roles('master')
-  @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update branding settings' })
   @ApiResponse({ status: 200, type: TenantResponseDto })
@@ -57,8 +55,6 @@ export class TenantsController {
    */
   @Put('general')
   @Roles('master')
-  @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update general settings' })
   @ApiResponse({ status: 200, type: TenantResponseDto })
