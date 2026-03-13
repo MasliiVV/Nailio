@@ -172,6 +172,25 @@ export class NotificationsProcessor extends WorkerHost {
         }
 
         // 10. Send via Telegram Bot API
+        //    For new_booking → send inline keyboard with confirm/reject buttons
+        const replyMarkup =
+          type === 'new_booking'
+            ? {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '✅ Підтвердити',
+                      callback_data: `confirm:${bookingId}`,
+                    },
+                    {
+                      text: '❌ Відхилити',
+                      callback_data: `reject:${bookingId}`,
+                    },
+                  ],
+                ],
+              }
+            : undefined;
+
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -179,6 +198,7 @@ export class NotificationsProcessor extends WorkerHost {
             chat_id: recipientTelegramId.toString(),
             text: messageText,
             parse_mode: 'HTML',
+            ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
           }),
         });
 

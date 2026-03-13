@@ -40,6 +40,10 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  PLATFORM_WEBHOOK_SECRET?: string;
+
+  @IsString()
+  @IsOptional()
   PLATFORM_ADMIN_TELEGRAM_IDS?: string;
 
   @IsString()

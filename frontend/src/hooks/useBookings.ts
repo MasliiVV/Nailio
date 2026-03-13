@@ -94,7 +94,7 @@ export function useCancelBooking() {
 
   return useMutation({
     mutationFn: async ({ id, dto }: { id: string; dto?: CancelBookingDto }) => {
-      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/cancel`, dto);
+      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/cancel`, dto || {});
       return res.data;
     },
     onSuccess: (_data, variables) => {
@@ -102,6 +102,10 @@ export function useCancelBooking() {
       tg?.HapticFeedback.notificationOccurred('warning');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+    onError: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('error');
     },
   });
 }

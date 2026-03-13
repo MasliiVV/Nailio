@@ -52,8 +52,16 @@ export function MyBookingsPage() {
   const displayed = tab === 'upcoming' ? upcoming : history;
 
   const handleCancel = async (id: string) => {
-    await cancelBooking.mutateAsync({ id });
-    setSelected(null);
+    try {
+      await cancelBooking.mutateAsync({ id, dto: {} });
+      setSelected(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : intl.formatMessage({ id: 'error.unknown' });
+      const tg = getTelegram();
+      if (tg?.showAlert) {
+        tg.showAlert(msg);
+      }
+    }
   };
 
   return (
