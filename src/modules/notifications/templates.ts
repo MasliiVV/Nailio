@@ -13,7 +13,7 @@ export interface TemplateVariables {
   reason?: string;
 }
 
-function formatPrice(kopiykas: number): string {
+function _formatPrice(kopiykas: number): string {
   return (kopiykas / 100).toFixed(0);
 }
 
@@ -27,12 +27,12 @@ function resolveLanguage(langCode: string | null | undefined): 'uk' | 'en' {
 // ──────────────────────────────────────────────
 
 const templates = {
-  // ─── Confirmation (to client) ───
+  // ─── Confirmation (to client — pending master approval) ───
   confirmation: {
     uk: (v: TemplateVariables) =>
-      `✅ Запис підтверджено!\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n⏱ ${v.duration} хв\n💰 ${formatPrice(v.price)} грн\n\nЯкщо потрібно скасувати — зробіть це не пізніше ніж за ${v.cancellationWindow || 24} год.`,
+      `🙏 Дякуємо за запис!\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\nОчікуйте підтвердження від майстра 💅`,
     en: (v: TemplateVariables) =>
-      `✅ Booking confirmed!\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n⏱ ${v.duration} min\n💰 ${formatPrice(v.price)} UAH\n\nTo cancel, please do so at least ${v.cancellationWindow || 24} hours in advance.`,
+      `🙏 Thank you for booking!\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\nPlease wait for confirmation from the master 💅`,
   },
 
   // ─── New Booking (to master) ───
