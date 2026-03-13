@@ -7,7 +7,15 @@ import {
   useCheckout,
   useCancelSubscription,
 } from '@/hooks';
-import { Card, Button, EmptyState, SkeletonList } from '@/components/ui';
+import {
+  Card,
+  Button,
+  EmptyState,
+  SkeletonList,
+  PageHeader,
+  Badge,
+  Section,
+} from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { SubscriptionPayment } from '@/types';
 import styles from './SubscriptionPage.module.css';
@@ -77,9 +85,9 @@ export function SubscriptionPage() {
 
   return (
     <div className="page animate-fade-in">
-      <h1 className="page-title">{intl.formatMessage({ id: 'subscription.title' })}</h1>
+      <PageHeader title={intl.formatMessage({ id: 'subscription.title' })} />
 
-      <Card style={{ marginBottom: 16, textAlign: 'center' as const }}>
+      <Card className={styles.statusCard}>
         <div className={styles.statusSection}>
           <span className={styles.statusEmoji}>
             {STATUS_ICON[statusKey] || <HelpCircle size={28} />}
@@ -107,7 +115,7 @@ export function SubscriptionPage() {
         )}
       </Card>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div className={styles.actions}>
         {(statusKey === 'expired' || statusKey === 'cancelled' || statusKey === 'trial') && (
           <Button fullWidth onClick={handleCheckout} loading={checkout.isPending}>
             {intl.formatMessage({ id: 'subscription.subscribe' })}
@@ -121,28 +129,31 @@ export function SubscriptionPage() {
       </div>
 
       {payments && payments.length > 0 && (
-        <section>
-          <h2 className={styles.sectionTitle}>
-            {intl.formatMessage({ id: 'subscription.payments' })}
-          </h2>
+        <Section title={intl.formatMessage({ id: 'subscription.payments' })}>
           {payments.map((payment: SubscriptionPayment) => (
-            <Card key={payment.id} style={{ marginBottom: 6 }}>
+            <Card key={payment.id} className={styles.paymentCard}>
               <div className={styles.paymentRow}>
                 <div>
-                  <div style={{ fontWeight: 500 }}>{(payment.amount / 100).toFixed(0)} ₴</div>
-                  <div className="text-secondary" style={{ fontSize: 12 }}>
+                  <div className={styles.paymentAmount}>{(payment.amount / 100).toFixed(0)} ₴</div>
+                  <div className={styles.paymentDate}>
                     {new Date(payment.createdAt).toLocaleDateString('uk-UA')}
                   </div>
                 </div>
-                <span
-                  className={`badge badge--${payment.status === 'success' ? 'success' : payment.status === 'pending' ? 'warning' : 'destructive'}`}
+                <Badge
+                  variant={
+                    payment.status === 'success'
+                      ? 'success'
+                      : payment.status === 'pending'
+                        ? 'warning'
+                        : 'destructive'
+                  }
                 >
                   {payment.status}
-                </span>
+                </Badge>
               </div>
             </Card>
           ))}
-        </section>
+        </Section>
       )}
     </div>
   );

@@ -1,0 +1,65 @@
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--color-link);
+  font-size: 15px;
+}
+
+.profileCard {
+  padding: 20px;
+}
+
+.profileName {
+  margin-bottom: 8px;
+}
+
+.profileSlug {
+  margin: 0;
+}
+
+.sectionGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.sectionCard {
+  padding: 20px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.detail {
+  margin: 8px 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.detail:first-of-type {
+  margin-top: 12px;
+}
+
+.pre {
+  white-space: pre-wrap;
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}

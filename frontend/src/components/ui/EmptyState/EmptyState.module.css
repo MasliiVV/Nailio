@@ -4,26 +4,28 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-3xl);
+  padding: var(--space-4xl);
   text-align: center;
-  gap: var(--space-md);
+  gap: var(--space-lg);
   min-height: 200px;
-  animation: fadeIn var(--transition-normal) ease;
+  animation: emptyFadeIn 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 .icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48px;
-  line-height: 1;
-  opacity: 0.6;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   color: var(--color-primary);
+  opacity: 0.8;
 }
 
 .title {
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
 }
 
@@ -31,13 +33,14 @@
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   max-width: 260px;
+  line-height: 1.5;
 }
 
 .action {
-  margin-top: var(--space-md);
+  margin-top: var(--space-lg);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes emptyFadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }

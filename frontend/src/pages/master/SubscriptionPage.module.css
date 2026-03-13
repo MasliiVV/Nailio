@@ -1,3 +1,8 @@
+.statusCard {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
 .statusSection {
   display: flex;
   flex-direction: column;
@@ -40,13 +45,24 @@
   color: var(--color-text-secondary);
 }
 
-.sectionTitle {
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.paymentCard {
+  margin-bottom: 6px;
+}
+
+.paymentAmount {
+  font-weight: 500;
   font-size: 15px;
-  font-weight: 600;
+}
+
+.paymentDate {
+  font-size: 12px;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
 }
 
 .paymentRow {

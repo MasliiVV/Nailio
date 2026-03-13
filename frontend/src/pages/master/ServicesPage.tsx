@@ -2,9 +2,19 @@ import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Scissors, Pencil, Trash2 } from 'lucide-react';
 import { useServices, useCreateService, useUpdateService, useDeleteService } from '@/hooks';
-import { Card, Button, Input, BottomSheet, EmptyState, SkeletonList } from '@/components/ui';
+import {
+  Card,
+  Button,
+  Input,
+  BottomSheet,
+  EmptyState,
+  SkeletonList,
+  PageHeader,
+  FormGroup,
+} from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { Service, CreateServiceDto } from '@/types';
+import styles from './ServicesPage.module.css';
 
 export function ServicesPage() {
   const intl = useIntl();
@@ -65,22 +75,21 @@ export function ServicesPage() {
 
   return (
     <div className="page animate-fade-in">
-      <div
-        className="page-header"
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-      >
-        <h1 className="page-title">{intl.formatMessage({ id: 'services.title' })}</h1>
-        <Button
-          size="sm"
-          onClick={() => {
-            getTelegram()?.HapticFeedback.impactOccurred('light');
-            resetForm();
-            setShowForm(true);
-          }}
-        >
-          + {intl.formatMessage({ id: 'common.add' })}
-        </Button>
-      </div>
+      <PageHeader
+        title={intl.formatMessage({ id: 'services.title' })}
+        action={
+          <Button
+            size="sm"
+            onClick={() => {
+              getTelegram()?.HapticFeedback.impactOccurred('light');
+              resetForm();
+              setShowForm(true);
+            }}
+          >
+            + {intl.formatMessage({ id: 'common.add' })}
+          </Button>
+        }
+      />
 
       {isLoading && <SkeletonList count={3} />}
 
@@ -96,28 +105,27 @@ export function ServicesPage() {
         />
       )}
 
-      {services &&
-        services.map((service: Service) => (
-          <Card key={service.id} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+      <div className={styles.list}>
+        {services &&
+          services.map((service: Service) => (
+            <Card key={service.id} className={styles.serviceCard}>
               <div
-                style={{
-                  width: 6,
-                  height: 40,
-                  borderRadius: 3,
-                  background: service.color || 'var(--color-primary)',
-                  flexShrink: 0,
-                }}
+                className={styles.colorBar}
+                style={{ background: service.color || 'var(--color-primary)' }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>{service.name}</div>
-                <div className="text-secondary" style={{ fontSize: 13 }}>
+              <div className={styles.serviceInfo}>
+                <div className={styles.serviceName}>{service.name}</div>
+                <div className={styles.serviceMeta}>
                   {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} ·{' '}
                   {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="touchable" onClick={() => handleEdit(service)} aria-label="Edit">
+              <div className={styles.serviceActions}>
+                <button
+                  className="touchable"
+                  onClick={() => handleEdit(service)}
+                  aria-label={intl.formatMessage({ id: 'common.edit' })}
+                >
                   <Pencil size={18} />
                 </button>
                 <button
@@ -135,14 +143,14 @@ export function ServicesPage() {
                       deleteService.mutate(service.id);
                     }
                   }}
-                  aria-label="Delete"
+                  aria-label={intl.formatMessage({ id: 'common.delete' })}
                 >
                   <Trash2 size={18} />
                 </button>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          ))}
+      </div>
 
       <BottomSheet
         open={showForm}
@@ -153,7 +161,7 @@ export function ServicesPage() {
             : intl.formatMessage({ id: 'services.addService' })
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <FormGroup>
           <Input
             label={intl.formatMessage({ id: 'services.name' })}
             value={name}
@@ -184,7 +192,7 @@ export function ServicesPage() {
           >
             {intl.formatMessage({ id: 'common.save' })}
           </Button>
-        </div>
+        </FormGroup>
       </BottomSheet>
     </div>
   );

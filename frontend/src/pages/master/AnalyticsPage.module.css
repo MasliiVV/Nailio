@@ -1,19 +1,3 @@
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.sectionTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
 .serviceRow {
   display: flex;
   align-items: center;

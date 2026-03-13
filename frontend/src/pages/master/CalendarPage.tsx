@@ -1,15 +1,23 @@
+import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { useBookings, useCompleteBooking, useNoShowBooking } from '@/hooks';
-import { Card, SkeletonList, EmptyState } from '@/components/ui';
-import type { Booking } from '@/types';
+import { Card, SkeletonList, EmptyState, PageHeader, DatePicker, Badge } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
+import styles from './CalendarPage.module.css';
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(iso: string): string {
+function formatDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateDisplay(iso: string): string {
   return new Date(iso).toLocaleDateString('uk-UA', {
     day: 'numeric',
     month: 'short',
@@ -19,21 +27,23 @@ function formatDate(iso: string): string {
 
 export function CalendarPage() {
   const intl = useIntl();
+  const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings();
   const completeBooking = useCompleteBooking();
   const noShowBooking = useNoShowBooking();
 
-  const bookings = bookingsData?.items || [];
+  const allBookings = bookingsData?.items || [];
 
-  // Group by date
-  const grouped = bookings.reduce<Record<string, Booking[]>>((acc, b) => {
-    const key = new Date(b.startTime).toISOString().split('T')[0] || '';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(b);
-    return acc;
-  }, {});
+  // Filter bookings by selected date
+  const bookings = allBookings.filter((b) => {
+    const bookingDate = new Date(b.startTime).toISOString().split('T')[0];
+    return bookingDate === selectedDate;
+  });
 
-  const sortedDates = Object.keys(grouped).sort();
+  // Sort by time
+  const sorted = [...bookings].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+  );
 
   const handleComplete = async (id: string) => {
     getTelegram()?.HapticFeedback.impactOccurred('medium');
@@ -53,74 +63,71 @@ export function CalendarPage() {
     }
   };
 
+  const statusVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'success' as const;
+      case 'cancelled':
+      case 'no_show':
+        return 'destructive' as const;
+      default:
+        return 'warning' as const;
+    }
+  };
+
   return (
     <div className="page animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">{intl.formatMessage({ id: 'master.calendar' })}</h1>
+      <PageHeader title={intl.formatMessage({ id: 'master.calendar' })} />
+
+      <div className={styles.datePickerWrap}>
+        <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={60} />
       </div>
 
       {isLoading && <SkeletonList count={5} />}
 
-      {!isLoading && bookings.length === 0 && (
+      {!isLoading && sorted.length === 0 && (
         <EmptyState
           icon={<Calendar size={40} />}
           title={intl.formatMessage({ id: 'master.noBookingsToday' })}
+          description={formatDateDisplay(`${selectedDate}T00:00:00`)}
         />
       )}
 
-      {sortedDates.map((dateKey) => (
-        <div key={dateKey} style={{ marginBottom: 20 }}>
-          <h3 className="section-title" style={{ padding: 0 }}>
-            {formatDate(grouped[dateKey]![0]!.startTime)}
-          </h3>
-          {grouped[dateKey]!.map((booking) => (
-            <Card key={booking.id} style={{ marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-primary)', width: 48 }}>
-                  {formatTime(booking.startTime)}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500 }}>{booking.serviceNameSnapshot}</div>
-                  {booking.client && (
-                    <div className="text-secondary" style={{ fontSize: 13 }}>
-                      {booking.client.firstName} {booking.client.lastName || ''}
-                    </div>
-                  )}
-                </div>
-                {(booking.status === 'confirmed' || booking.status === 'pending') && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      className="touchable"
-                      style={{ fontSize: 20 }}
-                      onClick={() => handleComplete(booking.id)}
-                      title="Complete"
-                    >
-                      <CheckCircle size={20} color="var(--color-success)" />
-                    </button>
-                    <button
-                      className="touchable"
-                      style={{ fontSize: 20 }}
-                      onClick={() => handleNoShow(booking.id)}
-                      title="No show"
-                    >
-                      <XCircle size={20} color="var(--color-destructive)" />
-                    </button>
-                  </div>
-                )}
-                {booking.status === 'completed' && (
-                  <span className="badge badge--success">
-                    {intl.formatMessage({ id: 'booking.status.completed' })}
-                  </span>
-                )}
-                {booking.status === 'cancelled' && (
-                  <span className="badge badge--destructive">
-                    {intl.formatMessage({ id: 'booking.status.cancelled' })}
-                  </span>
-                )}
+      {sorted.map((booking) => (
+        <Card key={booking.id} className={styles.bookingCard}>
+          <span className={styles.bookingTime}>{formatTime(booking.startTime)}</span>
+          <div className={styles.bookingBody}>
+            <div className={styles.bookingService}>{booking.serviceNameSnapshot}</div>
+            {booking.client && (
+              <div className={styles.bookingClient}>
+                {booking.client.firstName} {booking.client.lastName || ''}
               </div>
-            </Card>
-          ))}
-        </div>
+            )}
+          </div>
+          {(booking.status === 'confirmed' || booking.status === 'pending') && (
+            <div className={styles.bookingActions}>
+              <button
+                className="touchable"
+                onClick={() => handleComplete(booking.id)}
+                aria-label={intl.formatMessage({ id: 'booking.status.completed' })}
+              >
+                <CheckCircle size={20} color="var(--color-success)" />
+              </button>
+              <button
+                className="touchable"
+                onClick={() => handleNoShow(booking.id)}
+                aria-label={intl.formatMessage({ id: 'booking.status.no_show' })}
+              >
+                <XCircle size={20} color="var(--color-destructive)" />
+              </button>
+            </div>
+          )}
+          {booking.status !== 'confirmed' && booking.status !== 'pending' && (
+            <Badge variant={statusVariant(booking.status)}>
+              {intl.formatMessage({ id: `booking.status.${booking.status}` })}
+            </Badge>
+          )}
+        </Card>
       ))}
     </div>
   );

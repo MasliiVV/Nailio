@@ -2,7 +2,17 @@ import { useState, useRef, useCallback } from 'react';
 import { useIntl } from 'react-intl';
 import { Trash2 } from 'lucide-react';
 import { useSchedule, useUpdateWorkingHours, useCreateOverride, useDeleteOverride } from '@/hooks';
-import { Card, Button, Input, BottomSheet, SkeletonList } from '@/components/ui';
+import {
+  Card,
+  Button,
+  Input,
+  BottomSheet,
+  SkeletonList,
+  PageHeader,
+  Section,
+  Toggle,
+  FormGroup,
+} from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { WorkingHours, CreateOverrideDto } from '@/types';
 import styles from './SchedulePage.module.css';
@@ -86,12 +96,9 @@ export function SchedulePage() {
 
   return (
     <div className="page animate-fade-in">
-      <h1 className="page-title">{intl.formatMessage({ id: 'schedule.title' })}</h1>
+      <PageHeader title={intl.formatMessage({ id: 'schedule.title' })} />
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>
-          {intl.formatMessage({ id: 'schedule.workingHours' })}
-        </h2>
+      <Section title={intl.formatMessage({ id: 'schedule.workingHours' })}>
         <Card padding="none">
           {DAY_KEYS.map((dayKey, index) => {
             const hours = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === index);
@@ -103,14 +110,7 @@ export function SchedulePage() {
                   <span className={styles.dayName}>
                     {intl.formatMessage({ id: `schedule.${dayKey}` })}
                   </span>
-                  <label className={styles.toggle}>
-                    <input
-                      type="checkbox"
-                      checked={isWorking}
-                      onChange={() => handleToggleDay(index, hours)}
-                    />
-                    <span className={styles.toggleTrack} />
-                  </label>
+                  <Toggle checked={isWorking} onChange={() => handleToggleDay(index, hours)} />
                 </div>
                 {isWorking && (
                   <div className={styles.timeInputs}>
@@ -133,32 +133,23 @@ export function SchedulePage() {
             );
           })}
         </Card>
-      </section>
+      </Section>
 
-      <section className={styles.section}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className={styles.sectionTitle}>
-            {intl.formatMessage({ id: 'schedule.overrides' })}
-          </h2>
+      <Section
+        title={intl.formatMessage({ id: 'schedule.overrides' })}
+        action={
           <Button size="sm" variant="secondary" onClick={() => setShowOverrideForm(true)}>
             + {intl.formatMessage({ id: 'common.add' })}
           </Button>
-        </div>
-
+        }
+      >
         {schedule?.overrides && schedule.overrides.length > 0 ? (
           schedule.overrides.map((override) => (
-            <Card key={override.id} style={{ marginTop: 8 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                }}
-              >
+            <Card key={override.id} className={styles.overrideCard}>
+              <div className={styles.overrideRow}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{override.date}</div>
-                  <div className="text-secondary" style={{ fontSize: 13 }}>
+                  <div className={styles.overrideDate}>{override.date}</div>
+                  <div className={styles.overrideMeta}>
                     {override.isDayOff
                       ? intl.formatMessage({ id: 'schedule.dayOff' })
                       : `${override.startTime} — ${override.endTime}`}
@@ -167,7 +158,7 @@ export function SchedulePage() {
                 <button
                   className="touchable"
                   onClick={() => deleteOverride.mutate(override.id)}
-                  aria-label="Delete"
+                  aria-label={intl.formatMessage({ id: 'common.delete' })}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -175,18 +166,16 @@ export function SchedulePage() {
             </Card>
           ))
         ) : (
-          <div className="text-secondary" style={{ textAlign: 'center', padding: 16 }}>
-            {intl.formatMessage({ id: 'schedule.noOverrides' })}
-          </div>
+          <p className={styles.emptyText}>{intl.formatMessage({ id: 'schedule.noOverrides' })}</p>
         )}
-      </section>
+      </Section>
 
       <BottomSheet
         open={showOverrideForm}
         onClose={() => setShowOverrideForm(false)}
         title={intl.formatMessage({ id: 'schedule.addOverride' })}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <FormGroup>
           <Input
             label={intl.formatMessage({ id: 'schedule.date' })}
             type="date"
@@ -202,7 +191,7 @@ export function SchedulePage() {
             <span>{intl.formatMessage({ id: 'schedule.dayOff' })}</span>
           </label>
           {!overrideIsDayOff && (
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className={styles.timeRow}>
               <Input
                 label={intl.formatMessage({ id: 'schedule.startTime' })}
                 type="time"
@@ -225,7 +214,7 @@ export function SchedulePage() {
           >
             {intl.formatMessage({ id: 'common.save' })}
           </Button>
-        </div>
+        </FormGroup>
       </BottomSheet>
     </div>
   );

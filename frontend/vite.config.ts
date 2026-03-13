@@ -22,13 +22,23 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     minify: 'terser',
+    target: 'es2020',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
+          intl: ['react-intl'],
         },
       },
     },
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 200,
   },
 });

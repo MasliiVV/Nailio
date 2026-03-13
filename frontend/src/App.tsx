@@ -1,36 +1,79 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
-// Layouts
+// Layouts (keep eager — always needed)
 import { MasterLayout } from '@/layouts/MasterLayout';
 import { ClientLayout } from '@/layouts/ClientLayout';
 
-// Client pages
-import { ClientHomePage } from '@/pages/client/HomePage';
-import { BookingPage } from '@/pages/client/BookingPage';
-import { MyBookingsPage } from '@/pages/client/MyBookingsPage';
-import { ClientProfilePage } from '@/pages/client/ProfilePage';
-import { ClientOnboardingPage } from '@/pages/client/OnboardingPage';
+// Lazy-loaded pages for code splitting
+const ClientHomePage = lazy(() =>
+  import('@/pages/client/HomePage').then((m) => ({ default: m.ClientHomePage })),
+);
+const BookingPage = lazy(() =>
+  import('@/pages/client/BookingPage').then((m) => ({ default: m.BookingPage })),
+);
+const MyBookingsPage = lazy(() =>
+  import('@/pages/client/MyBookingsPage').then((m) => ({ default: m.MyBookingsPage })),
+);
+const ClientProfilePage = lazy(() =>
+  import('@/pages/client/ProfilePage').then((m) => ({ default: m.ClientProfilePage })),
+);
+const ClientOnboardingPage = lazy(() =>
+  import('@/pages/client/OnboardingPage').then((m) => ({ default: m.ClientOnboardingPage })),
+);
 
-// Master pages
-import { DashboardPage } from '@/pages/master/DashboardPage';
-import { CalendarPage } from '@/pages/master/CalendarPage';
-import { ClientsPage } from '@/pages/master/ClientsPage';
-import { ClientDetailPage } from '@/pages/master/ClientDetailPage';
-import { ServicesPage } from '@/pages/master/ServicesPage';
-import { SchedulePage } from '@/pages/master/SchedulePage';
-import { SettingsPage } from '@/pages/master/SettingsPage';
-import { AnalyticsPage } from '@/pages/master/AnalyticsPage';
-import { FinancePage } from '@/pages/master/FinancePage';
-import { SubscriptionPage } from '@/pages/master/SubscriptionPage';
+const DashboardPage = lazy(() =>
+  import('@/pages/master/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
+const CalendarPage = lazy(() =>
+  import('@/pages/master/CalendarPage').then((m) => ({ default: m.CalendarPage })),
+);
+const ClientsPage = lazy(() =>
+  import('@/pages/master/ClientsPage').then((m) => ({ default: m.ClientsPage })),
+);
+const ClientDetailPage = lazy(() =>
+  import('@/pages/master/ClientDetailPage').then((m) => ({ default: m.ClientDetailPage })),
+);
+const ServicesPage = lazy(() =>
+  import('@/pages/master/ServicesPage').then((m) => ({ default: m.ServicesPage })),
+);
+const SchedulePage = lazy(() =>
+  import('@/pages/master/SchedulePage').then((m) => ({ default: m.SchedulePage })),
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/master/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const AnalyticsPage = lazy(() =>
+  import('@/pages/master/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
+);
+const FinancePage = lazy(() =>
+  import('@/pages/master/FinancePage').then((m) => ({ default: m.FinancePage })),
+);
+const SubscriptionPage = lazy(() =>
+  import('@/pages/master/SubscriptionPage').then((m) => ({ default: m.SubscriptionPage })),
+);
 
-// Admin pages
-import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
-import { AdminTenantPage } from '@/pages/admin/AdminTenantPage';
+const AdminDashboardPage = lazy(() =>
+  import('@/pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })),
+);
+const AdminTenantPage = lazy(() =>
+  import('@/pages/admin/AdminTenantPage').then((m) => ({ default: m.AdminTenantPage })),
+);
 
-// Onboarding
-import { OnboardingWizard } from '@/pages/onboarding/OnboardingWizard';
+const OnboardingWizard = lazy(() =>
+  import('@/pages/onboarding/OnboardingWizard').then((m) => ({ default: m.OnboardingWizard })),
+);
+
+// Lazy suspense fallback
+function PageLoader() {
+  return (
+    <div className="loading-screen" style={{ minHeight: '40vh' }}>
+      <div className="spinner" />
+    </div>
+  );
+}
 
 // Loading screen
 function LoadingScreen() {
@@ -88,10 +131,12 @@ export function App() {
   if (role === 'master' && needsOnboarding) {
     return (
       <BrowserRouter>
-        <Routes>
-          <Route path="/onboarding/*" element={<OnboardingWizard />} />
-          <Route path="*" element={<Navigate to="/onboarding" replace />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/onboarding/*" element={<OnboardingWizard />} />
+            <Route path="*" element={<Navigate to="/onboarding" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
@@ -100,51 +145,55 @@ export function App() {
   if (role === 'client' && needsOnboarding) {
     return (
       <BrowserRouter>
-        <Routes>
-          <Route path="/client/onboarding" element={<ClientOnboardingPage />} />
-          <Route path="*" element={<Navigate to="/client/onboarding" replace />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/client/onboarding" element={<ClientOnboardingPage />} />
+            <Route path="*" element={<Navigate to="/client/onboarding" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
 
   return (
     <BrowserRouter>
-      <Routes>
-        {role === 'master' ? (
-          <>
-            <Route path="/master" element={<MasterLayout />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="calendar" element={<CalendarPage />} />
-              <Route path="clients" element={<ClientsPage />} />
-              <Route path="clients/:id" element={<ClientDetailPage />} />
-              <Route path="services" element={<ServicesPage />} />
-              <Route path="schedule" element={<SchedulePage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="finance" element={<FinancePage />} />
-              <Route path="subscription" element={<SubscriptionPage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/master" replace />} />
-          </>
-        ) : role === 'platform_admin' ? (
-          <>
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/tenants/:id" element={<AdminTenantPage />} />
-            <Route path="*" element={<Navigate to="/admin" replace />} />
-          </>
-        ) : (
-          <>
-            <Route path="/client" element={<ClientLayout />}>
-              <Route index element={<ClientHomePage />} />
-              <Route path="book/:serviceId" element={<BookingPage />} />
-              <Route path="bookings" element={<MyBookingsPage />} />
-              <Route path="profile" element={<ClientProfilePage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/client" replace />} />
-          </>
-        )}
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {role === 'master' ? (
+            <>
+              <Route path="/master" element={<MasterLayout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="calendar" element={<CalendarPage />} />
+                <Route path="clients" element={<ClientsPage />} />
+                <Route path="clients/:id" element={<ClientDetailPage />} />
+                <Route path="services" element={<ServicesPage />} />
+                <Route path="schedule" element={<SchedulePage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="finance" element={<FinancePage />} />
+                <Route path="subscription" element={<SubscriptionPage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/master" replace />} />
+            </>
+          ) : role === 'platform_admin' ? (
+            <>
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/tenants/:id" element={<AdminTenantPage />} />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </>
+          ) : (
+            <>
+              <Route path="/client" element={<ClientLayout />}>
+                <Route index element={<ClientHomePage />} />
+                <Route path="book/:serviceId" element={<BookingPage />} />
+                <Route path="bookings" element={<MyBookingsPage />} />
+                <Route path="profile" element={<ClientProfilePage />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/client" replace />} />
+            </>
+          )}
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

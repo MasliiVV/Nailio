@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useIntl } from 'react-intl';
 import { Hand } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, FormGroup } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import type { ApiResponse, Profile } from '@/types';
+import styles from './OnboardingPage.module.css';
 
 function normalizePhone(value: string): string | undefined {
   const trimmed = value.trim();
@@ -73,18 +74,16 @@ export function ClientOnboardingPage() {
   };
 
   return (
-    <div className="page animate-fade-in" style={{ justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+    <div className={`page animate-fade-in ${styles.page}`}>
+      <div className={styles.hero}>
         <Hand size={48} color="var(--color-primary)" />
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginTop: 12 }}>
-          {intl.formatMessage({ id: 'client.welcome' })}
-        </h1>
-        <p className="text-secondary" style={{ marginTop: 4 }}>
+        <h1 className={styles.heroTitle}>{intl.formatMessage({ id: 'client.welcome' })}</h1>
+        <p className={`text-secondary ${styles.heroSubtitle}`}>
           {intl.formatMessage({ id: 'client.onboarding.title' })}
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <FormGroup gap="lg">
         <Input
           label={intl.formatMessage({ id: 'client.onboarding.firstName' })}
           value={firstName}
@@ -111,12 +110,7 @@ export function ClientOnboardingPage() {
         />
         {submitError &&
           submitError !== intl.formatMessage({ id: 'client.onboarding.phoneError' }) && (
-            <div
-              className="text-secondary"
-              style={{ color: 'var(--color-destructive)', fontSize: 14 }}
-            >
-              {submitError}
-            </div>
+            <div className={styles.errorText}>{submitError}</div>
           )}
         <Button
           fullWidth
@@ -127,7 +121,7 @@ export function ClientOnboardingPage() {
         >
           {intl.formatMessage({ id: 'client.onboarding.submit' })}
         </Button>
-      </div>
+      </FormGroup>
     </div>
   );
 }

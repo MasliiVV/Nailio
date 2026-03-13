@@ -3,10 +3,11 @@ import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, Wallet, Crown, Palette, Clock, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks';
-import { Card, CardRow, Button, Input, BottomSheet } from '@/components/ui';
+import { Card, CardRow, Button, Input, BottomSheet, PageHeader, FormGroup } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import type { ApiResponse, Tenant, UpdateBrandingDto } from '@/types';
+import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
   const intl = useIntl();
@@ -67,9 +68,9 @@ export function SettingsPage() {
 
   return (
     <div className="page animate-fade-in">
-      <h1 className="page-title">{intl.formatMessage({ id: 'master.settings' })}</h1>
+      <PageHeader title={intl.formatMessage({ id: 'master.settings' })} />
 
-      <Card padding="none" style={{ marginBottom: 16 }}>
+      <Card padding="none" className={styles.cardGroup}>
         <CardRow
           icon={<BarChart3 size={20} />}
           title={intl.formatMessage({ id: 'master.analytics' })}
@@ -87,7 +88,7 @@ export function SettingsPage() {
         />
       </Card>
 
-      <Card padding="none" style={{ marginBottom: 16 }}>
+      <Card padding="none" className={styles.cardGroup}>
         <CardRow
           icon={<Palette size={20} />}
           title={intl.formatMessage({ id: 'settings.branding' })}
@@ -101,7 +102,7 @@ export function SettingsPage() {
         />
       </Card>
 
-      <Card padding="none" style={{ marginBottom: 24 }}>
+      <Card padding="none" className={styles.cardGroup}>
         <CardRow
           icon={<LogOut size={20} />}
           title={intl.formatMessage({ id: 'common.logout' })}
@@ -117,7 +118,7 @@ export function SettingsPage() {
         onClose={() => setShowBranding(false)}
         title={intl.formatMessage({ id: 'settings.branding' })}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <FormGroup>
           <Input
             label={intl.formatMessage({ id: 'settings.displayName' })}
             value={displayName}
@@ -129,24 +130,10 @@ export function SettingsPage() {
             onChange={(e) => setWelcomeMessage(e.target.value)}
           />
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 13,
-                color: 'var(--color-text-secondary)',
-                marginBottom: 8,
-              }}
-            >
+            <label className={styles.colorLabel}>
               {intl.formatMessage({ id: 'settings.primaryColor' })}
             </label>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(6, 1fr)',
-                gap: 8,
-                marginBottom: 12,
-              }}
-            >
+            <div className={styles.colorGrid}>
               {colorPresets.map((color) => (
                 <button
                   key={color}
@@ -154,44 +141,26 @@ export function SettingsPage() {
                     handleColorChange(color);
                     getTelegram()?.HapticFeedback.impactOccurred('light');
                   }}
-                  style={{
-                    width: '100%',
-                    aspectRatio: '1',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: color,
-                    border:
-                      primaryColor === color
-                        ? '3px solid var(--color-text)'
-                        : '2px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'transform 0.15s',
-                    transform: primaryColor === color ? 'scale(1.1)' : 'scale(1)',
-                  }}
+                  className={styles.colorSwatch}
+                  data-active={primaryColor === color}
+                  style={{ backgroundColor: color }}
                 />
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className={styles.customColorRow}>
               <input
                 type="color"
                 value={primaryColor}
                 onChange={(e) => handleColorChange(e.target.value)}
-                style={{
-                  width: 48,
-                  height: 48,
-                  border: 'none',
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                }}
+                className={styles.colorPicker}
               />
-              <span style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-                {primaryColor}
-              </span>
+              <span className={styles.colorValue}>{primaryColor}</span>
             </div>
           </div>
           <Button fullWidth loading={saving} onClick={handleSaveBranding}>
             {intl.formatMessage({ id: 'common.save' })}
           </Button>
-        </div>
+        </FormGroup>
       </BottomSheet>
     </div>
   );

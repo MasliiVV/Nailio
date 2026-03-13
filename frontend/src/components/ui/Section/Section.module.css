@@ -1,0 +1,28 @@
+.section + .section {
+  margin-top: var(--space-2xl);
+}
+
+.sm + .sm { margin-top: var(--space-lg); }
+.md + .md { margin-top: var(--space-2xl); }
+.lg + .lg { margin-top: var(--space-3xl); }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-section-header);
+  margin: 0;
+}
+
+.action {
+  flex-shrink: 0;
+}

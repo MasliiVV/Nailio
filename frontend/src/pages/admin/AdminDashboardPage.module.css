@@ -1,0 +1,71 @@
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tenantGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.tenantLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tenantCard {
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.tenantHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.tenantName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.tenantSlug {
+  margin: 4px 0 0;
+}
+
+.statIcon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metaGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.emptyCard {
+  padding: 20px;
+}

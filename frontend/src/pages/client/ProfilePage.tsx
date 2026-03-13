@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, PageHeader, FormGroup } from '@/components/ui';
 import { api } from '@/lib/api';
 import type { ApiResponse, Profile } from '@/types';
 import { getTelegram } from '@/lib/telegram';
@@ -39,11 +39,9 @@ export function ClientProfilePage() {
 
   return (
     <div className="page animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">{intl.formatMessage({ id: 'client.profile' })}</h1>
-      </div>
+      <PageHeader title={intl.formatMessage({ id: 'client.profile' })} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <FormGroup gap="lg">
         <Input
           label={intl.formatMessage({ id: 'client.onboarding.firstName' })}
           value={firstName}
@@ -64,7 +62,7 @@ export function ClientProfilePage() {
         <Button fullWidth loading={saving} onClick={handleSave}>
           {intl.formatMessage({ id: 'common.save' })}
         </Button>
-      </div>
+      </FormGroup>
     </div>
   );
 }

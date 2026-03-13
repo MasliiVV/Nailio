@@ -1,0 +1,8 @@
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm { gap: var(--space-sm); }
+.md { gap: var(--space-md); }
+.lg { gap: var(--space-lg); }

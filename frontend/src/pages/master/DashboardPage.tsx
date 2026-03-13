@@ -2,7 +2,15 @@ import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useDashboard, useBookings } from '@/hooks';
-import { Card, SkeletonList } from '@/components/ui';
+import {
+  Card,
+  SkeletonList,
+  PageHeader,
+  StatCard,
+  StatGrid,
+  Section,
+  Badge,
+} from '@/components/ui';
 import type { Booking } from '@/types';
 import styles from './DashboardPage.module.css';
 
@@ -31,50 +39,38 @@ export function DashboardPage() {
 
   return (
     <div className="page animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">{intl.formatMessage({ id: 'master.dashboard' })}</h1>
-      </div>
+      <PageHeader title={intl.formatMessage({ id: 'master.dashboard' })} />
 
       {/* Stats grid */}
       {dashLoading ? (
         <SkeletonList count={2} />
       ) : (
         dashboard && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card__value">{dashboard.today.bookings}</div>
-              <div className="stat-card__label">
-                {intl.formatMessage({ id: 'master.todayBookings' })}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__value">{(dashboard.today.revenue / 100).toFixed(0)}₴</div>
-              <div className="stat-card__label">
-                {intl.formatMessage({ id: 'master.todayRevenue' })}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__value">{dashboard.period.newClients}</div>
-              <div className="stat-card__label">
-                {intl.formatMessage({ id: 'master.newClients' })}
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-card__value">{dashboard.period.completed}</div>
-              <div className="stat-card__label">
-                {intl.formatMessage({ id: 'analytics.completed' })}
-              </div>
-            </div>
-          </div>
+          <StatGrid columns={2}>
+            <StatCard
+              value={dashboard.today.bookings}
+              label={intl.formatMessage({ id: 'master.todayBookings' })}
+            />
+            <StatCard
+              value={`${(dashboard.today.revenue / 100).toFixed(0)}₴`}
+              label={intl.formatMessage({ id: 'master.todayRevenue' })}
+            />
+            <StatCard
+              value={dashboard.period.newClients}
+              label={intl.formatMessage({ id: 'master.newClients' })}
+            />
+            <StatCard
+              value={dashboard.period.completed}
+              label={intl.formatMessage({ id: 'analytics.completed' })}
+            />
+          </StatGrid>
         )
       )}
 
       {/* Today's bookings */}
-      <div style={{ marginTop: 24 }}>
-        <div className="flex justify-between items-center" style={{ marginBottom: 12 }}>
-          <h3 style={{ fontSize: 17, fontWeight: 600 }}>
-            {intl.formatMessage({ id: 'master.todayBookings' })}
-          </h3>
+      <Section
+        title={intl.formatMessage({ id: 'master.todayBookings' })}
+        action={
           <button
             className="touchable"
             style={{ color: 'var(--color-link)', fontSize: 15 }}
@@ -82,8 +78,8 @@ export function DashboardPage() {
           >
             {intl.formatMessage({ id: 'master.viewAll' })}
           </button>
-        </div>
-
+        }
+      >
         {bookingsLoading && <SkeletonList count={3} />}
 
         {!bookingsLoading && todayBookings.length === 0 && (
@@ -108,14 +104,12 @@ export function DashboardPage() {
                 </span>
               )}
             </div>
-            <span
-              className={`badge badge--${booking.status === 'confirmed' ? 'success' : 'warning'}`}
-            >
+            <Badge variant={booking.status === 'confirmed' ? 'success' : 'warning'}>
               {intl.formatMessage({ id: `booking.status.${booking.status}` })}
-            </span>
+            </Badge>
           </Card>
         ))}
-      </div>
+      </Section>
     </div>
   );
 }

@@ -2,7 +2,17 @@ import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { useTransactions, useFinanceSummary, useCreateTransaction } from '@/hooks';
-import { Card, Button, Input, BottomSheet, EmptyState, Tabs, SkeletonList } from '@/components/ui';
+import {
+  Card,
+  Button,
+  Input,
+  BottomSheet,
+  EmptyState,
+  Tabs,
+  SkeletonList,
+  PageHeader,
+  FormGroup,
+} from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { Transaction, TransactionType, CreateTransactionDto } from '@/types';
 import styles from './FinancePage.module.css';
@@ -51,12 +61,14 @@ export function FinancePage() {
 
   return (
     <div className="page animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 className="page-title">{intl.formatMessage({ id: 'finance.title' })}</h1>
-        <Button size="sm" onClick={() => setShowForm(true)}>
-          + {intl.formatMessage({ id: 'common.add' })}
-        </Button>
-      </div>
+      <PageHeader
+        title={intl.formatMessage({ id: 'finance.title' })}
+        action={
+          <Button size="sm" onClick={() => setShowForm(true)}>
+            + {intl.formatMessage({ id: 'common.add' })}
+          </Button>
+        }
+      />
 
       {summary && (
         <div className={styles.summaryGrid}>
@@ -90,7 +102,7 @@ export function FinancePage() {
 
       {transactions &&
         transactions.items.map((tx: Transaction) => (
-          <Card key={tx.id} style={{ marginBottom: 6 }}>
+          <Card key={tx.id} className={styles.txCard}>
             <div className={styles.txRow}>
               <div className={styles.txIcon}>
                 {tx.type === 'income' ? (
@@ -118,7 +130,7 @@ export function FinancePage() {
         onClose={() => setShowForm(false)}
         title={intl.formatMessage({ id: 'finance.addTransaction' })}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <FormGroup>
           <Tabs
             tabs={[
               { id: 'income', label: intl.formatMessage({ id: 'finance.income' }) },
@@ -146,7 +158,7 @@ export function FinancePage() {
           >
             {intl.formatMessage({ id: 'common.save' })}
           </Button>
-        </div>
+        </FormGroup>
       </BottomSheet>
     </div>
   );

@@ -1,6 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
+import { useIntl } from 'react-intl';
 import { ArrowLeft, Bot, CreditCard, Settings, Users } from 'lucide-react';
 import { useAdminTenant } from '@/hooks';
+import { StatCard, StatGrid } from '@/components/ui';
+import styles from './AdminTenantPage.module.css';
 
 function renderJson(value: Record<string, unknown>): string {
   const entries = Object.entries(value);
@@ -24,6 +27,7 @@ function formatDate(value: string | null): string {
 }
 
 export function AdminTenantPage() {
+  const intl = useIntl();
   const { id = '' } = useParams();
   const { data: tenant, isLoading } = useAdminTenant(id);
 
@@ -38,107 +42,119 @@ export function AdminTenantPage() {
   if (!tenant) {
     return (
       <div className="page">
-        <Link to="/admin" style={{ textDecoration: 'none' }}>
-          ← Назад
+        <Link to="/admin" className={styles.backLink}>
+          <ArrowLeft size={16} /> {intl.formatMessage({ id: 'common.back' })}
         </Link>
-        <p>Тенанта не знайдено.</p>
+        <p>{intl.formatMessage({ id: 'admin.tenantNotFound' })}</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="page animate-fade-in"
-      style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gap: 16 }}
-    >
-      <Link
-        to="/admin"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}
-      >
-        <ArrowLeft size={16} /> До списку майстрів
+    <div className={`page animate-fade-in ${styles.page}`}>
+      <Link to="/admin" className={styles.backLink}>
+        <ArrowLeft size={16} /> {intl.formatMessage({ id: 'admin.backToList' })}
       </Link>
 
-      <div className="card" style={{ padding: 20 }}>
-        <h1 className="page-title" style={{ marginBottom: 8 }}>
-          {tenant.displayName}
-        </h1>
-        <p className="text-secondary" style={{ margin: 0 }}>
+      <div className={`card ${styles.profileCard}`}>
+        <h1 className={`page-title ${styles.profileName}`}>{tenant.displayName}</h1>
+        <p className={`text-secondary ${styles.profileSlug}`}>
           @{tenant.slug} · {tenant.master.firstName} {tenant.master.lastName || ''}
         </p>
       </div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-        <div className="stat-card">
-          <div className="stat-card__value">{tenant.counts.clients}</div>
-          <div className="stat-card__label">Клієнти</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__value">{tenant.counts.services}</div>
-          <div className="stat-card__label">Послуги</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card__value">{tenant.counts.bookings}</div>
-          <div className="stat-card__label">Записи</div>
-        </div>
-      </div>
+      <StatGrid columns={3}>
+        <StatCard
+          value={tenant.counts.clients}
+          label={intl.formatMessage({ id: 'admin.clients' })}
+        />
+        <StatCard
+          value={tenant.counts.services}
+          label={intl.formatMessage({ id: 'admin.services' })}
+        />
+        <StatCard
+          value={tenant.counts.bookings}
+          label={intl.formatMessage({ id: 'admin.bookings' })}
+        />
+      </StatGrid>
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        <div className="card" style={{ padding: 20 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-            <Users size={18} /> Профіль майстра
+      <div className={styles.sectionGrid}>
+        <div className={`card ${styles.sectionCard}`}>
+          <h2 className={styles.sectionTitle}>
+            <Users size={18} /> {intl.formatMessage({ id: 'admin.masterProfile' })}
           </h2>
-          <p>
-            Ім'я: {tenant.master.firstName} {tenant.master.lastName || ''}
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.name' })}: {tenant.master.firstName}{' '}
+            {tenant.master.lastName || ''}
           </p>
-          <p>Телефон майстра: {tenant.master.phone || '—'}</p>
-          <p>Email бізнесу: {tenant.email || '—'}</p>
-          <p>Телефон бізнесу: {tenant.phone || '—'}</p>
-          <p>Часовий пояс: {tenant.timezone}</p>
-          <p>Локаль: {tenant.locale}</p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.masterPhone' })}: {tenant.master.phone || '—'}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.businessEmail' })}: {tenant.email || '—'}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.businessPhone' })}: {tenant.phone || '—'}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.timezone' })}: {tenant.timezone}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.locale' })}: {tenant.locale}
+          </p>
         </div>
 
-        <div className="card" style={{ padding: 20 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-            <Bot size={18} /> Бот та онбординг
+        <div className={`card ${styles.sectionCard}`}>
+          <h2 className={styles.sectionTitle}>
+            <Bot size={18} /> {intl.formatMessage({ id: 'admin.botAndOnboarding' })}
           </h2>
-          <p>Статус онбордингу: {tenant.onboardingStatus}</p>
-          <p>
-            Бот:{' '}
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.onboardingStatus' })}: {tenant.onboardingStatus}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.bot' })}:{' '}
             {tenant.bot
               ? `@${tenant.bot.botUsername} (${tenant.bot.isActive ? 'active' : 'inactive'})`
-              : 'не підключений'}
+              : intl.formatMessage({ id: 'admin.botNotConnected' })}
           </p>
-          <p>Trial до: {formatDate(tenant.trialEndsAt)}</p>
-          <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-            {renderJson(tenant.onboardingChecklist)}
-          </pre>
+          <p className={styles.detail}>
+            Trial {intl.formatMessage({ id: 'admin.until' })}: {formatDate(tenant.trialEndsAt)}
+          </p>
+          <pre className={styles.pre}>{renderJson(tenant.onboardingChecklist)}</pre>
         </div>
 
-        <div className="card" style={{ padding: 20 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-            <CreditCard size={18} /> Платежі та підписка
+        <div className={`card ${styles.sectionCard}`}>
+          <h2 className={styles.sectionTitle}>
+            <CreditCard size={18} /> {intl.formatMessage({ id: 'admin.paymentsAndSubscription' })}
           </h2>
-          <p>Підписка: {tenant.subscription ? tenant.subscription.status : '—'}</p>
-          <p>Період до: {formatDate(tenant.subscription?.currentPeriodEnd || null)}</p>
-          <p>Провайдер підписки: {tenant.subscription?.paymentProvider || '—'}</p>
-          <p>
-            Платіжні налаштування:{' '}
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.subscription' })}:{' '}
+            {tenant.subscription ? tenant.subscription.status : '—'}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.periodUntil' })}:{' '}
+            {formatDate(tenant.subscription?.currentPeriodEnd || null)}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.paymentProvider' })}:{' '}
+            {tenant.subscription?.paymentProvider || '—'}
+          </p>
+          <p className={styles.detail}>
+            {intl.formatMessage({ id: 'admin.paymentSettings' })}:{' '}
             {tenant.paymentSettings
               ? `${tenant.paymentSettings.provider} (${tenant.paymentSettings.isActive ? 'active' : 'inactive'})`
-              : 'не підключені'}
+              : intl.formatMessage({ id: 'admin.notConnected' })}
           </p>
         </div>
 
-        <div className="card" style={{ padding: 20 }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-            <Settings size={18} /> Налаштування
+        <div className={`card ${styles.sectionCard}`}>
+          <h2 className={styles.sectionTitle}>
+            <Settings size={18} /> {intl.formatMessage({ id: 'master.settings' })}
           </h2>
           <h3>Branding</h3>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{renderJson(tenant.branding)}</pre>
+          <pre className={styles.pre}>{renderJson(tenant.branding)}</pre>
           <h3>Settings</h3>
-          <pre style={{ whiteSpace: 'pre-wrap', marginBottom: 0 }}>
-            {renderJson(tenant.settings)}
-          </pre>
+          <pre className={styles.pre}>{renderJson(tenant.settings)}</pre>
         </div>
       </div>
     </div>

@@ -1,25 +1,28 @@
 .header {
   text-align: center;
-  padding: var(--space-xl) 0 var(--space-2xl);
+  padding: var(--space-2xl) 0 var(--space-3xl);
 }
 
 .logo {
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-lg);
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-xl);
   margin: 0 auto var(--space-md);
   object-fit: cover;
+  box-shadow: var(--shadow-md);
 }
 
 .title {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
+  font-size: var(--font-size-3xl);
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .welcome {
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
-  margin-top: var(--space-xs);
+  margin-top: var(--space-sm);
+  line-height: 1.5;
 }
 
 .section {
@@ -29,20 +32,20 @@
 .servicesList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .serviceCard {
   display: flex !important;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-lg) !important;
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--space-xl) !important;
 }
 
 .serviceColor {
-  width: 6px;
-  height: 40px;
-  border-radius: 3px;
+  width: 4px;
+  height: 44px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
 }
 
@@ -50,13 +53,13 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .serviceName {
   font-size: var(--font-size-md);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text);
 }
 
@@ -77,13 +80,19 @@
 }
 
 .servicePrice {
-  font-weight: 600;
-  color: var(--color-text);
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .chevron {
   font-size: 1.25rem;
   color: var(--color-text-secondary);
-  opacity: 0.5;
+  opacity: 0.4;
   flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.serviceCard:hover .chevron {
+  transform: translateX(2px);
+  opacity: 0.6;
 }

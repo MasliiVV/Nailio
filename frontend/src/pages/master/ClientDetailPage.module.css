@@ -1,0 +1,73 @@
+.profileHeader {
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+
+.profileName {
+  margin-top: var(--space-md);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.profilePhone {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.statsSection {
+  margin-bottom: var(--space-2xl);
+}
+
+.notesCard {
+  padding: var(--space-md) var(--space-lg) !important;
+}
+
+.notesLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.notesText {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.recentSection {
+  margin-top: var(--space-2xl);
+}
+
+.recentCard {
+  padding: var(--space-sm) var(--space-lg) !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.recentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recentService {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.recentDate {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.blockSection {
+  margin-top: var(--space-3xl);
+}

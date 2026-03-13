@@ -1,0 +1,44 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.serviceCard {
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg) !important;
+}
+
+.colorBar {
+  width: 5px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.serviceInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.serviceName {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.serviceMeta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.serviceActions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
