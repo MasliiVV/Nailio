@@ -25,7 +25,7 @@ export function ClientHomePage() {
         {tenant?.logoUrl && (
           <img src={tenant.logoUrl} alt={tenant.displayName} className={styles.logo} />
         )}
-        <h1 className={styles.title}>{tenant?.displayName || 'GlowUp'}</h1>
+        <h1 className={styles.title}>{tenant?.displayName || 'Nailio'}</h1>
         {tenant?.branding?.welcomeMessage && (
           <p className={styles.welcome}>{tenant.branding.welcomeMessage}</p>
         )}

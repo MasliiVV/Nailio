@@ -11,7 +11,7 @@ import { RequiresActiveSubscription } from '../../common/decorators/requires-act
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 
-@Controller('api/v1/finance')
+@Controller('finance')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
 @Roles('master')
 export class FinanceController {

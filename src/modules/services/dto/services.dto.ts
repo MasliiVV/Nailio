@@ -31,10 +31,11 @@ export class CreateServiceDto {
   @Min(0)
   price!: number;
 
-  @ApiProperty({ example: 'UAH' })
+  @ApiPropertyOptional({ example: 'UAH', default: 'UAH' })
+  @IsOptional()
   @IsString()
   @MaxLength(3)
-  currency!: string;
+  currency?: string;
 
   @ApiPropertyOptional({ example: 15, description: 'Buffer time after service (minutes)' })
   @IsOptional()

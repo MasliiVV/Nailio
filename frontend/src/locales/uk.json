@@ -12,6 +12,7 @@
   "common.close": "Закрити",
   "common.search": "Пошук",
   "common.retry": "Спробувати ще",
+  "common.skip": "Пропустити",
   "common.yes": "Так",
   "common.no": "Ні",
   "common.uah": "грн",
@@ -58,6 +59,9 @@
   "client.onboarding.firstName": "Ваше ім'я",
   "client.onboarding.lastName": "Прізвище",
   "client.onboarding.phone": "Номер телефону",
+  "client.onboarding.phoneHint": "Можна вводити як +380..., 380... або 0...",
+  "client.onboarding.phoneError": "Вкажіть номер у форматі +380XXXXXXXXX",
+  "client.onboarding.submitError": "Не вдалося зберегти профіль. Спробуйте ще раз.",
   "client.onboarding.submit": "Зберегти",
 
   "master.dashboard": "Головна",
@@ -167,7 +171,7 @@
   "subscription.readOnly": "Цей майстер тимчасово не приймає онлайн-записи.",
   "subscription.readOnlyHint": "Зв'яжіться з майстром напряму.",
 
-  "onboarding.welcome": "Ласкаво просимо до GlowUp!",
+  "onboarding.welcome": "Ласкаво просимо до Nailio!",
   "onboarding.welcomeText": "Створіть власного бота для запису клієнтів за 5 хвилин.",
   "onboarding.welcomeDesc": "Створіть власного бота для запису клієнтів за 5 хвилин.",
   "onboarding.watchVideo": "Дивитись відео-інструкцію",

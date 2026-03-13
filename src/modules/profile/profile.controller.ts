@@ -9,7 +9,7 @@ import { UpdateProfileDto } from './dto/profile.dto';
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
-@Controller('api/v1/profile')
+@Controller('profile')
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}

@@ -39,3 +39,4 @@ export {
   useCancelSubscription,
   subscriptionKeys,
 } from './useSubscription';
+export { useAdminTenants, useAdminTenant, adminTenantKeys } from './useAdminTenants';

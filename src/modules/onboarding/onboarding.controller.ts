@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { OnboardingService } from './onboarding.service';
 import { ValidateTokenDto, OnboardingStatusDto } from './dto/onboarding.dto';
 import { Roles, CurrentTenant } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
 @ApiTags('Onboarding')
 @Controller('onboarding')
@@ -20,7 +20,7 @@ export class OnboardingController {
    */
   @Get('status')
   @Roles('master')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get onboarding progress' })
   @ApiResponse({ status: 200, type: OnboardingStatusDto })
   async getStatus(@CurrentTenant() tenantId: string) {
@@ -33,7 +33,7 @@ export class OnboardingController {
    */
   @Post('connect-bot')
   @Roles('master')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Validate and connect bot token' })
   @ApiResponse({ status: 201, description: 'Bot connected successfully' })
@@ -47,7 +47,7 @@ export class OnboardingController {
    */
   @Post('shared-link')
   @Roles('master')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark bot link as shared' })
   @ApiResponse({ status: 200, type: OnboardingStatusDto })

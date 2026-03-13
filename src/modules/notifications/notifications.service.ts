@@ -98,19 +98,12 @@ export class NotificationsService {
       });
     }
 
-    // Schedule cancellation notification (immediate)
+    // Schedule cancellation notification to client (immediate)
     await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation', 0);
 
-    // If cancelled by client, also notify master
+    // If cancelled by client, also notify master via platform bot
     if (cancelledBy === 'client') {
-      await this.addNotificationJob(
-        tenantId,
-        bookingId,
-        clientId,
-        'cancellation',
-        0,
-        // This will be handled in the processor — it sends to master
-      );
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation_master', 0);
     }
 
     this.logger.log(`Notifications cancelled for booking ${bookingId} in tenant ${tenantId}`);

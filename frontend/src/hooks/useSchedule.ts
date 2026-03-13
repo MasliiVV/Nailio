@@ -17,7 +17,7 @@ export function useSchedule() {
   return useQuery({
     queryKey: scheduleKeys.all,
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Schedule>>('/api/v1/schedule');
+      const res = await api.get<ApiResponse<Schedule>>('/schedule');
       return res.data;
     },
   });
@@ -27,8 +27,10 @@ export function useUpdateWorkingHours() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (hours: WorkingHours) => {
-      const res = await api.put<ApiResponse<Schedule>>('/api/v1/schedule/hours', hours);
+    mutationFn: async (
+      payload: { hours: Array<Omit<WorkingHours, 'isWorking'>> } | WorkingHours,
+    ) => {
+      const res = await api.put<ApiResponse<Schedule>>('/schedule/hours', payload);
       return res.data;
     },
     onSuccess: () => {
@@ -43,7 +45,7 @@ export function useCreateOverride() {
 
   return useMutation({
     mutationFn: async (dto: CreateOverrideDto) => {
-      const res = await api.post<ApiResponse<ScheduleOverride>>('/api/v1/schedule/overrides', dto);
+      const res = await api.post<ApiResponse<ScheduleOverride>>('/schedule/overrides', dto);
       return res.data;
     },
     onSuccess: () => {
@@ -58,7 +60,7 @@ export function useDeleteOverride() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/api/v1/schedule/overrides/${id}`);
+      await api.delete(`/schedule/overrides/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.all });

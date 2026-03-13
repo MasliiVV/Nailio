@@ -25,7 +25,7 @@ export function useSlots(date: string, serviceId: string) {
     queryKey: bookingKeys.slots(date, serviceId),
     queryFn: async () => {
       const res = await api.get<ApiResponse<SlotsResponse>>(
-        `/api/v1/bookings/slots?date=${date}&serviceId=${serviceId}`,
+        `/bookings/slots?date=${date}&serviceId=${serviceId}`,
       );
       return res.data;
     },
@@ -47,7 +47,7 @@ export function useBookings(params?: { status?: string; upcoming?: boolean; curs
     queryKey: bookingKeys.list(params as Record<string, string>),
     queryFn: async () => {
       const res = await api.get<ApiResponse<PaginatedResponse<Booking>>>(
-        `/api/v1/bookings${qs ? `?${qs}` : ''}`,
+        `/bookings${qs ? `?${qs}` : ''}`,
       );
       return res.data;
     },
@@ -59,7 +59,7 @@ export function useBooking(id: string) {
   return useQuery({
     queryKey: bookingKeys.detail(id),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Booking>>(`/api/v1/bookings/${id}`);
+      const res = await api.get<ApiResponse<Booking>>(`/bookings/${id}`);
       return res.data;
     },
     enabled: !!id,
@@ -72,7 +72,7 @@ export function useCreateBooking() {
 
   return useMutation({
     mutationFn: async (dto: CreateBookingDto) => {
-      const res = await api.post<ApiResponse<Booking>>('/api/v1/bookings', dto);
+      const res = await api.post<ApiResponse<Booking>>('/bookings', dto);
       return res.data;
     },
     onSuccess: () => {
@@ -93,7 +93,7 @@ export function useCancelBooking() {
 
   return useMutation({
     mutationFn: async ({ id, dto }: { id: string; dto?: CancelBookingDto }) => {
-      const res = await api.post<ApiResponse<Booking>>(`/api/v1/bookings/${id}/cancel`, dto);
+      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/cancel`, dto);
       return res.data;
     },
     onSuccess: (_data, variables) => {
@@ -111,7 +111,7 @@ export function useCompleteBooking() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.post<ApiResponse<Booking>>(`/api/v1/bookings/${id}/complete`);
+      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/complete`);
       return res.data;
     },
     onSuccess: (_data, id) => {
@@ -129,7 +129,7 @@ export function useNoShowBooking() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.post<ApiResponse<Booking>>(`/api/v1/bookings/${id}/no-show`);
+      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/no-show`);
       return res.data;
     },
     onSuccess: (_data, id) => {

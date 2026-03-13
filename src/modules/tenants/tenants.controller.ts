@@ -4,10 +4,16 @@
 // PUT /api/v1/settings/general 🔑👑⚡
 // POST /api/v1/settings/logo 🔑👑⚡
 
-import { Controller, Get, Put, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, HttpCode, HttpStatus, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
-import { UpdateBrandingDto, UpdateGeneralSettingsDto, TenantResponseDto } from './dto/tenants.dto';
+import {
+  UpdateBrandingDto,
+  UpdateGeneralSettingsDto,
+  TenantResponseDto,
+  AdminTenantSummaryDto,
+  AdminTenantDetailDto,
+} from './dto/tenants.dto';
 import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
 
@@ -61,5 +67,30 @@ export class TenantsController {
     @Body() dto: UpdateGeneralSettingsDto,
   ) {
     return this.tenantsService.updateGeneralSettings(tenantId, dto);
+  }
+}
+
+@ApiTags('Admin')
+@Controller('admin/tenants')
+@ApiBearerAuth()
+export class AdminTenantsController {
+  constructor(private readonly tenantsService: TenantsService) {}
+
+  @Get()
+  @Roles('platform_admin')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'List all tenants for platform admin' })
+  @ApiResponse({ status: 200, type: AdminTenantSummaryDto, isArray: true })
+  async listTenants() {
+    return this.tenantsService.listAdminTenants();
+  }
+
+  @Get(':id')
+  @Roles('platform_admin')
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get tenant overview for platform admin' })
+  @ApiResponse({ status: 200, type: AdminTenantDetailDto })
+  async getTenant(@Param('id') tenantId: string) {
+    return this.tenantsService.getAdminTenantById(tenantId);
   }
 }

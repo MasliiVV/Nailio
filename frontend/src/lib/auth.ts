@@ -4,7 +4,7 @@
 
 import { cloudStorageSet, cloudStorageGet, cloudStorageRemove } from './telegram';
 import { api, setAccessToken, setTokenRefreshHandler } from './api';
-import type { AuthResponse } from '@/types';
+import type { ApiResponse, AuthResponse } from '@/types';
 
 export type { AuthResponse };
 
@@ -12,11 +12,12 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 
 /** Authenticate via Telegram initData */
 export async function authenticate(initData: string, startParam?: string): Promise<AuthResponse> {
-  const data = await api.post<AuthResponse>(
+  const response = await api.post<ApiResponse<AuthResponse>>(
     '/auth/telegram',
     { initData, startParam },
     { skipAuth: true },
   );
+  const data = response.data;
 
   // Store tokens
   setAccessToken(data.accessToken);
@@ -25,22 +26,26 @@ export async function authenticate(initData: string, startParam?: string): Promi
   return data;
 }
 
-/** Refresh access token using stored refresh token */
-export async function refreshAccessToken(): Promise<string | null> {
+/** Refresh access token using stored refresh token.
+ *  Returns full AuthResponse so the caller can restore session state
+ *  without re-authenticating via initData (which may already be expired).
+ */
+export async function refreshAccessToken(): Promise<AuthResponse | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
   try {
-    const data = await api.post<{ accessToken: string; refreshToken: string }>(
+    const response = await api.post<ApiResponse<AuthResponse>>(
       '/auth/refresh',
       { refreshToken },
       { skipAuth: true },
     );
+    const data = response.data;
 
     setAccessToken(data.accessToken);
     await saveRefreshToken(data.refreshToken);
 
-    return data.accessToken;
+    return data;
   } catch {
     // Refresh failed — clear tokens
     await clearTokens();
@@ -51,7 +56,10 @@ export async function refreshAccessToken(): Promise<string | null> {
 /** Logout */
 export async function logout(): Promise<void> {
   try {
-    await api.post('/auth/logout');
+    const refreshToken = await getRefreshToken();
+    if (refreshToken) {
+      await api.post('/auth/logout', { refreshToken });
+    }
   } catch {
     // Ignore errors on logout
   }

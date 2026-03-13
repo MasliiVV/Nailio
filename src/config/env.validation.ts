@@ -40,6 +40,14 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  PLATFORM_ADMIN_TELEGRAM_IDS?: string;
+
+  @IsString()
+  @IsOptional()
+  PLATFORM_ADMIN_USERNAMES?: string;
+
+  @IsString()
+  @IsOptional()
   MONOBANK_MERCHANT_TOKEN?: string;
 
   @IsString()

@@ -50,6 +50,53 @@ export interface Tenant {
   branding: TenantBranding | null;
 }
 
+export interface AdminTenantSummary {
+  id: string;
+  slug: string;
+  displayName: string;
+  onboardingStatus: string;
+  isActive: boolean;
+  trialEndsAt: string | null;
+  createdAt: string;
+  master: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    phone: string | null;
+  };
+  bot: {
+    id: string;
+    botId: string;
+    botUsername: string;
+    isActive: boolean;
+  } | null;
+  subscription: {
+    status: SubscriptionStatus;
+    currentPeriodEnd: string | null;
+    paymentProvider: string | null;
+  } | null;
+  paymentSettings: {
+    provider: string;
+    isActive: boolean;
+  } | null;
+  counts: {
+    clients: number;
+    services: number;
+    bookings: number;
+  };
+}
+
+export interface AdminTenantDetail extends AdminTenantSummary {
+  phone: string | null;
+  email: string | null;
+  timezone: string;
+  locale: string;
+  logoUrl: string | null;
+  branding: Record<string, unknown>;
+  settings: Record<string, unknown>;
+  onboardingChecklist: Record<string, unknown>;
+}
+
 export interface TenantBranding {
   primaryColor?: string;
   secondaryColor?: string;

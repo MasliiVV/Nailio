@@ -25,7 +25,9 @@ export default () => ({
 
   platformBot: {
     token: process.env.PLATFORM_BOT_TOKEN,
-    url: process.env.PLATFORM_BOT_URL || 'https://t.me/GlowUpProBot',
+    url: process.env.PLATFORM_BOT_URL || 'https://t.me/nailioapp_bot',
+    adminTelegramIds: process.env.PLATFORM_ADMIN_TELEGRAM_IDS || '',
+    adminUsernames: process.env.PLATFORM_ADMIN_USERNAMES || '',
   },
 
   subscription: {

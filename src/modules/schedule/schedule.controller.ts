@@ -16,16 +16,18 @@ import {
   HttpStatus,
   UseGuards,
   ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ScheduleService } from './schedule.service';
 import { UpdateWorkingHoursDto, CreateOverrideDto, ScheduleResponseDto } from './dto/schedule.dto';
 import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
 @ApiTags('Schedule')
 @Controller('schedule')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
@@ -47,11 +49,28 @@ export class ScheduleController {
   @Put('hours')
   @Roles('master')
   @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Update weekly working hours' })
   @ApiResponse({ status: 200, type: ScheduleResponseDto })
   async updateHours(@CurrentTenant() tenantId: string, @Body() dto: UpdateWorkingHoursDto) {
-    return this.scheduleService.updateWorkingHours(tenantId, dto);
+    if (Array.isArray(dto.hours)) {
+      return this.scheduleService.updateWorkingHours(tenantId, dto);
+    }
+
+    if (
+      dto.dayOfWeek !== undefined &&
+      dto.isWorking !== undefined &&
+      dto.startTime !== undefined &&
+      dto.endTime !== undefined
+    ) {
+      return this.scheduleService.updateWorkingDay(tenantId, {
+        dayOfWeek: dto.dayOfWeek,
+        isWorking: dto.isWorking,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+      });
+    }
+
+    throw new BadRequestException('Either hours[] or single day payload is required');
   }
 
   /**
@@ -61,7 +80,6 @@ export class ScheduleController {
   @Post('overrides')
   @Roles('master')
   @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add schedule override' })
   async createOverride(@CurrentTenant() tenantId: string, @Body() dto: CreateOverrideDto) {
@@ -75,7 +93,6 @@ export class ScheduleController {
   @Delete('overrides/:id')
   @Roles('master')
   @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete schedule override' })
   @ApiResponse({ status: 204 })

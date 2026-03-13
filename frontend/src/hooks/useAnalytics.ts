@@ -12,7 +12,7 @@ export function useDashboard(period: 'week' | 'month' | 'year' = 'week') {
     queryKey: analyticsKeys.dashboard(period),
     queryFn: async () => {
       const res = await api.get<ApiResponse<DashboardData>>(
-        `/api/v1/analytics/dashboard?period=${period}`,
+        `/analytics/dashboard?period=${period}`,
       );
       return res.data;
     },

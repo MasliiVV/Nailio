@@ -60,7 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const initData = getInitData();
       if (!initData) {
-        throw new Error('No Telegram initData available');
+        throw new Error(
+          'Відкрийте додаток через кнопку меню в Telegram-боті, а не як звичайний сайт.',
+        );
       }
 
       const startParam = getStartParam();
@@ -69,12 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       // Try to restore session via refresh token
       try {
-        await refreshAccessToken();
-        // If refresh succeeds, re-authenticate to get full profile
-        const initData = getInitData();
-        if (initData) {
-          const data = await authenticate(initData, getStartParam() || undefined);
-          handleAuthResponse(data);
+        const refreshedData = await refreshAccessToken();
+        if (refreshedData) {
+          // Refresh succeeded — use the full AuthResponse directly
+          // (no need to re-authenticate with initData which may be expired)
+          handleAuthResponse(refreshedData);
           return;
         }
       } catch {
@@ -123,11 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isTelegramEnv()) {
       login();
     } else {
-      // Dev mode — skip auth
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Not running inside Telegram',
+        error: 'Цей додаток працює тільки всередині Telegram Mini App.',
       }));
     }
   }, [login]);

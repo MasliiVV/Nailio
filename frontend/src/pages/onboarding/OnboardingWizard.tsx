@@ -14,9 +14,9 @@ import {
   Smartphone,
   Video,
 } from 'lucide-react';
-import { useAuth, useCreateService, useUpdateWorkingHours } from '@/hooks';
+import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import type { CreateServiceDto, ApiResponse, Tenant, UpdateBrandingDto } from '@/types';
 import styles from './OnboardingWizard.module.css';
@@ -41,14 +41,13 @@ export function OnboardingWizard() {
   const navigate = useNavigate();
   const { setOnboardingComplete, updateTenant } = useAuth();
   const createService = useCreateService();
-  const updateHours = useUpdateWorkingHours();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
   // Step 3: Bot token
   const [botToken, setBotToken] = useState('');
-  const [botInfo, setBotInfo] = useState<{ username: string; name: string } | null>(null);
+  const [botInfo, setBotInfo] = useState<{ username: string } | null>(null);
   const [tokenError, setTokenError] = useState('');
 
   // Step 4: Services
@@ -56,6 +55,8 @@ export function OnboardingWizard() {
   const [servicePrice, setServicePrice] = useState('');
   const [serviceDuration, setServiceDuration] = useState('60');
   const [addedServices, setAddedServices] = useState<AddedService[]>([]);
+  const [serviceError, setServiceError] = useState('');
+  const [scheduleError, setScheduleError] = useState('');
 
   // Step 5: Schedule
   const [schedule, setSchedule] = useState<ScheduleDay[]>([
@@ -87,13 +88,24 @@ export function OnboardingWizard() {
     setTokenError('');
     setLoading(true);
     try {
-      const res = await api.post<{ botUsername: string; botName: string }>('/api/v1/bot/connect', {
-        token: botToken,
+      const res = await api.post<
+        ApiResponse<{
+          id: string;
+          botUsername: string;
+          botId: number;
+          isActive: boolean;
+        }>
+      >('/onboarding/connect-bot', {
+        botToken,
       });
-      setBotInfo({ username: res.botUsername, name: res.botName });
+      setBotInfo({ username: res.data.botUsername });
       getTelegram()?.HapticFeedback.notificationOccurred('success');
-    } catch {
-      setTokenError(intl.formatMessage({ id: 'onboarding.tokenError' }));
+    } catch (error) {
+      setTokenError(
+        error instanceof ApiRequestError
+          ? error.message
+          : intl.formatMessage({ id: 'onboarding.tokenError' }),
+      );
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     } finally {
       setLoading(false);
@@ -101,37 +113,91 @@ export function OnboardingWizard() {
   };
 
   // Step 4: Add service
+  const saveCurrentService = async (): Promise<boolean> => {
+    setServiceError('');
+
+    const trimmedServiceName = serviceName.trim();
+    const parsedPrice = Number(servicePrice);
+    const parsedDuration = Number(serviceDuration);
+
+    if (!trimmedServiceName || !Number.isFinite(parsedPrice) || !Number.isFinite(parsedDuration)) {
+      setServiceError(intl.formatMessage({ id: 'error.unknown' }));
+      return false;
+    }
+
+    try {
+      const dto: CreateServiceDto = {
+        name: trimmedServiceName,
+        price: Math.round(parsedPrice * 100),
+        durationMinutes: parsedDuration,
+        currency: 'UAH',
+      };
+      await createService.mutateAsync(dto);
+      setAddedServices((prev) => [
+        ...prev,
+        { name: trimmedServiceName, price: parsedPrice, durationMinutes: parsedDuration },
+      ]);
+      setServiceName('');
+      setServicePrice('');
+      setServiceDuration('60');
+      getTelegram()?.HapticFeedback.impactOccurred('light');
+      return true;
+    } catch (error) {
+      setServiceError(
+        error instanceof ApiRequestError
+          ? error.message
+          : intl.formatMessage({ id: 'error.unknown' }),
+      );
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      return false;
+    }
+  };
+
   const handleAddService = async () => {
-    const dto: CreateServiceDto = {
-      name: serviceName,
-      price: Number(servicePrice) * 100,
-      durationMinutes: Number(serviceDuration),
-    };
-    await createService.mutateAsync(dto);
-    setAddedServices((prev) => [
-      ...prev,
-      { name: serviceName, price: Number(servicePrice), durationMinutes: Number(serviceDuration) },
-    ]);
-    setServiceName('');
-    setServicePrice('');
-    setServiceDuration('60');
-    getTelegram()?.HapticFeedback.impactOccurred('light');
+    await saveCurrentService();
+  };
+
+  const handleSaveServices = async () => {
+    if (serviceName.trim() || servicePrice.trim() || serviceDuration.trim()) {
+      const saved = await saveCurrentService();
+      if (!saved) {
+        return;
+      }
+      next();
+      return;
+    }
+
+    if (addedServices.length > 0) {
+      next();
+      return;
+    }
+
+    setServiceError(intl.formatMessage({ id: 'services.name' }));
   };
 
   // Step 5: Save schedule
   const handleSaveSchedule = async () => {
+    setScheduleError('');
     setLoading(true);
     try {
-      for (let i = 0; i < 7; i++) {
-        const day = schedule[i]!;
-        await updateHours.mutateAsync({
-          dayOfWeek: i,
-          isWorking: day.isWorking,
+      const hours = schedule
+        .map((day, index) => ({ day, index }))
+        .filter(({ day }) => day.isWorking)
+        .map(({ day, index }) => ({
+          dayOfWeek: index,
           startTime: day.startTime,
           endTime: day.endTime,
-        });
-      }
+        }));
+
+      await api.put('/schedule/hours', { hours });
       next();
+    } catch (error) {
+      setScheduleError(
+        error instanceof ApiRequestError
+          ? error.message
+          : intl.formatMessage({ id: 'error.unknown' }),
+      );
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
     } finally {
       setLoading(false);
     }
@@ -146,7 +212,7 @@ export function OnboardingWizard() {
           primaryColor,
           welcomeMessage: welcomeMessage || undefined,
         };
-        const res = await api.put<ApiResponse<Tenant>>('/api/v1/settings/branding', dto);
+        const res = await api.put<ApiResponse<Tenant>>('/settings/branding', dto);
         updateTenant(res.data);
       } catch {
         // non-critical, skip
@@ -289,7 +355,6 @@ export function OnboardingWizard() {
                 <div style={{ fontWeight: 700, fontSize: 18, margin: '4px 0' }}>
                   @{botInfo.username}
                 </div>
-                <div className="text-secondary">{botInfo.name}</div>
               </div>
             </Card>
           )}
@@ -335,6 +400,7 @@ export function OnboardingWizard() {
               label={intl.formatMessage({ id: 'services.name' })}
               value={serviceName}
               onChange={(e) => setServiceName(e.target.value)}
+              error={serviceError}
             />
             <div style={{ display: 'flex', gap: 8 }}>
               <Input
@@ -365,10 +431,16 @@ export function OnboardingWizard() {
             <Button variant="ghost" onClick={prev}>
               ←
             </Button>
-            <Button fullWidth onClick={next}>
-              {addedServices.length > 0
-                ? `${intl.formatMessage({ id: 'common.next' })} →`
-                : intl.formatMessage({ id: 'onboarding.skip' })}
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={next}
+              disabled={createService.isPending}
+            >
+              {intl.formatMessage({ id: 'common.skip' })}
+            </Button>
+            <Button fullWidth onClick={handleSaveServices} loading={createService.isPending}>
+              {intl.formatMessage({ id: 'common.save' })}
             </Button>
           </div>
         </div>
@@ -437,12 +509,16 @@ export function OnboardingWizard() {
             })}
           </div>
 
+          {scheduleError ? (
+            <div style={{ color: 'var(--color-destructive)', fontSize: 14 }}>{scheduleError}</div>
+          ) : null}
+
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
               ←
             </Button>
             <Button fullWidth loading={loading} onClick={handleSaveSchedule}>
-              {intl.formatMessage({ id: 'common.next' })} →
+              {intl.formatMessage({ id: 'common.save' })}
             </Button>
           </div>
         </div>

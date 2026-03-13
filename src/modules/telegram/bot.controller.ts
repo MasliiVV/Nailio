@@ -6,7 +6,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { BotService } from './bot.service';
 import { ConnectBotDto, ReconnectBotDto, BotResponseDto } from './dto/bot.dto';
 import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
-import { RolesGuard } from '../../common/guards';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
 @ApiTags('Bot')
 @Controller('bot')
@@ -20,7 +20,7 @@ export class BotController {
    */
   @Post('connect')
   @Roles('master')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Connect Telegram bot to tenant' })
   @ApiResponse({ status: 201, type: BotResponseDto })
@@ -34,7 +34,7 @@ export class BotController {
    */
   @Get()
   @Roles('master')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Get connected bot info' })
   @ApiResponse({ status: 200, type: BotResponseDto })
   async getBotInfo(@CurrentTenant() tenantId: string) {
@@ -57,7 +57,7 @@ export class BotController {
   @Post('reconnect')
   @Roles('master')
   @RequiresActiveSubscription()
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reconnect bot with new token' })
   @ApiResponse({ status: 200, type: BotResponseDto })

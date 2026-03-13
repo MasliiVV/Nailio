@@ -33,6 +33,16 @@ export class BrandingDto {
   @IsObject()
   welcomeText?: Record<string, string>;
 
+  @ApiPropertyOptional({ description: 'Welcome message (string shortcut for welcomeText)' })
+  @IsOptional()
+  @IsString()
+  welcomeMessage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
@@ -141,4 +151,89 @@ export class TenantResponseDto {
 
   @ApiProperty()
   createdAt!: Date;
+}
+
+export class AdminTenantSummaryDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  slug!: string;
+
+  @ApiProperty()
+  displayName!: string;
+
+  @ApiProperty()
+  onboardingStatus!: string;
+
+  @ApiProperty()
+  isActive!: boolean;
+
+  @ApiPropertyOptional()
+  trialEndsAt?: Date | null;
+
+  @ApiProperty()
+  createdAt!: Date;
+
+  @ApiProperty()
+  master!: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    phone: string | null;
+  };
+
+  @ApiProperty({ nullable: true })
+  bot!: {
+    id: string;
+    botId: string;
+    botUsername: string;
+    isActive: boolean;
+  } | null;
+
+  @ApiProperty({ nullable: true })
+  subscription!: {
+    status: string;
+    currentPeriodEnd: Date | null;
+    paymentProvider: string | null;
+  } | null;
+
+  @ApiProperty({ nullable: true })
+  paymentSettings!: {
+    provider: string;
+    isActive: boolean;
+  } | null;
+
+  @ApiProperty()
+  counts!: {
+    clients: number;
+    services: number;
+    bookings: number;
+  };
+}
+
+export class AdminTenantDetailDto extends AdminTenantSummaryDto {
+  @ApiPropertyOptional()
+  phone?: string | null;
+
+  @ApiPropertyOptional()
+  email?: string | null;
+
+  @ApiProperty()
+  timezone!: string;
+
+  @ApiProperty()
+  locale!: string;
+
+  @ApiPropertyOptional()
+  logoUrl?: string | null;
+
+  @ApiProperty()
+  branding!: Record<string, unknown>;
+
+  @ApiProperty()
+  settings!: Record<string, unknown>;
+
+  @ApiProperty()
+  onboardingChecklist!: Record<string, unknown>;
 }

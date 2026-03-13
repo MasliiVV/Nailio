@@ -19,6 +19,14 @@ interface ApiError {
   message: string;
 }
 
+interface ApiErrorEnvelope {
+  success?: false;
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
 export class ApiRequestError extends Error {
   constructor(
     public statusCode: number,
@@ -37,10 +45,14 @@ interface RequestOptions {
   skipAuth?: boolean;
 }
 
-/** Token refresh handler — will be set by AuthProvider */
-let onTokenExpired: (() => Promise<string | null>) | null = null;
+/** Token refresh handler — will be set by auth module.
+ *  Returns either a string (access token) or an object with accessToken property, or null on failure.
+ */
+let onTokenExpired: (() => Promise<string | { accessToken: string } | null>) | null = null;
 
-export function setTokenRefreshHandler(handler: () => Promise<string | null>): void {
+export function setTokenRefreshHandler(
+  handler: () => Promise<string | { accessToken: string } | null>,
+): void {
   onTokenExpired = handler;
 }
 
@@ -64,7 +76,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // If 401, try to refresh token once
   if (response.status === 401 && !skipAuth && onTokenExpired) {
-    const newToken = await onTokenExpired();
+    const refreshResult = await onTokenExpired();
+    const newToken =
+      typeof refreshResult === 'string' ? refreshResult : (refreshResult?.accessToken ?? null);
     if (newToken) {
       accessToken = newToken;
       reqHeaders['Authorization'] = `Bearer ${newToken}`;
@@ -79,7 +93,22 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   if (!response.ok) {
     let error: ApiError;
     try {
-      error = await response.json();
+      const payload = (await response.json()) as ApiError | ApiErrorEnvelope;
+      const envelopeError = 'error' in payload ? payload.error : undefined;
+      error = {
+        statusCode:
+          'statusCode' in payload && typeof payload.statusCode === 'number'
+            ? payload.statusCode
+            : response.status,
+        errorCode:
+          'errorCode' in payload && typeof payload.errorCode === 'string'
+            ? payload.errorCode
+            : envelopeError?.code || 'UNKNOWN',
+        message:
+          'message' in payload && typeof payload.message === 'string'
+            ? payload.message
+            : envelopeError?.message || response.statusText,
+      };
     } catch {
       error = {
         statusCode: response.status,

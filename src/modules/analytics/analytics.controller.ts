@@ -9,7 +9,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 
-@Controller('api/v1/analytics')
+@Controller('analytics')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
 @Roles('master')
 export class AnalyticsController {

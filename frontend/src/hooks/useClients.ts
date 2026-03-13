@@ -17,7 +17,7 @@ export function useClients(search?: string) {
       if (search) params.set('search', search);
       const qs = params.toString();
       const res = await api.get<ApiResponse<PaginatedResponse<Client>>>(
-        `/api/v1/clients${qs ? `?${qs}` : ''}`,
+        `/clients${qs ? `?${qs}` : ''}`,
       );
       return res.data;
     },
@@ -28,7 +28,7 @@ export function useClient(id: string) {
   return useQuery({
     queryKey: clientKeys.detail(id),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<ClientDetail>>(`/api/v1/clients/${id}`);
+      const res = await api.get<ApiResponse<ClientDetail>>(`/clients/${id}`);
       return res.data;
     },
     enabled: !!id,
@@ -40,7 +40,7 @@ export function useBlockClient() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.post(`/api/v1/clients/${id}/block`);
+      await api.post(`/clients/${id}/block`);
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('warning');
@@ -54,7 +54,7 @@ export function useUnblockClient() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.post(`/api/v1/clients/${id}/unblock`);
+      await api.post(`/clients/${id}/unblock`);
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');

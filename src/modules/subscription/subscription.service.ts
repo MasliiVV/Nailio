@@ -58,7 +58,7 @@ export class SubscriptionService {
     );
     this.platformBotUrl = this.configService.get<string>(
       'PLATFORM_BOT_URL',
-      'https://t.me/GlowUpProBot',
+      'https://t.me/nailioapp_bot',
     );
     this.apiBaseUrl = this.configService.getOrThrow<string>('API_BASE_URL');
   }
@@ -134,7 +134,7 @@ export class SubscriptionService {
     const result = await paymentProvider.createPayment({
       orderId,
       amountKopecks,
-      description: 'GlowUp Pro — Місячна підписка',
+      description: 'Nailio — Місячна підписка',
       redirectUrl: this.platformBotUrl,
       webhookUrl: `${this.apiBaseUrl}/webhooks/${provider}`,
       saveCard: true,
@@ -310,7 +310,7 @@ export class SubscriptionService {
       cardToken,
       amountKopecks,
       orderId,
-      description: 'GlowUp Pro — Місячна підписка',
+      description: 'Nailio — Місячна підписка',
     });
 
     if (result.status === 'success') {
@@ -415,7 +415,7 @@ export class SubscriptionService {
       cardToken,
       amountKopecks,
       orderId,
-      description: 'GlowUp Pro — Повторна оплата підписки',
+      description: 'Nailio — Повторна оплата підписки',
     });
 
     if (result.status === 'success') {

@@ -13,7 +13,7 @@ export function useServices() {
   return useQuery({
     queryKey: serviceKeys.list(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Service[]>>('/api/v1/services');
+      const res = await api.get<ApiResponse<Service[]>>('/services');
       return res.data;
     },
   });
@@ -23,7 +23,7 @@ export function useService(id: string) {
   return useQuery({
     queryKey: serviceKeys.detail(id),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Service>>(`/api/v1/services/${id}`);
+      const res = await api.get<ApiResponse<Service>>(`/services/${id}`);
       return res.data;
     },
     enabled: !!id,
@@ -35,7 +35,7 @@ export function useCreateService() {
 
   return useMutation({
     mutationFn: async (dto: CreateServiceDto) => {
-      const res = await api.post<ApiResponse<Service>>('/api/v1/services', dto);
+      const res = await api.post<ApiResponse<Service>>('/services', dto);
       return res.data;
     },
     onSuccess: () => {
@@ -50,7 +50,7 @@ export function useUpdateService() {
 
   return useMutation({
     mutationFn: async ({ id, dto }: { id: string; dto: UpdateServiceDto }) => {
-      const res = await api.put<ApiResponse<Service>>(`/api/v1/services/${id}`, dto);
+      const res = await api.put<ApiResponse<Service>>(`/services/${id}`, dto);
       return res.data;
     },
     onSuccess: () => {
@@ -65,7 +65,7 @@ export function useDeleteService() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/api/v1/services/${id}`);
+      await api.delete(`/services/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: serviceKeys.all });

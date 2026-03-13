@@ -68,7 +68,7 @@ export class ClientPaymentService {
 
     const redirectUrl = bot
       ? `https://t.me/${bot.botUsername}/app`
-      : this.configService.get<string>('PLATFORM_BOT_URL', 'https://t.me/GlowUpProBot');
+      : this.configService.get<string>('PLATFORM_BOT_URL', 'https://t.me/nailioapp_bot');
 
     const orderId = `booking_${bookingId}_${Date.now()}`;
 

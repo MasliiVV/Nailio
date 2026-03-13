@@ -13,7 +13,7 @@ export function useSubscription() {
   return useQuery({
     queryKey: subscriptionKeys.status(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Subscription>>('/api/v1/subscription');
+      const res = await api.get<ApiResponse<Subscription>>('/subscription');
       return res.data;
     },
     staleTime: 60_000,
@@ -24,9 +24,7 @@ export function useSubscriptionPayments() {
   return useQuery({
     queryKey: subscriptionKeys.payments(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<SubscriptionPayment[]>>(
-        '/api/v1/subscription/payments',
-      );
+      const res = await api.get<ApiResponse<SubscriptionPayment[]>>('/subscription/payments');
       return res.data;
     },
   });
@@ -35,7 +33,7 @@ export function useSubscriptionPayments() {
 export function useCheckout() {
   return useMutation({
     mutationFn: async (provider: 'monobank' | 'liqpay') => {
-      const res = await api.post<ApiResponse<CheckoutResponse>>('/api/v1/subscription/checkout', {
+      const res = await api.post<ApiResponse<CheckoutResponse>>('/subscription/checkout', {
         provider,
       });
       return res.data;
@@ -57,7 +55,7 @@ export function useCancelSubscription() {
 
   return useMutation({
     mutationFn: async () => {
-      await api.post('/api/v1/subscription/cancel');
+      await api.post('/subscription/cancel');
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('warning');

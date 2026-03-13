@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -12,8 +12,14 @@ async function bootstrap() {
   // Pino logger (docs/architecture/overview.md — Pino + Loki)
   app.useLogger(app.get(Logger));
 
-  // Global prefix
-  app.setGlobalPrefix('api');
+  // Global API prefix
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      { path: 'health', method: RequestMethod.ALL },
+      { path: 'webhook/:path*', method: RequestMethod.ALL },
+      { path: 'webhooks/:path*', method: RequestMethod.ALL },
+    ],
+  });
 
   // CORS (docs/security/overview.md — only Mini App + Admin domains)
   app.enableCors({
@@ -50,7 +56,7 @@ async function bootstrap() {
       .addBearerAuth()
       .build();
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document);
+    SwaggerModule.setup('api/v1/docs', app, document);
   }
 
   const port = process.env.PORT || 3000;

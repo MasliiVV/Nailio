@@ -46,11 +46,43 @@ export class WorkingHourEntryDto {
  * docs/api/endpoints.md — PUT /api/v1/schedule/hours
  */
 export class UpdateWorkingHoursDto {
-  @ApiProperty({ type: [WorkingHourEntryDto] })
+  @ApiPropertyOptional({ type: [WorkingHourEntryDto] })
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => WorkingHourEntryDto)
   hours!: WorkingHourEntryDto[];
+
+  @ApiPropertyOptional({ example: 0, description: 'Single day update: 0=Monday, 6=Sunday' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  dayOfWeek?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Single day update: whether the day is working',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isWorking?: boolean;
+
+  @ApiPropertyOptional({ example: '09:00', description: 'Single day update: start time HH:MM' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'startTime must be in HH:MM format',
+  })
+  startTime?: string;
+
+  @ApiPropertyOptional({ example: '18:00', description: 'Single day update: end time HH:MM' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'endTime must be in HH:MM format',
+  })
+  endTime?: string;
 }
 
 /**

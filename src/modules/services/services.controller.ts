@@ -28,11 +28,12 @@ import {
   CurrentUser,
 } from '../../common/decorators';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
-import { RolesGuard } from '../../common/guards';
+import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
 @ApiTags('Services')
 @Controller('services')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 

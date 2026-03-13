@@ -53,13 +53,13 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: glowup-api
+    container_name: nailio-api
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://glowup:${DB_PASSWORD}@pgbouncer:6432/glowup
+      - DATABASE_URL=postgresql://nailio:${DB_PASSWORD}@pgbouncer:6432/nailio
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - BOT_TOKEN_ENCRYPTION_KEY=${BOT_TOKEN_ENCRYPTION_KEY}
@@ -93,12 +93,12 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: glowup-worker
+    container_name: nailio-worker
     restart: unless-stopped
     command: ["node", "dist/worker.js"]
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://glowup:${DB_PASSWORD}@pgbouncer:6432/glowup
+      - DATABASE_URL=postgresql://nailio:${DB_PASSWORD}@pgbouncer:6432/nailio
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
       - BOT_TOKEN_ENCRYPTION_KEY=${BOT_TOKEN_ENCRYPTION_KEY}
       - PAYMENT_ENCRYPTION_KEY=${PAYMENT_ENCRYPTION_KEY}
@@ -114,21 +114,21 @@ services:
   # ─── PostgreSQL ───
   postgres:
     image: postgres:16-alpine
-    container_name: glowup-postgres
+    container_name: nailio-postgres
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      - POSTGRES_DB=glowup
-      - POSTGRES_USER=glowup
+      - POSTGRES_DB=nailio
+      - POSTGRES_USER=nailio
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
       - "127.0.0.1:5432:5432"   # local access only
     networks:
       - internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U glowup"]
+      test: ["CMD-SHELL", "pg_isready -U nailio"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -136,10 +136,10 @@ services:
   # ─── PgBouncer ───
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: glowup-pgbouncer
+    container_name: nailio-pgbouncer
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql://glowup:${DB_PASSWORD}@postgres:5432/glowup
+      - DATABASE_URL=postgresql://nailio:${DB_PASSWORD}@postgres:5432/nailio
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=200
       - DEFAULT_POOL_SIZE=20
@@ -153,7 +153,7 @@ services:
   # ─── Redis ───
   redis:
     image: redis:7-alpine
-    container_name: glowup-redis
+    container_name: nailio-redis
     restart: unless-stopped
     command: >
       redis-server
@@ -176,7 +176,7 @@ services:
   # ─── MinIO (S3-compatible storage) ───
   minio:
     image: minio/minio:latest
-    container_name: glowup-minio
+    container_name: nailio-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     volumes:
@@ -193,7 +193,7 @@ services:
   # ─── Nginx (reverse proxy + SSL) ───
   nginx:
     image: nginx:alpine
-    container_name: glowup-nginx
+    container_name: nailio-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -213,7 +213,7 @@ services:
   # ─── Certbot (Let's Encrypt) ───
   certbot:
     image: certbot/certbot:latest
-    container_name: glowup-certbot
+    container_name: nailio-certbot
     volumes:
       - ./certbot/www:/var/www/certbot:rw
       - ./certbot/conf:/etc/letsencrypt:rw
@@ -280,7 +280,7 @@ limit_req_zone $binary_remote_addr zone=api_webhook:10m rate=100r/s;
 
 server {
     listen 80;
-    server_name api.glowup.example.com;
+    server_name api.nailio.example.com;
 
     # ACME challenge for Let's Encrypt
     location /.well-known/acme-challenge/ {
@@ -294,10 +294,10 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name api.glowup.example.com;
+    server_name api.nailio.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/api.glowup.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.glowup.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/api.nailio.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.nailio.example.com/privkey.pem;
 
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -353,10 +353,10 @@ server {
 # Admin panel
 server {
     listen 443 ssl http2;
-    server_name admin.glowup.example.com;
+    server_name admin.nailio.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/admin.glowup.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/admin.glowup.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/admin.nailio.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admin.nailio.example.com/privkey.pem;
 
     root /var/www/admin;
     index index.html;
@@ -408,9 +408,9 @@ MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=strong-random-password-here
 
 # ─── URLs ───
-API_BASE_URL=https://api.glowup.example.com
-MINI_APP_URL=https://app.glowup.example.com
-ADMIN_URL=https://admin.glowup.example.com
+API_BASE_URL=https://api.nailio.example.com
+MINI_APP_URL=https://app.nailio.example.com
+ADMIN_URL=https://admin.nailio.example.com
 ```
 
 ### Generating Secrets
@@ -440,8 +440,8 @@ docker compose up -d nginx
 docker compose run --rm certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
-  -d api.glowup.example.com \
-  -d admin.glowup.example.com \
+  -d api.nailio.example.com \
+  -d admin.nailio.example.com \
   --email admin@example.com \
   --agree-tos \
   --no-eff-email
@@ -465,8 +465,8 @@ docker compose restart nginx
 
 ```bash
 # 1. Clone repository
-git clone git@github.com:user/glowup.git
-cd glowup
+git clone git@github.com:user/nailio.git
+cd nailio
 
 # 2. Create .env
 cp .env.example .env
@@ -492,10 +492,10 @@ docker compose up -d
 # 8. Set platform bot webhook
 curl -X POST "https://api.telegram.org/bot${PLATFORM_BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://api.glowup.example.com/webhook/platform", "secret_token": "random-secret"}'
+  -d '{"url": "https://api.nailio.example.com/webhook/platform", "secret_token": "random-secret"}'
 
 # 9. Verify
-curl https://api.glowup.example.com/health
+curl https://api.nailio.example.com/health
 ```
 
 ### Rolling Update
@@ -516,7 +516,7 @@ sleep 10  # Wait for health check
 docker compose up -d --no-deps worker
 
 # 5. Verify
-curl https://api.glowup.example.com/health
+curl https://api.nailio.example.com/health
 ```
 
 ### Rollback

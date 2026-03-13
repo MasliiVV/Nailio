@@ -25,6 +25,10 @@ import { AnalyticsPage } from '@/pages/master/AnalyticsPage';
 import { FinancePage } from '@/pages/master/FinancePage';
 import { SubscriptionPage } from '@/pages/master/SubscriptionPage';
 
+// Admin pages
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
+import { AdminTenantPage } from '@/pages/admin/AdminTenantPage';
+
 // Onboarding
 import { OnboardingWizard } from '@/pages/onboarding/OnboardingWizard';
 
@@ -40,11 +44,17 @@ function LoadingScreen() {
 
 // Auth error screen
 function AuthErrorScreen({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const helpText =
+    error.includes('Telegram') || error.includes('боті')
+      ? 'Відкрийте @nailioapp_bot у Telegram і запустіть Mini App через кнопку меню.'
+      : null;
+
   return (
     <div className="loading-screen">
       <ShieldAlert size={48} color="var(--color-destructive)" />
       <h2 style={{ fontSize: 20, fontWeight: 600 }}>Помилка авторизації</h2>
       <p className="text-secondary">{error}</p>
+      {helpText ? <p className="text-secondary">{helpText}</p> : null}
       <button
         className="touchable"
         style={{
@@ -116,6 +126,12 @@ export function App() {
               <Route path="subscription" element={<SubscriptionPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/master" replace />} />
+          </>
+        ) : role === 'platform_admin' ? (
+          <>
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/tenants/:id" element={<AdminTenantPage />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </>
         ) : (
           <>

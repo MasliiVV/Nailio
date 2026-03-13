@@ -18,7 +18,7 @@ export function ClientProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await api.put<ApiResponse<Profile>>('/api/v1/profile', {
+      const res = await api.put<ApiResponse<Profile>>('/profile', {
         firstName,
         lastName,
         phone,

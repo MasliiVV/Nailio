@@ -82,6 +82,7 @@ export interface NotificationJobData extends TenantJobData {
     | 'reminder_24h'
     | 'reminder_1h'
     | 'cancellation'
+    | 'cancellation_master'
     | 'reschedule'
     | 'new_booking';
 }

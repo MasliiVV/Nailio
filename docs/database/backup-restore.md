@@ -24,22 +24,22 @@
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/backups/postgres"
-DB_NAME="glowup"
-S3_BUCKET="s3://glowup-backups/postgres"
+DB_NAME="nailio"
+S3_BUCKET="s3://nailio-backups/postgres"
 
 # Create backup
 pg_dump \
   --host=localhost \
   --port=5432 \
-  --username=glowup_admin \
+  --username=nailio_admin \
   --format=custom \
   --compress=9 \
-  --file="${BACKUP_DIR}/glowup_${TIMESTAMP}.dump" \
+  --file="${BACKUP_DIR}/nailio_${TIMESTAMP}.dump" \
   ${DB_NAME}
 
 # Upload to S3 (MinIO)
-mc cp "${BACKUP_DIR}/glowup_${TIMESTAMP}.dump" \
-  "${S3_BUCKET}/daily/glowup_${TIMESTAMP}.dump"
+mc cp "${BACKUP_DIR}/nailio_${TIMESTAMP}.dump" \
+  "${S3_BUCKET}/daily/nailio_${TIMESTAMP}.dump"
 
 # Cleanup local (keep 7 days)
 find ${BACKUP_DIR} -name "*.dump" -mtime +7 -delete
@@ -47,7 +47,7 @@ find ${BACKUP_DIR} -name "*.dump" -mtime +7 -delete
 # Cleanup S3 (keep 30 days)
 mc rm --recursive --older-than 30d "${S3_BUCKET}/daily/"
 
-echo "[$(date)] Backup completed: glowup_${TIMESTAMP}.dump"
+echo "[$(date)] Backup completed: nailio_${TIMESTAMP}.dump"
 ```
 
 ### Cron Schedule
@@ -63,7 +63,7 @@ echo "[$(date)] Backup completed: glowup_${TIMESTAMP}.dump"
 # postgresql.conf
 wal_level: replica
 archive_mode: 'on'
-archive_command: 'mc cp %p s3://glowup-backups/wal/%f'
+archive_command: 'mc cp %p s3://nailio-backups/wal/%f'
 archive_timeout: 300  # 5 minutes max
 ```
 
@@ -85,7 +85,7 @@ pg_basebackup \
   --checkpoint=fast
 
 mc cp /backups/base/${TIMESTAMP}/* \
-  s3://glowup-backups/base/${TIMESTAMP}/
+  s3://nailio-backups/base/${TIMESTAMP}/
 ```
 
 ---
@@ -121,7 +121,7 @@ sleep 5
 
 # Copy RDB file
 mc cp /data/redis/dump.rdb \
-  s3://glowup-backups/redis/dump_${TIMESTAMP}.rdb
+  s3://nailio-backups/redis/dump_${TIMESTAMP}.rdb
 ```
 
 ---
@@ -135,17 +135,17 @@ mc cp /data/redis/dump.rdb \
 docker compose stop api worker
 
 # 2. Drop and recreate database
-psql -U postgres -c "DROP DATABASE glowup;"
-psql -U postgres -c "CREATE DATABASE glowup OWNER glowup_admin;"
+psql -U postgres -c "DROP DATABASE nailio;"
+psql -U postgres -c "CREATE DATABASE nailio OWNER nailio_admin;"
 
 # 3. Restore from dump
 pg_restore \
   --host=localhost \
   --port=5432 \
-  --username=glowup_admin \
-  --dbname=glowup \
+  --username=nailio_admin \
+  --dbname=nailio \
   --verbose \
-  /backups/postgres/glowup_YYYYMMDD_HHMMSS.dump
+  /backups/postgres/nailio_YYYYMMDD_HHMMSS.dump
 
 # 4. Run pending migrations
 npx prisma migrate deploy
@@ -168,7 +168,7 @@ tar xzf /backups/base/YYYYMMDD/base.tar.gz -C /var/lib/postgresql/data
 touch /var/lib/postgresql/data/recovery.signal
 
 cat >> /var/lib/postgresql/data/postgresql.conf << EOF
-restore_command = 'mc cp s3://glowup-backups/wal/%f %p'
+restore_command = 'mc cp s3://nailio-backups/wal/%f %p'
 recovery_target_time = '2024-01-15 14:30:00 UTC'
 recovery_target_action = 'promote'
 EOF
@@ -177,7 +177,7 @@ EOF
 pg_ctl start
 
 # 5. Verify data integrity
-psql -U glowup_admin -d glowup -c "SELECT count(*) FROM bookings;"
+psql -U nailio_admin -d nailio -c "SELECT count(*) FROM bookings;"
 ```
 
 ### Scenario 3: Redis Restore
@@ -199,12 +199,12 @@ redis-server /etc/redis/redis.conf
 # For cases where a single tenant's data needs restoration
 
 # 1. Restore full dump to temporary database
-createdb glowup_temp
-pg_restore --dbname=glowup_temp /backups/postgres/glowup_YYYYMMDD.dump
+createdb nailio_temp
+pg_restore --dbname=nailio_temp /backups/postgres/nailio_YYYYMMDD.dump
 
 # 2. Export tenant data
 TENANT_ID="uuid-here"
-pg_dump glowup_temp \
+pg_dump nailio_temp \
   --data-only \
   --table=tenants --table=masters --table=bots \
   --table=clients --table=services --table=working_hours \
@@ -212,10 +212,10 @@ pg_dump glowup_temp \
   | grep "${TENANT_ID}" > /tmp/tenant_restore.sql
 
 # 3. Apply to production (carefully!)
-psql glowup < /tmp/tenant_restore.sql
+psql nailio < /tmp/tenant_restore.sql
 
 # 4. Cleanup
-dropdb glowup_temp
+dropdb nailio_temp
 ```
 
 ---
@@ -229,7 +229,7 @@ dropdb glowup_temp
 # /scripts/check-backup-health.sh
 
 # Check latest backup age
-LATEST=$(mc ls s3://glowup-backups/postgres/daily/ | tail -1 | awk '{print $1, $2}')
+LATEST=$(mc ls s3://nailio-backups/postgres/daily/ | tail -1 | awk '{print $1, $2}')
 LATEST_TS=$(date -d "${LATEST}" +%s)
 NOW=$(date +%s)
 AGE_HOURS=$(( (NOW - LATEST_TS) / 3600 ))
@@ -240,8 +240,8 @@ if [ $AGE_HOURS -gt 26 ]; then
 fi
 
 # Check backup size (should be growing)
-LATEST_SIZE=$(mc ls s3://glowup-backups/postgres/daily/ | tail -1 | awk '{print $5}')
-PREV_SIZE=$(mc ls s3://glowup-backups/postgres/daily/ | tail -2 | head -1 | awk '{print $5}')
+LATEST_SIZE=$(mc ls s3://nailio-backups/postgres/daily/ | tail -1 | awk '{print $5}')
+PREV_SIZE=$(mc ls s3://nailio-backups/postgres/daily/ | tail -2 | head -1 | awk '{print $5}')
 
 if [ $LATEST_SIZE -lt $(( PREV_SIZE / 2 )) ]; then
   echo "ALERT: Backup size decreased significantly!"

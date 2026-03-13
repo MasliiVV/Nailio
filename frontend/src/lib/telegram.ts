@@ -174,7 +174,18 @@ export function getUser(): TelegramUser | undefined {
 
 /** Get start_param (tenant slug) */
 export function getStartParam(): string | undefined {
-  return getTelegram().initDataUnsafe.start_param;
+  const initDataStartParam = getTelegram().initDataUnsafe.start_param;
+  if (initDataStartParam) {
+    return initDataStartParam;
+  }
+
+  const url = new URL(window.location.href);
+  return (
+    url.searchParams.get('tgWebAppStartParam') ||
+    url.searchParams.get('startapp') ||
+    url.searchParams.get('startApp') ||
+    undefined
+  );
 }
 
 /** Get language code with fallback to 'uk' */

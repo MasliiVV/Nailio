@@ -31,7 +31,10 @@ export class BotService {
     private readonly configService: ConfigService,
   ) {
     this.appUrl = this.configService.get<string>('MINI_APP_URL', 'https://app.platform.com');
-    this.webhookBaseUrl = this.configService.get<string>('API_URL', 'https://api.platform.com');
+    this.webhookBaseUrl = this.configService.get<string>(
+      'API_BASE_URL',
+      'https://api.platform.com',
+    );
   }
 
   /**

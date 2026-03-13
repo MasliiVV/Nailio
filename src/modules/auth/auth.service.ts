@@ -12,6 +12,24 @@ import { TelegramAuthService, ValidatedInitData } from './telegram-auth.service'
 import { TenantsService } from '../tenants/tenants.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { TelegramAuthDto, AuthResponseDto } from './dto/auth.dto';
+import { BotCryptoService } from '../telegram/bot-crypto.service';
+
+type AuthRole = 'master' | 'client' | 'platform_admin';
+
+interface RefreshSessionProfile {
+  firstName: string;
+  lastName: string | null;
+}
+
+interface RefreshSessionPayload extends JwtPayload {
+  profile?: RefreshSessionProfile;
+}
+
+interface BotValidationCandidate {
+  token: string;
+  botId?: string;
+  startParam?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -25,6 +43,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly telegramAuth: TelegramAuthService,
     private readonly tenantsService: TenantsService,
+    private readonly botCrypto: BotCryptoService,
   ) {
     this.redis = new Redis(this.configService.getOrThrow<string>('REDIS_URL'));
     this.refreshTtl = this.configService.get<number>('JWT_REFRESH_TTL', 2592000); // 30 days
@@ -35,11 +54,31 @@ export class AuthService {
    * docs/api/authentication.md — Auth Flow Diagram
    */
   async authenticateTelegram(dto: TelegramAuthDto): Promise<AuthResponseDto> {
-    // Step 1: Determine bot token for validation
-    const botToken = await this.resolveBotToken(dto.botId);
+    const candidates = await this.resolveBotValidationCandidates(dto.botId, dto.startParam);
 
-    // Step 2: Validate initData (HMAC-SHA256)
-    const validatedData = this.telegramAuth.validate(dto.initData, botToken);
+    let validatedData: ValidatedInitData | null = null;
+    let matchedCandidate: BotValidationCandidate | null = null;
+
+    for (const candidate of candidates) {
+      try {
+        validatedData = this.telegramAuth.validate(dto.initData, candidate.token);
+        matchedCandidate = candidate;
+        break;
+      } catch (error) {
+        if (
+          error instanceof UnauthorizedException &&
+          error.message === 'Invalid initData signature'
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!validatedData) {
+      throw new UnauthorizedException('Invalid initData signature');
+    }
 
     // Step 3: Find or create user
     const user = await this.findOrCreateUser(validatedData);
@@ -48,8 +87,8 @@ export class AuthService {
     const { role, tenantId, clientId } = await this.resolveRoleAndTenant(
       user.id,
       validatedData,
-      dto.botId,
-      dto.startParam,
+      dto.botId || matchedCandidate?.botId,
+      dto.startParam || matchedCandidate?.startParam,
     );
 
     // Step 5: Generate tokens
@@ -78,7 +117,7 @@ export class AuthService {
     // Delete used refresh token (single-use rotation)
     await this.redis.del(`refresh:${refreshToken}`);
 
-    const payload = JSON.parse(payloadStr) as JwtPayload;
+    const payload = JSON.parse(payloadStr) as RefreshSessionPayload;
 
     // Generate new token pair
     return this.generateTokens(payload);
@@ -93,25 +132,69 @@ export class AuthService {
 
   // ─── Private Methods ───
 
-  private async resolveBotToken(botId?: string): Promise<string> {
-    if (!botId) {
-      // Platform bot
-      return this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+  private async resolveBotValidationCandidates(
+    botId?: string,
+    startParam?: string,
+  ): Promise<BotValidationCandidate[]> {
+    if (botId) {
+      const bot = await this.prisma.bot.findFirst({
+        where: { botId: BigInt(botId) },
+      });
+
+      if (!bot) {
+        throw new UnauthorizedException('Bot not found');
+      }
+
+      return [
+        {
+          botId,
+          token: await this.botCrypto.getCachedToken(bot.id, Buffer.from(bot.botTokenEncrypted)),
+        },
+      ];
     }
 
-    // Tenant bot — find by bot_id
-    const bot = await this.prisma.bot.findFirst({
-      where: { botId: BigInt(botId) },
+    if (startParam) {
+      const tenant = await this.tenantsService.findBySlug(startParam);
+      if (tenant) {
+        const tenantBot = await this.prisma.bot.findFirst({
+          where: { tenantId: tenant.id, isActive: true },
+        });
+
+        if (!tenantBot) {
+          throw new UnauthorizedException('Bot not found');
+        }
+
+        return [
+          {
+            botId: tenantBot.botId.toString(),
+            startParam,
+            token: await this.botCrypto.getCachedToken(
+              tenantBot.id,
+              Buffer.from(tenantBot.botTokenEncrypted),
+            ),
+          },
+        ];
+      }
+    }
+
+    const candidates: BotValidationCandidate[] = [
+      { token: this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN') },
+    ];
+
+    const bots = await this.prisma.bot.findMany({
+      where: { isActive: true },
+      include: { tenant: true },
     });
 
-    if (!bot) {
-      throw new UnauthorizedException('Bot not found');
+    for (const bot of bots) {
+      candidates.push({
+        botId: bot.botId.toString(),
+        startParam: bot.tenant.slug,
+        token: await this.botCrypto.getCachedToken(bot.id, Buffer.from(bot.botTokenEncrypted)),
+      });
     }
 
-    // Decrypt bot token (delegated to TelegramModule in the future)
-    // For now, we need to decrypt from bot.botTokenEncrypted
-    // This will be properly handled by BotService.decryptToken()
-    throw new UnauthorizedException('Bot token resolution requires BotService');
+    return candidates;
   }
 
   private async findOrCreateUser(data: ValidatedInitData) {
@@ -142,10 +225,51 @@ export class AuthService {
     userId: string,
     data: ValidatedInitData,
     botId?: string,
-    _startParam?: string,
-  ): Promise<{ role: 'master' | 'client'; tenantId: string | null; clientId?: string }> {
-    // Platform bot → user is master (or becoming one)
+    startParam?: string,
+  ): Promise<{ role: AuthRole; tenantId: string | null; clientId?: string }> {
+    if (botId || startParam) {
+      const bot = botId
+        ? await this.prisma.bot.findFirst({
+            where: { botId: BigInt(botId) },
+          })
+        : await this.prisma.bot.findFirst({
+            where: {
+              tenant: {
+                slug: startParam,
+              },
+              isActive: true,
+            },
+          });
+
+      if (bot) {
+        let client = await this.prisma.client.findFirst({
+          where: { tenantId: bot.tenantId, userId },
+        });
+
+        if (!client) {
+          client = await this.prisma.client.create({
+            data: {
+              tenantId: bot.tenantId,
+              userId,
+              firstName: data.user.first_name,
+              lastName: data.user.last_name || null,
+            },
+          });
+          this.logger.log(
+            `New client created: tenant=${bot.tenantId}, telegram_id=${data.user.id}`,
+          );
+        }
+
+        return { role: 'client', tenantId: bot.tenantId, clientId: client.id };
+      }
+    }
+
+    // Platform bot → platform admin or master onboarding flow
     if (!botId) {
+      if (this.isPlatformAdmin(data)) {
+        return { role: 'platform_admin', tenantId: null };
+      }
+
       const master = await this.prisma.master.findFirst({
         where: { userId },
       });
@@ -188,38 +312,12 @@ export class AuthService {
       return { role: 'master', tenantId: tenant.id };
     }
 
-    // Tenant bot → user is client
-    const bot = await this.prisma.bot.findFirst({
-      where: { botId: BigInt(botId) },
-    });
-
-    if (!bot) {
-      throw new UnauthorizedException('Bot not found');
-    }
-
-    // Find or create client record
-    let client = await this.prisma.client.findFirst({
-      where: { tenantId: bot.tenantId, userId },
-    });
-
-    if (!client) {
-      client = await this.prisma.client.create({
-        data: {
-          tenantId: bot.tenantId,
-          userId,
-          firstName: data.user.first_name,
-          lastName: data.user.last_name || null,
-        },
-      });
-      this.logger.log(`New client created: tenant=${bot.tenantId}, telegram_id=${data.user.id}`);
-    }
-
-    return { role: 'client', tenantId: bot.tenantId, clientId: client.id };
+    throw new UnauthorizedException('Bot not found');
   }
 
   private async generateTokens(
-    payload: JwtPayload,
-    _validatedData?: ValidatedInitData,
+    payload: RefreshSessionPayload,
+    validatedData?: ValidatedInitData,
   ): Promise<AuthResponseDto> {
     // Access token (1h)
     const accessToken = this.jwtService.sign({
@@ -232,35 +330,181 @@ export class AuthService {
 
     // Refresh token (30d, stored in Redis)
     const refreshToken = uuidv4();
-    await this.redis.setex(`refresh:${refreshToken}`, this.refreshTtl, JSON.stringify(payload));
+    const sessionPayload: RefreshSessionPayload = {
+      ...payload,
+      profile: validatedData?.user
+        ? {
+            firstName: validatedData.user.first_name,
+            lastName: validatedData.user.last_name || null,
+          }
+        : payload.profile,
+    };
+    await this.redis.setex(
+      `refresh:${refreshToken}`,
+      this.refreshTtl,
+      JSON.stringify(sessionPayload),
+    );
 
-    // Fetch user info for response
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
-
-    const master =
-      payload.role === 'master' && payload.tenantId
-        ? await this.prisma.master.findFirst({ where: { userId: payload.sub } })
-        : null;
-
-    const client =
-      payload.role === 'client' && payload.clientId
-        ? await this.prisma.client.findUnique({ where: { id: payload.clientId } })
-        : null;
+    const responseContext = await this.buildResponseContext(sessionPayload, validatedData);
 
     return {
       accessToken,
       refreshToken,
       expiresIn: this.configService.get<number>('JWT_ACCESS_TTL', 3600),
+      role: responseContext.role,
+      needsOnboarding: responseContext.needsOnboarding,
+      profile: responseContext.profile,
+      tenant: responseContext.tenant,
       user: {
         id: payload.sub,
         telegramId: payload.telegramId,
         role: payload.role,
         tenantId: payload.tenantId,
-        firstName: master?.firstName || client?.firstName || user?.languageCode,
-        lastName: master?.lastName || client?.lastName || undefined,
+        firstName: responseContext.profile.firstName,
+        lastName: responseContext.profile.lastName || undefined,
       },
     };
+  }
+
+  private async buildResponseContext(
+    payload: RefreshSessionPayload,
+    validatedData?: ValidatedInitData,
+  ): Promise<{
+    role: AuthRole;
+    needsOnboarding: boolean;
+    profile: {
+      id: string;
+      firstName: string;
+      lastName: string | null;
+      phone: string | null;
+      avatarUrl: string | null;
+    };
+    tenant: {
+      id: string;
+      displayName: string;
+      slug: string;
+      logoUrl: string | null;
+      branding: {
+        primaryColor?: string;
+        secondaryColor?: string;
+        welcomeMessage?: string;
+      } | null;
+    } | null;
+  }> {
+    if (payload.role === 'master' && payload.tenantId) {
+      const master = await this.prisma.master.findFirst({
+        where: { userId: payload.sub, tenantId: payload.tenantId },
+        include: { tenant: true },
+      });
+
+      if (master) {
+        return {
+          role: 'master',
+          needsOnboarding: master.tenant.onboardingStatus !== 'setup_complete',
+          profile: {
+            id: master.id,
+            firstName: master.firstName,
+            lastName: master.lastName,
+            phone: master.phone,
+            avatarUrl: null,
+          },
+          tenant: {
+            id: master.tenant.id,
+            displayName: master.tenant.displayName,
+            slug: master.tenant.slug,
+            logoUrl: master.tenant.logoUrl,
+            branding: this.mapTenantBranding(master.tenant.branding),
+          },
+        };
+      }
+    }
+
+    if (payload.role === 'client' && payload.clientId) {
+      const client = await this.prisma.client.findUnique({
+        where: { id: payload.clientId },
+        include: { tenant: true },
+      });
+
+      if (client) {
+        return {
+          role: 'client',
+          needsOnboarding: !client.phone,
+          profile: {
+            id: client.id,
+            firstName: client.firstName,
+            lastName: client.lastName,
+            phone: client.phone,
+            avatarUrl: null,
+          },
+          tenant: {
+            id: client.tenant.id,
+            displayName: client.tenant.displayName,
+            slug: client.tenant.slug,
+            logoUrl: client.tenant.logoUrl,
+            branding: this.mapTenantBranding(client.tenant.branding),
+          },
+        };
+      }
+    }
+
+    return {
+      role: 'platform_admin',
+      needsOnboarding: false,
+      profile: {
+        id: payload.sub,
+        firstName: validatedData?.user.first_name || payload.profile?.firstName || 'Platform',
+        lastName: validatedData?.user.last_name || payload.profile?.lastName || 'Admin',
+        phone: null,
+        avatarUrl: null,
+      },
+      tenant: null,
+    };
+  }
+
+  private mapTenantBranding(branding: unknown) {
+    if (!branding || typeof branding !== 'object' || Array.isArray(branding)) {
+      return null;
+    }
+
+    const source = branding as Record<string, unknown>;
+
+    return {
+      primaryColor:
+        typeof source.primary_color === 'string'
+          ? source.primary_color
+          : typeof source.primaryColor === 'string'
+            ? source.primaryColor
+            : undefined,
+      secondaryColor:
+        typeof source.secondary_color === 'string'
+          ? source.secondary_color
+          : typeof source.secondaryColor === 'string'
+            ? source.secondaryColor
+            : undefined,
+      welcomeMessage:
+        typeof source.welcomeMessage === 'string'
+          ? source.welcomeMessage
+          : typeof source.welcome_text === 'string'
+            ? source.welcome_text
+            : undefined,
+    };
+  }
+
+  private isPlatformAdmin(data: ValidatedInitData): boolean {
+    const adminIds = this.configService
+      .get<string>('PLATFORM_ADMIN_TELEGRAM_IDS', '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const adminUsernames = this.configService
+      .get<string>('PLATFORM_ADMIN_USERNAMES', '')
+      .split(',')
+      .map((value) => value.trim().replace(/^@/, '').toLowerCase())
+      .filter(Boolean);
+
+    const telegramId = String(data.user.id);
+    const username = data.user.username?.toLowerCase();
+
+    return adminIds.includes(telegramId) || (!!username && adminUsernames.includes(username));
   }
 }

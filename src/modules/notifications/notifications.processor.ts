@@ -14,6 +14,7 @@
 
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { ClsService } from 'nestjs-cls';
 import { PrismaService, TENANT_ID_KEY } from '../../prisma/prisma.service';
@@ -30,6 +31,7 @@ export class NotificationsProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly cls: ClsService,
     private readonly botCrypto: BotCryptoService,
+    private readonly configService: ConfigService,
   ) {
     super();
   }
@@ -109,29 +111,22 @@ export class NotificationsProcessor extends WorkerHost {
         let recipientTelegramId: bigint;
         let langCode: string;
 
-        if (type === 'new_booking' || type === 'cancellation') {
-          // For new_booking → send to master
-          // For cancellation → we send two jobs, one for client, one for master
-          // Determine by checking if this is the "master" version
-          // Simple heuristic: new_booking always goes to master
-          if (type === 'new_booking') {
-            const master = await this.prisma.master.findFirst({
-              where: { tenantId },
-              include: { user: true },
-            });
-            if (!master) {
-              await this.markNotification(job, 'failed', 'Master not found');
-              return;
-            }
-            recipientTelegramId = master.user.telegramId;
-            langCode = master.user.languageCode;
-          } else {
-            // Cancellation to client
-            recipientTelegramId = booking.client.user.telegramId;
-            langCode = booking.client.user.languageCode;
+        // Master-directed notification types
+        const isMasterNotification = type === 'new_booking' || type === 'cancellation_master';
+
+        if (isMasterNotification) {
+          const master = await this.prisma.master.findFirst({
+            where: { tenantId },
+            include: { user: true },
+          });
+          if (!master) {
+            await this.markNotification(job, 'failed', 'Master not found');
+            return;
           }
+          recipientTelegramId = master.user.telegramId;
+          langCode = master.user.languageCode;
         } else {
-          // All other types → send to client
+          // All other types (confirmation, reminder, cancellation) → client
           recipientTelegramId = booking.client.user.telegramId;
           langCode = booking.client.user.languageCode;
         }
@@ -162,12 +157,19 @@ export class NotificationsProcessor extends WorkerHost {
         };
 
         // 8. Render template
-        const templateType =
-          type === 'new_booking' ? 'new_booking' : type === 'cancellation' ? 'cancellation' : type;
+        //    cancellation_master uses a dedicated template; other types map 1:1
+        const templateType = type === 'cancellation_master' ? 'cancellation_master' : type;
         const messageText = renderTemplate(templateType, langCode, templateVars);
 
-        // 9. Decrypt bot token
-        const botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
+        // 9. Resolve bot token:
+        //    - Master-directed notifications → platform bot (Nailio_App)
+        //    - Client-directed notifications → tenant bot (Тест / tenant's own bot)
+        let botToken: string;
+        if (isMasterNotification) {
+          botToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+        } else {
+          botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
+        }
 
         // 10. Send via Telegram Bot API
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

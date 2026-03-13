@@ -27,6 +27,62 @@ export class TenantsService {
     return tenant;
   }
 
+  async listAdminTenants() {
+    const tenants = await this.prisma.tenant.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        master: true,
+        bot: true,
+        subscription: true,
+        paymentSettings: true,
+        _count: {
+          select: {
+            clients: true,
+            services: true,
+            bookings: true,
+          },
+        },
+      },
+    });
+
+    return tenants.map((tenant) => this.mapAdminTenantSummary(tenant));
+  }
+
+  async getAdminTenantById(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: {
+        master: true,
+        bot: true,
+        subscription: true,
+        paymentSettings: true,
+        _count: {
+          select: {
+            clients: true,
+            services: true,
+            bookings: true,
+          },
+        },
+      },
+    });
+
+    if (!tenant || !tenant.master) {
+      throw new NotFoundException('Tenant not found');
+    }
+
+    return {
+      ...this.mapAdminTenantSummary(tenant),
+      phone: tenant.phone,
+      email: tenant.email,
+      timezone: tenant.timezone,
+      locale: tenant.locale,
+      logoUrl: tenant.logoUrl,
+      branding: this.asObject(tenant.branding),
+      settings: this.asObject(tenant.settings),
+      onboardingChecklist: this.asObject(tenant.onboardingChecklist),
+    };
+  }
+
   /**
    * Get tenant by slug (for auth flow — startParam resolution)
    * docs/api/authentication.md — Tenant Resolution
@@ -52,7 +108,7 @@ export class TenantsService {
       timezone: tenant.timezone,
       locale: tenant.locale,
       logoUrl: tenant.logoUrl,
-      branding: tenant.branding,
+      branding: this.mapBranding(tenant.branding),
       settings: tenant.settings,
       onboardingStatus: tenant.onboardingStatus,
       onboardingChecklist: tenant.onboardingChecklist,
@@ -77,13 +133,51 @@ export class TenantsService {
     if (dto.accentColor !== undefined) updatedBranding.accent_color = dto.accentColor;
     if (dto.backgroundColor !== undefined) updatedBranding.background_color = dto.backgroundColor;
     if (dto.welcomeText !== undefined) updatedBranding.welcome_text = dto.welcomeText;
+    if (dto.welcomeMessage !== undefined) updatedBranding.welcome_text = dto.welcomeMessage;
     if (dto.description !== undefined) updatedBranding.description = dto.description;
     if (dto.contacts !== undefined) updatedBranding.contacts = dto.contacts;
 
-    return this.prisma.tenant.update({
+    // Build update data: branding JSONB + optional top-level displayName
+    const updateData: Record<string, unknown> = {
+      branding: updatedBranding as Prisma.InputJsonValue,
+    };
+    if (dto.displayName !== undefined) {
+      updateData.displayName = dto.displayName;
+    }
+
+    const updated = await this.prisma.tenant.update({
       where: { id: tenantId },
-      data: { branding: updatedBranding as Prisma.InputJsonValue },
+      data: updateData as Prisma.TenantUpdateInput,
     });
+
+    // Return mapped response with camelCase branding keys
+    return {
+      id: updated.id,
+      displayName: updated.displayName,
+      slug: updated.slug,
+      logoUrl: updated.logoUrl,
+      branding: this.mapBranding(updated.branding),
+    };
+  }
+
+  /**
+   * Map raw branding JSONB (snake_case) to camelCase response
+   */
+  private mapBranding(branding: unknown): Record<string, string | undefined> | null {
+    if (!branding || typeof branding !== 'object' || Array.isArray(branding)) {
+      return null;
+    }
+    const src = branding as Record<string, unknown>;
+    return {
+      primaryColor: typeof src.primary_color === 'string' ? src.primary_color : undefined,
+      secondaryColor: typeof src.secondary_color === 'string' ? src.secondary_color : undefined,
+      welcomeMessage:
+        typeof src.welcome_text === 'string'
+          ? src.welcome_text
+          : typeof src.welcomeMessage === 'string'
+            ? src.welcomeMessage
+            : undefined,
+    };
   }
 
   /**
@@ -241,5 +335,91 @@ export class TenantsService {
         return char;
       })
       .join('');
+  }
+
+  private mapAdminTenantSummary(tenant: {
+    id: string;
+    slug: string;
+    displayName: string;
+    onboardingStatus: string;
+    isActive: boolean;
+    trialEndsAt: Date | null;
+    createdAt: Date;
+    master: {
+      id: string;
+      firstName: string;
+      lastName: string | null;
+      phone: string | null;
+    } | null;
+    bot: {
+      id: string;
+      botId: bigint;
+      botUsername: string;
+      isActive: boolean;
+    } | null;
+    subscription: {
+      status: string;
+      currentPeriodEnd: Date | null;
+      paymentProvider: string | null;
+    } | null;
+    paymentSettings: {
+      provider: string;
+      isActive: boolean;
+    } | null;
+    _count: {
+      clients: number;
+      services: number;
+      bookings: number;
+    };
+  }) {
+    if (!tenant.master) {
+      throw new NotFoundException('Tenant master not found');
+    }
+
+    return {
+      id: tenant.id,
+      slug: tenant.slug,
+      displayName: tenant.displayName,
+      onboardingStatus: tenant.onboardingStatus,
+      isActive: tenant.isActive,
+      trialEndsAt: tenant.trialEndsAt,
+      createdAt: tenant.createdAt,
+      master: {
+        id: tenant.master.id,
+        firstName: tenant.master.firstName,
+        lastName: tenant.master.lastName,
+        phone: tenant.master.phone,
+      },
+      bot: tenant.bot
+        ? {
+            id: tenant.bot.id,
+            botId: tenant.bot.botId.toString(),
+            botUsername: tenant.bot.botUsername,
+            isActive: tenant.bot.isActive,
+          }
+        : null,
+      subscription: tenant.subscription
+        ? {
+            status: tenant.subscription.status,
+            currentPeriodEnd: tenant.subscription.currentPeriodEnd,
+            paymentProvider: tenant.subscription.paymentProvider,
+          }
+        : null,
+      paymentSettings: tenant.paymentSettings
+        ? {
+            provider: tenant.paymentSettings.provider,
+            isActive: tenant.paymentSettings.isActive,
+          }
+        : null,
+      counts: tenant._count,
+    };
+  }
+
+  private asObject(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return {};
+    }
+
+    return value as Record<string, unknown>;
   }
 }

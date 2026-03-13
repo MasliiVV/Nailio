@@ -22,7 +22,7 @@ import { RequiresActiveSubscription } from '../../common/decorators/requires-act
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 
-@Controller('api/v1/clients')
+@Controller('clients')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
 export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}

@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { TelegramAuthService } from './telegram-auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { TenantsModule } from '../tenants/tenants.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TenantsModule } from '../tenants/tenants.module';
       }),
     }),
     TenantsModule,
+    TelegramModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, TelegramAuthService, JwtStrategy],

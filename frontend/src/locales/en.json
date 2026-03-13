@@ -12,6 +12,7 @@
   "common.close": "Close",
   "common.search": "Search",
   "common.retry": "Try again",
+  "common.skip": "Skip",
   "common.yes": "Yes",
   "common.no": "No",
   "common.uah": "UAH",
@@ -58,6 +59,9 @@
   "client.onboarding.firstName": "First name",
   "client.onboarding.lastName": "Last name",
   "client.onboarding.phone": "Phone number",
+  "client.onboarding.phoneHint": "You can enter +380..., 380..., or 0...",
+  "client.onboarding.phoneError": "Enter a phone number in the format +380XXXXXXXXX",
+  "client.onboarding.submitError": "Could not save your profile. Please try again.",
   "client.onboarding.submit": "Save",
 
   "master.dashboard": "Dashboard",
@@ -172,7 +176,7 @@
   "settings.welcomeMessage": "Welcome message",
   "settings.primaryColor": "Primary color",
 
-  "onboarding.welcome": "Welcome to GlowUp!",
+  "onboarding.welcome": "Welcome to Nailio!",
   "onboarding.welcomeText": "Create your own booking bot in just 5 minutes.",
   "onboarding.welcomeDesc": "Create your own booking bot in just 5 minutes.",
   "onboarding.watchVideo": "Watch video tutorial",

@@ -19,9 +19,8 @@ export function useTransactions() {
   return useQuery({
     queryKey: financeKeys.transactions(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<PaginatedResponse<Transaction>>>(
-        '/api/v1/finance/transactions',
-      );
+      const res =
+        await api.get<ApiResponse<PaginatedResponse<Transaction>>>('/finance/transactions');
       return res.data;
     },
   });
@@ -32,7 +31,7 @@ export function useFinanceSummary(period?: string) {
     queryKey: financeKeys.summary(period),
     queryFn: async () => {
       const params = period ? `?period=${period}` : '';
-      const res = await api.get<ApiResponse<FinanceSummary>>(`/api/v1/finance/summary${params}`);
+      const res = await api.get<ApiResponse<FinanceSummary>>(`/finance/summary${params}`);
       return res.data;
     },
   });
@@ -43,7 +42,7 @@ export function useCreateTransaction() {
 
   return useMutation({
     mutationFn: async (dto: CreateTransactionDto) => {
-      const res = await api.post<ApiResponse<Transaction>>('/api/v1/finance/transactions', dto);
+      const res = await api.post<ApiResponse<Transaction>>('/finance/transactions', dto);
       return res.data;
     },
     onSuccess: () => {

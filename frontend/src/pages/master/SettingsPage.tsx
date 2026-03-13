@@ -23,7 +23,7 @@ export function SettingsPage() {
     setSaving(true);
     try {
       const dto: UpdateBrandingDto = { displayName, primaryColor, welcomeMessage };
-      const res = await api.put<ApiResponse<Tenant>>('/api/v1/settings/branding', dto);
+      const res = await api.put<ApiResponse<Tenant>>('/settings/branding', dto);
       updateTenant(res.data);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       setShowBranding(false);

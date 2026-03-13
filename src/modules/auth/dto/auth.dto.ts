@@ -38,6 +38,34 @@ export class AuthResponseDto {
   expiresIn!: number;
 
   @ApiProperty()
+  role!: string;
+
+  @ApiProperty()
+  needsOnboarding!: boolean;
+
+  @ApiProperty()
+  profile!: {
+    id: string;
+    firstName: string;
+    lastName: string | null;
+    phone: string | null;
+    avatarUrl: string | null;
+  };
+
+  @ApiProperty({ nullable: true })
+  tenant!: {
+    id: string;
+    displayName: string;
+    slug: string;
+    logoUrl: string | null;
+    branding: {
+      primaryColor?: string;
+      secondaryColor?: string;
+      welcomeMessage?: string;
+    } | null;
+  } | null;
+
+  @ApiProperty()
   user!: {
     id: string;
     telegramId: number;

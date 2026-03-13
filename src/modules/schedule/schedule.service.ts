@@ -6,6 +6,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { WorkingHour, WorkingHourOverride } from '@prisma/client';
 import { UpdateWorkingHoursDto, CreateOverrideDto } from './dto/schedule.dto';
 
+interface SingleWorkingDayUpdate {
+  dayOfWeek: number;
+  isWorking: boolean;
+  startTime: string;
+  endTime: string;
+}
+
 @Injectable()
 export class ScheduleService {
   private readonly logger = new Logger(ScheduleService.name);
@@ -90,6 +97,51 @@ export class ScheduleService {
 
     this.logger.log(`Working hours updated: ${dto.hours.length} days for tenant ${tenantId}`);
 
+    return this.getSchedule(tenantId);
+  }
+
+  async updateWorkingDay(tenantId: string, dto: SingleWorkingDayUpdate) {
+    if (dto.isWorking && dto.endTime <= dto.startTime) {
+      throw new BadRequestException(
+        `End time (${dto.endTime}) must be after start time (${dto.startTime}) for day ${dto.dayOfWeek}`,
+      );
+    }
+
+    const existing = await this.prisma.tenantClient.workingHour.findFirst({
+      where: { tenantId, dayOfWeek: dto.dayOfWeek },
+    });
+
+    if (!dto.isWorking) {
+      if (existing) {
+        await this.prisma.tenantClient.workingHour.delete({
+          where: { id: existing.id },
+        });
+      }
+
+      this.logger.log(`Working day disabled: ${dto.dayOfWeek} for tenant ${tenantId}`);
+      return this.getSchedule(tenantId);
+    }
+
+    if (existing) {
+      await this.prisma.tenantClient.workingHour.update({
+        where: { id: existing.id },
+        data: {
+          startTime: dto.startTime,
+          endTime: dto.endTime,
+        },
+      });
+    } else {
+      await this.prisma.tenantClient.workingHour.create({
+        data: {
+          tenantId,
+          dayOfWeek: dto.dayOfWeek,
+          startTime: dto.startTime,
+          endTime: dto.endTime,
+        },
+      });
+    }
+
+    this.logger.log(`Working day updated: ${dto.dayOfWeek} for tenant ${tenantId}`);
     return this.getSchedule(tenantId);
   }
 

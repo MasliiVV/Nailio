@@ -194,7 +194,7 @@ POST body: data=...&signature=...
      public_key: "...",
      amount: 295.00,               // UAH
      currency: "UAH",
-     description: "GlowUp Pro Subscription",
+    description: "Nailio Subscription",
      order_id: "sub_xxx",
      recurringbytoken: "1",        // enable recurring
      server_url: "https://api.example.com/webhooks/liqpay",
@@ -213,7 +213,7 @@ POST body: data=...&signature=...
      public_key: "...",
      amount: 295.00,
      currency: "UAH",
-     description: "GlowUp Pro Monthly",
+    description: "Nailio Monthly",
      order_id: "sub_xxx_2024_02",
      card_token: "..."
    }
