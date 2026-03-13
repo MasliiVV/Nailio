@@ -40,7 +40,9 @@ export function useUpdateWorkingHours() {
       const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.all);
 
       if (previous && 'dayOfWeek' in payload) {
-        const updatedHours = [...(previous.data?.hours || (previous as unknown as Schedule).hours || [])];
+        const updatedHours = [
+          ...(previous.data?.hours || (previous as unknown as Schedule).hours || []),
+        ];
         const idx = updatedHours.findIndex((h) => h.dayOfWeek === payload.dayOfWeek);
         const newHour: WorkingHours = {
           dayOfWeek: payload.dayOfWeek,

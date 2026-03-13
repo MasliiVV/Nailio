@@ -264,9 +264,7 @@ export function CalendarPage() {
                   ))}
                 </div>
               ) : (
-                <p className={styles.noSlots}>
-                  {intl.formatMessage({ id: 'booking.noSlots' })}
-                </p>
+                <p className={styles.noSlots}>{intl.formatMessage({ id: 'booking.noSlots' })}</p>
               )}
             </>
           )}

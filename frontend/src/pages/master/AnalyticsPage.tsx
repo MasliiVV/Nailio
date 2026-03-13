@@ -87,17 +87,26 @@ export function AnalyticsPage() {
               <div className={styles.legendItem}>
                 <span className={styles.legendDot} style={{ background: 'var(--color-success)' }} />
                 <span>{intl.formatMessage({ id: 'analytics.completed' })}</span>
-                <span className={styles.legendValue}>{completed} ({completedPct}%)</span>
+                <span className={styles.legendValue}>
+                  {completed} ({completedPct}%)
+                </span>
               </div>
               <div className={styles.legendItem}>
                 <span className={styles.legendDot} style={{ background: 'var(--color-warning)' }} />
                 <span>{intl.formatMessage({ id: 'analytics.cancelled' })}</span>
-                <span className={styles.legendValue}>{cancelled} ({cancelledPct}%)</span>
+                <span className={styles.legendValue}>
+                  {cancelled} ({cancelledPct}%)
+                </span>
               </div>
               <div className={styles.legendItem}>
-                <span className={styles.legendDot} style={{ background: 'var(--color-destructive)' }} />
+                <span
+                  className={styles.legendDot}
+                  style={{ background: 'var(--color-destructive)' }}
+                />
                 <span>{intl.formatMessage({ id: 'analytics.noShows' })}</span>
-                <span className={styles.legendValue}>{noShows} ({noShowsPct}%)</span>
+                <span className={styles.legendValue}>
+                  {noShows} ({noShowsPct}%)
+                </span>
               </div>
             </div>
           </Card>
