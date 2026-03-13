@@ -25,6 +25,13 @@ export function ClientProfilePage() {
       });
       updateProfile(res.data);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
+    } catch (err) {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      getTelegram()?.showAlert?.(
+        intl.formatMessage({ id: 'common.error' }) +
+          ': ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
     } finally {
       setSaving(false);
     }

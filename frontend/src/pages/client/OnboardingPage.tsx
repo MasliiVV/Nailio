@@ -103,13 +103,21 @@ export function ClientOnboardingPage() {
           type="tel"
           placeholder="+380..."
           hint={intl.formatMessage({ id: 'client.onboarding.phoneHint' })}
-          error={submitError === intl.formatMessage({ id: 'client.onboarding.phoneError' }) ? submitError : undefined}
+          error={
+            submitError === intl.formatMessage({ id: 'client.onboarding.phoneError' })
+              ? submitError
+              : undefined
+          }
         />
-        {submitError && submitError !== intl.formatMessage({ id: 'client.onboarding.phoneError' }) && (
-          <div className="text-secondary" style={{ color: 'var(--color-danger, #ef4444)', fontSize: 14 }}>
-            {submitError}
-          </div>
-        )}
+        {submitError &&
+          submitError !== intl.formatMessage({ id: 'client.onboarding.phoneError' }) && (
+            <div
+              className="text-secondary"
+              style={{ color: 'var(--color-destructive)', fontSize: 14 }}
+            >
+              {submitError}
+            </div>
+          )}
         <Button
           fullWidth
           size="lg"

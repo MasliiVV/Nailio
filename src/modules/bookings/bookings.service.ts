@@ -197,55 +197,86 @@ export class BookingsService {
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
-    const dateStr = startTime.toISOString().split('T')[0];
-    const dateObj = new Date(dateStr + 'T00:00:00');
+    const timezone = tenant.timezone || 'Europe/Kyiv';
+
+    // Use tenant timezone to determine the correct local date
+    const localDateStr = startTime
+      .toLocaleDateString('en-CA', { timeZone: timezone })
+      .split('T')[0];
+    const dateObj = new Date(localDateStr + 'T00:00:00');
     const workingHours = await this.scheduleService.getWorkingHoursForDate(tenantId, dateObj);
 
     if (!workingHours) {
       throw new BadRequestException('Selected date is a day off');
     }
 
-    // 7. App-level double-booking check (DB exclusion constraint is the final guard)
-    const overlapping = await this.prisma.tenantClient.booking.findFirst({
-      where: {
-        tenantId,
-        status: { notIn: ['cancelled'] },
-        startTime: { lt: endTime },
-        endTime: { gt: startTime },
-      },
+    // Validate booking time falls within working hours
+    const localTimeStr = startTime.toLocaleTimeString('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const localEndTimeStr = endTime.toLocaleTimeString('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     });
 
-    if (overlapping) {
-      throw new ConflictException('Time slot is already booked');
+    if (localTimeStr < workingHours.startTime || localEndTimeStr > workingHours.endTime) {
+      throw new BadRequestException(
+        `Booking time must be within working hours (${workingHours.startTime} - ${workingHours.endTime})`,
+      );
     }
 
-    // 8. Create booking with service snapshot
+    // 7. Atomic overlap check + create inside a serializable transaction
     try {
-      const booking = await this.prisma.tenantClient.booking.create({
-        data: {
-          tenantId,
-          clientId,
-          serviceId: service.id,
-          serviceNameSnapshot: service.name,
-          priceAtBooking: service.price,
-          durationAtBooking: service.durationMinutes,
-          startTime,
-          endTime,
-          status: 'pending',
-          notes: dto.notes,
-          createdBy: user.role === 'master' ? 'master' : 'client',
-        },
-        include: {
-          client: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
+      const booking = await this.prisma.$transaction(
+        async (tx) => {
+          // Double-booking check inside transaction
+          const overlapping = await tx.booking.findFirst({
+            where: {
+              tenantId,
+              status: { notIn: ['cancelled'] },
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
             },
-          },
+          });
+
+          if (overlapping) {
+            throw new ConflictException('Time slot is already booked');
+          }
+
+          // Create booking with service snapshot
+          return tx.booking.create({
+            data: {
+              tenantId,
+              clientId,
+              serviceId: service.id,
+              serviceNameSnapshot: service.name,
+              priceAtBooking: service.price,
+              durationAtBooking: service.durationMinutes,
+              startTime,
+              endTime,
+              status: 'pending',
+              notes: dto.notes,
+              createdBy: user.role === 'master' ? 'master' : 'client',
+            },
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  phone: true,
+                },
+              },
+            },
+          });
         },
-      });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
 
       this.logger.log(
         `Booking created: ${booking.id} by ${user.role} for client ${clientId} in tenant ${tenantId}`,
@@ -262,7 +293,9 @@ export class BookingsService {
 
       return this.formatBookingResponse(booking);
     } catch (error: unknown) {
-      // Handle DB exclusion constraint violation (concurrent booking)
+      // Re-throw our own exceptions
+      if (error instanceof ConflictException) throw error;
+      // Handle DB constraint violation (concurrent booking)
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('Time slot is already booked');
       }

@@ -66,7 +66,7 @@ export function AdminDashboardPage() {
                     @{tenant.slug} · {tenant.master.firstName} {tenant.master.lastName || ''}
                   </p>
                 </div>
-                <span className={`badge badge--${tenant.isActive ? 'success' : 'danger'}`}>
+                <span className={`badge badge--${tenant.isActive ? 'success' : 'destructive'}`}>
                   {tenant.isActive ? 'Активний' : 'Вимкнений'}
                 </span>
               </div>

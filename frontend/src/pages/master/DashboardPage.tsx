@@ -14,7 +14,9 @@ export function DashboardPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { data: dashboard, isLoading: dashLoading } = useDashboard('week');
-  const { data: bookingsData, isLoading: bookingsLoading } = useBookings();
+  const { data: bookingsData, isLoading: bookingsLoading } = useBookings({
+    upcoming: true,
+  });
 
   const todayBookings = (bookingsData?.items || []).filter((b: Booking) => {
     const d = new Date(b.startTime);
@@ -92,7 +94,11 @@ export function DashboardPage() {
         )}
 
         {todayBookings.map((booking: Booking) => (
-          <Card key={booking.id} className={styles.bookingCard}>
+          <Card
+            key={booking.id}
+            className={styles.bookingCard}
+            onClick={() => navigate('/master/calendar')}
+          >
             <div className={styles.bookingTime}>{formatTime(booking.startTime)}</div>
             <div className={styles.bookingInfo}>
               <span className={styles.bookingName}>{booking.serviceNameSnapshot}</span>

@@ -69,12 +69,12 @@ export class TenantsController {
 @ApiTags('Admin')
 @Controller('admin/tenants')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminTenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Get()
   @Roles('platform_admin')
-  @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'List all tenants for platform admin' })
   @ApiResponse({ status: 200, type: AdminTenantSummaryDto, isArray: true })
   async listTenants() {
@@ -83,7 +83,6 @@ export class AdminTenantsController {
 
   @Get(':id')
   @Roles('platform_admin')
-  @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Get tenant overview for platform admin' })
   @ApiResponse({ status: 200, type: AdminTenantDetailDto })
   async getTenant(@Param('id') tenantId: string) {

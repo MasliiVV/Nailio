@@ -33,28 +33,30 @@ export function AnalyticsPage() {
 
       <div className={styles.statsGrid}>
         <div className="stat-card">
-          <span className="stat-card-label">
+          <span className="stat-card__label">
             {intl.formatMessage({ id: 'analytics.totalBookings' })}
           </span>
-          <span className="stat-card-value">{data?.period?.totalBookings ?? 0}</span>
+          <span className="stat-card__value">{data?.period?.totalBookings ?? 0}</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-label">
+          <span className="stat-card__label">
             {intl.formatMessage({ id: 'analytics.completed' })}
           </span>
-          <span className="stat-card-value">{data?.period?.completed ?? 0}</span>
+          <span className="stat-card__value">{data?.period?.completed ?? 0}</span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-label">{intl.formatMessage({ id: 'analytics.revenue' })}</span>
-          <span className="stat-card-value">
+          <span className="stat-card__label">
+            {intl.formatMessage({ id: 'analytics.revenue' })}
+          </span>
+          <span className="stat-card__value">
             {((data?.period?.revenue ?? 0) / 100).toFixed(0)} ₴
           </span>
         </div>
         <div className="stat-card">
-          <span className="stat-card-label">
+          <span className="stat-card__label">
             {intl.formatMessage({ id: 'analytics.newClients' })}
           </span>
-          <span className="stat-card-value">{data?.period?.newClients ?? 0}</span>
+          <span className="stat-card__value">{data?.period?.newClients ?? 0}</span>
         </div>
       </div>
 

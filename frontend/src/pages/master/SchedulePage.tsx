@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useIntl } from 'react-intl';
 import { Trash2 } from 'lucide-react';
 import { useSchedule, useUpdateWorkingHours, useCreateOverride, useDeleteOverride } from '@/hooks';
@@ -41,15 +41,26 @@ export function SchedulePage() {
     }
   };
 
-  const handleTimeChange = (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
-    const existing = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === dayOfWeek);
-    updateHours.mutate({
-      dayOfWeek,
-      isWorking: true,
-      startTime: field === 'startTime' ? value : existing?.startTime || '09:00',
-      endTime: field === 'endTime' ? value : existing?.endTime || '18:00',
-    });
-  };
+  const timeChangeTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const handleTimeChange = useCallback(
+    (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
+      const key = `${dayOfWeek}-${field}`;
+      if (timeChangeTimers.current[key]) {
+        clearTimeout(timeChangeTimers.current[key]);
+      }
+      timeChangeTimers.current[key] = setTimeout(() => {
+        const existing = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === dayOfWeek);
+        updateHours.mutate({
+          dayOfWeek,
+          isWorking: true,
+          startTime: field === 'startTime' ? value : existing?.startTime || '09:00',
+          endTime: field === 'endTime' ? value : existing?.endTime || '18:00',
+        });
+      }, 600);
+    },
+    [schedule, updateHours],
+  );
 
   const handleAddOverride = () => {
     const dto: CreateOverrideDto = {

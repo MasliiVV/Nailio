@@ -86,6 +86,7 @@
   "services.duration": "Тривалість (хв)",
   "services.description": "Опис (необов'язково)",
   "services.noServices": "Ви ще не додали послуг",
+  "services.deleteConfirm": "Видалити цю послугу? Цю дію неможливо скасувати.",
   "services.active": "Активна",
   "services.inactive": "Неактивна",
 

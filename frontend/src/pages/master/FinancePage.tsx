@@ -19,9 +19,14 @@ export function FinancePage() {
   const [description, setDescription] = useState('');
 
   const handleAdd = () => {
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
+      getTelegram()?.showAlert?.(intl.formatMessage({ id: 'common.error' }));
+      return;
+    }
     const dto: CreateTransactionDto = {
       type: txType,
-      amount: Number(amount) * 100,
+      amount: numAmount * 100,
       description,
     };
     createTx.mutate(dto, {

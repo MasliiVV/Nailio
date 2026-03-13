@@ -34,8 +34,11 @@ export function SubscriptionPage() {
 
   const handleCancel = () => {
     getTelegram()?.HapticFeedback.impactOccurred('heavy');
-    if (confirm(intl.formatMessage({ id: 'subscription.confirmCancel' }))) {
-      cancel.mutate();
+    const tg = getTelegram();
+    if (tg) {
+      tg.showConfirm(intl.formatMessage({ id: 'subscription.confirmCancel' }), (confirmed) => {
+        if (confirmed) cancel.mutate();
+      });
     }
   };
 
@@ -86,7 +89,7 @@ export function SubscriptionPage() {
           </span>
           {daysLeft > 0 && (
             <span className={styles.daysLeft}>
-              {daysLeft} {intl.formatMessage({ id: 'subscription.daysLeft' })}
+              {intl.formatMessage({ id: 'subscription.daysLeft' }, { days: daysLeft })}
             </span>
           )}
         </div>
@@ -132,7 +135,7 @@ export function SubscriptionPage() {
                   </div>
                 </div>
                 <span
-                  className={`badge badge-${payment.status === 'success' ? 'success' : payment.status === 'pending' ? 'warning' : 'destructive'}`}
+                  className={`badge badge--${payment.status === 'success' ? 'success' : payment.status === 'pending' ? 'warning' : 'destructive'}`}
                 >
                   {payment.status}
                 </span>

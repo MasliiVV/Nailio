@@ -86,6 +86,7 @@
   "services.duration": "Duration (min)",
   "services.description": "Description (optional)",
   "services.noServices": "No services added yet",
+  "services.deleteConfirm": "Delete this service? This action cannot be undone.",
   "services.active": "Active",
   "services.inactive": "Inactive",
 

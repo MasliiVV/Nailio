@@ -15,13 +15,28 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
   useEffect(() => {
     if (open) {
       setVisible(true);
+      document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => setAnimating(true));
     } else {
       setAnimating(false);
+      document.body.style.overflow = '';
       const timer = setTimeout(() => setVisible(false), 300);
       return () => clearTimeout(timer);
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open, onClose]);
 
   const handleBackdropClick = useCallback(() => {
     onClose();

@@ -37,12 +37,20 @@ export function CalendarPage() {
 
   const handleComplete = async (id: string) => {
     getTelegram()?.HapticFeedback.impactOccurred('medium');
-    await completeBooking.mutateAsync(id);
+    try {
+      await completeBooking.mutateAsync(id);
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
   };
 
   const handleNoShow = async (id: string) => {
     getTelegram()?.HapticFeedback.impactOccurred('medium');
-    await noShowBooking.mutateAsync(id);
+    try {
+      await noShowBooking.mutateAsync(id);
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
   };
 
   return (

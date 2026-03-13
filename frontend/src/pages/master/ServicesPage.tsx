@@ -46,12 +46,21 @@ export function ServicesPage() {
       description: description || undefined,
     };
 
-    if (editing) {
-      await updateService.mutateAsync({ id: editing.id, dto });
-    } else {
-      await createService.mutateAsync(dto);
+    try {
+      if (editing) {
+        await updateService.mutateAsync({ id: editing.id, dto });
+      } else {
+        await createService.mutateAsync(dto);
+      }
+      resetForm();
+    } catch (err) {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      getTelegram()?.showAlert?.(
+        intl.formatMessage({ id: 'common.error' }) +
+          ': ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
     }
-    resetForm();
   };
 
   return (
@@ -113,7 +122,19 @@ export function ServicesPage() {
                 </button>
                 <button
                   className="touchable"
-                  onClick={() => deleteService.mutate(service.id)}
+                  onClick={() => {
+                    const tg = getTelegram();
+                    if (tg) {
+                      tg.showConfirm(
+                        intl.formatMessage({ id: 'services.deleteConfirm' }),
+                        (confirmed) => {
+                          if (confirmed) deleteService.mutate(service.id);
+                        },
+                      );
+                    } else {
+                      deleteService.mutate(service.id);
+                    }
+                  }}
                   aria-label="Delete"
                 >
                   <Trash2 size={18} />
