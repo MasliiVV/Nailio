@@ -398,9 +398,45 @@ export class AuthService {
       });
 
       if (master) {
+        // Determine onboarding status: check actual data, not just the flag.
+        // If the flag is stale (e.g. services/schedule added outside onboarding wizard),
+        // auto-complete onboarding when all prerequisites are met.
+        let needsOnboarding = master.tenant.onboardingStatus !== 'setup_complete';
+
+        if (needsOnboarding) {
+          const [botCount, servicesCount, hoursCount] = await Promise.all([
+            this.prisma.bot.count({ where: { tenantId: payload.tenantId, isActive: true } }),
+            this.prisma.service.count({ where: { tenantId: payload.tenantId, isActive: true } }),
+            this.prisma.workingHour.count({ where: { tenantId: payload.tenantId } }),
+          ]);
+
+          if (botCount > 0 && servicesCount > 0 && hoursCount > 0) {
+            // All prerequisites met — auto-complete onboarding
+            needsOnboarding = false;
+            await this.prisma.tenant
+              .update({
+                where: { id: payload.tenantId },
+                data: {
+                  onboardingStatus: 'setup_complete',
+                  onboardingChecklist: {
+                    has_bot: true,
+                    has_services: true,
+                    has_schedule: true,
+                    has_branding: true,
+                    has_shared_link: true,
+                  },
+                },
+              })
+              .catch(() => {
+                // Non-critical — don't fail auth if checklist update fails
+              });
+            this.logger.log(`Auto-completed onboarding for tenant ${payload.tenantId}`);
+          }
+        }
+
         return {
           role: 'master',
-          needsOnboarding: master.tenant.onboardingStatus !== 'setup_complete',
+          needsOnboarding,
           profile: {
             id: master.id,
             firstName: master.firstName,

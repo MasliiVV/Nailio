@@ -5,6 +5,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QUEUE_NAMES, NotificationJobData } from '../../common/bullmq/tenant-context';
 
@@ -128,7 +129,7 @@ export class NotificationsService {
         tenantId,
         bookingId,
         clientId,
-        type,
+        type: type as string as NotificationType,
         channel: 'telegram',
         status: 'pending',
         scheduledAt,
