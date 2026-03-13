@@ -13,8 +13,16 @@ export function useSubscription() {
   return useQuery({
     queryKey: subscriptionKeys.status(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<Subscription>>('/subscription');
-      return res.data;
+      try {
+        const res = await api.get<ApiResponse<Subscription>>('/subscription');
+        return res.data;
+      } catch (err: unknown) {
+        // 404 means no subscription yet — return null instead of throwing
+        if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 404) {
+          return null;
+        }
+        throw err;
+      }
     },
     staleTime: 60_000,
   });
@@ -24,9 +32,17 @@ export function useSubscriptionPayments() {
   return useQuery({
     queryKey: subscriptionKeys.payments(),
     queryFn: async () => {
-      const res = await api.get<ApiResponse<SubscriptionPayment[]>>('/subscription/payments');
-      return res.data;
+      try {
+        const res = await api.get<ApiResponse<SubscriptionPayment[]>>('/subscription/payments');
+        return res.data;
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 404) {
+          return [];
+        }
+        throw err;
+      }
     },
+    staleTime: 60_000,
   });
 }
 
