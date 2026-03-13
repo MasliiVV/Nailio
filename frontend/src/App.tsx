@@ -7,10 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { MasterLayout } from '@/layouts/MasterLayout';
 import { ClientLayout } from '@/layouts/ClientLayout';
 
+// Eager-loaded landing pages (no extra round-trip)
+import { ClientHomePage } from '@/pages/client/HomePage';
+import { DashboardPage } from '@/pages/master/DashboardPage';
+
 // Lazy-loaded pages for code splitting
-const ClientHomePage = lazy(() =>
-  import('@/pages/client/HomePage').then((m) => ({ default: m.ClientHomePage })),
-);
 const BookingPage = lazy(() =>
   import('@/pages/client/BookingPage').then((m) => ({ default: m.BookingPage })),
 );
@@ -22,10 +23,6 @@ const ClientProfilePage = lazy(() =>
 );
 const ClientOnboardingPage = lazy(() =>
   import('@/pages/client/OnboardingPage').then((m) => ({ default: m.ClientOnboardingPage })),
-);
-
-const DashboardPage = lazy(() =>
-  import('@/pages/master/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 );
 const CalendarPage = lazy(() =>
   import('@/pages/master/CalendarPage').then((m) => ({ default: m.CalendarPage })),

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { authenticate, logout as logoutApi, refreshAccessToken } from '@/lib/auth';
 import { getInitData, getStartParam, getTelegram, isTelegramEnv } from '@/lib/telegram';
+import { prefetchMasterData, prefetchClientData } from '@/lib/prefetch';
 import type { AuthResponse, Profile, Tenant, UserRole } from '@/types';
 
 interface AuthState {
@@ -43,6 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const handleAuthResponse = useCallback((data: AuthResponse) => {
+    // Start prefetching data BEFORE React re-renders — saves ~200-500ms
+    if (!data.needsOnboarding) {
+      if (data.role === 'master') prefetchMasterData();
+      else if (data.role === 'client') prefetchClientData();
+    }
+
     setState({
       isLoading: false,
       isAuthenticated: true,

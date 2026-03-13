@@ -3,11 +3,15 @@
 // Language: Telegram.WebApp.initDataUnsafe.user.language_code → 'uk' | 'en'
 
 import { getLanguage } from './telegram';
+import ukMessages from '../locales/uk.json';
 
 export type Locale = 'uk' | 'en';
 
 let currentLocale: Locale = 'uk';
 const messageCache = new Map<Locale, Record<string, string>>();
+
+// Pre-cache default locale (no async needed)
+messageCache.set('uk', ukMessages as Record<string, string>);
 
 /** Detect language from Telegram or use default */
 export function detectLocale(): Locale {
@@ -18,7 +22,7 @@ export function detectLocale(): Locale {
   }
 }
 
-/** Load messages for a locale (lazy) */
+/** Load messages for a locale (sync for uk, lazy for en) */
 export async function loadMessages(locale: Locale): Promise<Record<string, string>> {
   const cached = messageCache.get(locale);
   if (cached) return cached;

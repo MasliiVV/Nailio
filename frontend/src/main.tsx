@@ -8,6 +8,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initTelegramApp } from '@/lib/telegram';
 import { loadMessages, detectLocale } from '@/lib/i18n';
+import { setQueryClient } from '@/lib/prefetch';
 
 import '@/styles/globals.css';
 
@@ -28,6 +29,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Register query client for prefetching during auth
+setQueryClient(queryClient);
 
 async function bootstrap() {
   // Detect locale and load messages
