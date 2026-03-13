@@ -15,6 +15,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { FinanceService } from '../finance/finance.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { Booking, Prisma } from '@prisma/client';
 import {
@@ -34,6 +35,7 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly scheduleService: ScheduleService,
     private readonly notificationsService: NotificationsService,
+    private readonly financeService: FinanceService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -494,6 +496,19 @@ export class BookingsService {
       where: { id: booking.clientId },
       data: { lastVisitAt: new Date() },
     });
+
+    // Auto-create income transaction for completed booking
+    try {
+      await this.financeService.createBookingTransaction(
+        tenantId,
+        bookingId,
+        booking.clientId,
+        booking.priceAtBooking,
+        booking.serviceNameSnapshot,
+      );
+    } catch (err) {
+      this.logger.error(`Failed to create transaction for booking ${bookingId}: ${err}`);
+    }
 
     this.logger.log(`Booking completed: ${bookingId} in tenant ${tenantId}`);
 

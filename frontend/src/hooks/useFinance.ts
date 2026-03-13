@@ -23,6 +23,7 @@ export function useTransactions() {
         await api.get<ApiResponse<PaginatedResponse<Transaction>>>('/finance/transactions');
       return res.data;
     },
+    staleTime: 60_000,
   });
 }
 
@@ -34,6 +35,7 @@ export function useFinanceSummary(period?: string) {
       const res = await api.get<ApiResponse<FinanceSummary>>(`/finance/summary${params}`);
       return res.data;
     },
+    staleTime: 60_000,
   });
 }
 

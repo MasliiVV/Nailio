@@ -222,7 +222,7 @@ export interface Client {
   tags: string[];
   isBlocked: boolean;
   lastVisitAt: string | null;
-  stats: ClientStats;
+  stats?: ClientStats;
 }
 
 export interface ClientStats {

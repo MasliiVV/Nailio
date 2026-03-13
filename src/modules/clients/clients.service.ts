@@ -36,6 +36,9 @@ export class ClientsService {
       where,
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
+      include: {
+        _count: { select: { bookings: true } },
+      },
     };
 
     if (query.cursor) {
@@ -50,7 +53,12 @@ export class ClientsService {
     const nextCursor = hasMore ? items[items.length - 1].id : undefined;
 
     return {
-      items: items.map((c: Client) => this.formatClientListItem(c)),
+      items: items.map((c: Client & { _count?: { bookings: number } }) => ({
+        ...this.formatClientListItem(c),
+        stats: {
+          totalBookings: c._count?.bookings ?? 0,
+        },
+      })),
       nextCursor,
       hasMore,
     };

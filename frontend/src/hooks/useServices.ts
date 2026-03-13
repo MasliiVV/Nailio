@@ -16,6 +16,7 @@ export function useServices() {
       const res = await api.get<ApiResponse<Service[]>>('/services');
       return res.data;
     },
+    staleTime: 120_000,
   });
 }
 

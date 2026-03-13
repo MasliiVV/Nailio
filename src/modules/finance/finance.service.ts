@@ -61,10 +61,17 @@ export class FinanceService {
     return {
       items: items.map((t: Transaction & Record<string, unknown>) => ({
         id: t.id,
+        type: t.type || 'income',
         amount: t.amount,
+        description:
+          t.description ||
+          (t.booking as { serviceNameSnapshot?: string } | null)?.serviceNameSnapshot ||
+          '',
         currency: t.currency,
+        category: t.paymentMethod || null,
         paymentMethod: t.paymentMethod,
         status: t.status,
+        bookingId: t.bookingId || null,
         createdAt: t.createdAt.toISOString(),
         client: t.client || undefined,
         booking: t.booking || undefined,
@@ -79,11 +86,13 @@ export class FinanceService {
    * docs/api/endpoints.md — POST /api/v1/finance/transactions
    */
   async create(tenantId: string, dto: CreateTransactionDto) {
-    // Verify client exists
-    const client = await this.prisma.tenantClient.client.findFirst({
-      where: { id: dto.clientId, tenantId },
-    });
-    if (!client) throw new NotFoundException('Client not found');
+    // Verify client exists if provided
+    if (dto.clientId) {
+      const client = await this.prisma.tenantClient.client.findFirst({
+        where: { id: dto.clientId, tenantId },
+      });
+      if (!client) throw new NotFoundException('Client not found');
+    }
 
     // Verify booking if provided
     if (dto.bookingId) {
@@ -96,11 +105,13 @@ export class FinanceService {
     const transaction = await this.prisma.tenantClient.transaction.create({
       data: {
         tenantId,
-        bookingId: dto.bookingId,
-        clientId: dto.clientId,
+        type: dto.type || 'income',
+        bookingId: dto.bookingId || undefined,
+        clientId: dto.clientId || undefined,
         amount: dto.amount,
+        description: dto.description || null,
         currency: dto.currency || 'UAH',
-        paymentMethod: dto.paymentMethod,
+        paymentMethod: dto.paymentMethod || 'cash',
         status: 'completed', // Manual transactions are immediately completed
       },
     });
@@ -109,7 +120,15 @@ export class FinanceService {
       `Transaction created: ${transaction.id} for ${dto.amount} in tenant ${tenantId}`,
     );
 
-    return transaction;
+    return {
+      id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description || '',
+      category: transaction.paymentMethod,
+      bookingId: transaction.bookingId,
+      createdAt: transaction.createdAt.toISOString(),
+    };
   }
 
   /**
@@ -120,46 +139,70 @@ export class FinanceService {
     const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const to = dateTo ? new Date(dateTo + 'T23:59:59.999Z') : new Date();
 
-    const [totalIncome, transactionCount, byMethod] = await Promise.all([
+    const baseWhere = {
+      tenantId,
+      status: 'completed' as const,
+      createdAt: { gte: from, lte: to },
+    };
+
+    const [incomeResult, expenseResult] = await Promise.all([
       this.prisma.tenantClient.transaction.aggregate({
-        where: {
-          tenantId,
-          status: 'completed',
-          createdAt: { gte: from, lte: to },
-        },
+        where: { ...baseWhere, type: 'income' },
         _sum: { amount: true },
       }),
-      this.prisma.tenantClient.transaction.count({
-        where: {
-          tenantId,
-          status: 'completed',
-          createdAt: { gte: from, lte: to },
-        },
-      }),
-      this.prisma.tenantClient.transaction.groupBy({
-        by: ['paymentMethod'],
-        where: {
-          tenantId,
-          status: 'completed',
-          createdAt: { gte: from, lte: to },
-        },
+      this.prisma.tenantClient.transaction.aggregate({
+        where: { ...baseWhere, type: 'expense' },
         _sum: { amount: true },
-        _count: { id: true },
       }),
     ]);
 
+    const income = incomeResult._sum.amount || 0;
+    const expense = expenseResult._sum.amount || 0;
+
     return {
-      totalIncome: totalIncome._sum.amount || 0,
-      transactionCount,
-      byMethod: byMethod.map((m) => ({
-        method: m.paymentMethod,
-        total: m._sum.amount || 0,
-        count: m._count.id,
-      })),
-      period: {
-        from: from.toISOString().split('T')[0],
-        to: to.toISOString().split('T')[0],
-      },
+      income,
+      expense,
+      net: income - expense,
     };
+  }
+
+  /**
+   * Auto-create income transaction when booking is completed
+   */
+  async createBookingTransaction(
+    tenantId: string,
+    bookingId: string,
+    clientId: string,
+    amount: number,
+    description: string,
+  ) {
+    // Avoid duplicate transaction for same booking
+    const existing = await this.prisma.tenantClient.transaction.findFirst({
+      where: { tenantId, bookingId },
+    });
+    if (existing) {
+      this.logger.warn(`Transaction already exists for booking ${bookingId}`);
+      return existing;
+    }
+
+    const transaction = await this.prisma.tenantClient.transaction.create({
+      data: {
+        tenantId,
+        type: 'income',
+        bookingId,
+        clientId,
+        amount,
+        description,
+        currency: 'UAH',
+        paymentMethod: 'cash',
+        status: 'completed',
+      },
+    });
+
+    this.logger.log(
+      `Auto-transaction created: ${transaction.id} for booking ${bookingId} (${amount} kopiykas)`,
+    );
+
+    return transaction;
   }
 }

@@ -87,14 +87,27 @@ export class SubscriptionService {
       select: { trialEndsAt: true },
     });
 
+    // Compute daysLeft for frontend
+    const periodEnd = subscription.currentPeriodEnd || tenant?.trialEndsAt;
+    const daysLeft = periodEnd
+      ? Math.max(0, Math.ceil((periodEnd.getTime() - Date.now()) / 86400000))
+      : 0;
+
+    // Convert USD price to kopecks (UAH) — approximate display
+    const pricePerMonth = subscription.amount || this.platformSubscriptionPrice * 100;
+
     return {
       id: subscription.id,
       status: subscription.status,
+      plan: 'monthly',
+      pricePerMonth,
       provider: subscription.paymentProvider,
       cardLastFour: subscription.cardLastFour,
       currentPeriodStart: subscription.currentPeriodStart,
-      currentPeriodEnd: subscription.currentPeriodEnd,
+      currentPeriodEnd: subscription.currentPeriodEnd || tenant?.trialEndsAt,
       trialEndsAt: tenant?.trialEndsAt,
+      cancelledAt: subscription.cancelReason ? subscription.createdAt : null,
+      daysLeft,
       priceUsd: this.platformSubscriptionPrice,
       lastPayment: subscription.payments[0] || null,
     };

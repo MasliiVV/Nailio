@@ -51,6 +51,7 @@ export function useBookings(params?: { status?: string; upcoming?: boolean; curs
       );
       return res.data;
     },
+    staleTime: 30_000,
   });
 }
 

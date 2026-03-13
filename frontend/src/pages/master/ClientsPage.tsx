@@ -54,7 +54,7 @@ export function ClientsPage() {
                 <div className="text-secondary" style={{ fontSize: 13 }}>
                   {intl.formatMessage(
                     { id: 'clients.totalVisits' },
-                    { count: client.stats.totalBookings },
+                    { count: client.stats?.totalBookings ?? 0 },
                   )}
                 </div>
               </div>

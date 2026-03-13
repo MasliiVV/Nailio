@@ -21,6 +21,7 @@ export function useClients(search?: string) {
       );
       return res.data;
     },
+    staleTime: 60_000,
   });
 }
 

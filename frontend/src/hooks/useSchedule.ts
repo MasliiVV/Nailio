@@ -20,6 +20,7 @@ export function useSchedule() {
       const res = await api.get<ApiResponse<Schedule>>('/schedule');
       return res.data;
     },
+    staleTime: 120_000,
   });
 }
 

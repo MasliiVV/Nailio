@@ -46,6 +46,11 @@ enum PaymentStatus {
   refunded
 }
 
+enum TransactionType {
+  income
+  expense
+}
+
 enum NotificationType {
   confirmation
   reminder_24h
@@ -317,20 +322,22 @@ model Booking {
 // ──────────────────────────────────────────────
 
 model Transaction {
-  id                    String        @id @default(uuid()) @db.Uuid
-  tenantId              String        @map("tenant_id") @db.Uuid
-  bookingId             String?       @map("booking_id") @db.Uuid
-  clientId              String        @map("client_id") @db.Uuid
+  id                    String          @id @default(uuid()) @db.Uuid
+  tenantId              String          @map("tenant_id") @db.Uuid
+  bookingId             String?         @map("booking_id") @db.Uuid
+  clientId              String?         @map("client_id") @db.Uuid
+  type                  TransactionType @default(income)
   amount                Int
-  currency              String        @default("UAH") @db.VarChar(3)
-  paymentMethod         PaymentMethod @map("payment_method")
-  status                PaymentStatus @default(pending)
-  externalTransactionId String?       @map("external_transaction_id") @db.VarChar(255)
-  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  currency              String          @default("UAH") @db.VarChar(3)
+  description           String?         @db.Text
+  paymentMethod         PaymentMethod   @default(cash) @map("payment_method")
+  status                PaymentStatus   @default(pending)
+  externalTransactionId String?         @map("external_transaction_id") @db.VarChar(255)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz()
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client  Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt])
   @@index([tenantId, bookingId])

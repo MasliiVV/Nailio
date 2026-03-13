@@ -11,15 +11,20 @@ import {
   MaxLength,
   IsDateString,
 } from 'class-validator';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod, TransactionType } from '@prisma/client';
 
 export class CreateTransactionDto {
+  @IsEnum(TransactionType)
+  @IsOptional()
+  type?: TransactionType; // default 'income'
+
   @IsUUID()
   @IsOptional()
   bookingId?: string;
 
   @IsUUID()
-  clientId!: string;
+  @IsOptional()
+  clientId?: string;
 
   @IsInt()
   @Min(1)
@@ -27,11 +32,16 @@ export class CreateTransactionDto {
 
   @IsString()
   @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
   @MaxLength(3)
   currency?: string; // default UAH
 
   @IsEnum(PaymentMethod)
-  paymentMethod!: PaymentMethod;
+  @IsOptional()
+  paymentMethod?: PaymentMethod; // default cash
 }
 
 export class TransactionListQueryDto {
