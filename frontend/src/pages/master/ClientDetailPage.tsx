@@ -55,7 +55,9 @@ export function ClientDetailPage() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__value">{((client.stats?.totalSpent ?? 0) / 100).toFixed(0)}₴</div>
+          <div className="stat-card__value">
+            {((client.stats?.totalSpent ?? 0) / 100).toFixed(0)}₴
+          </div>
           <div className="stat-card__label">{intl.formatMessage({ id: 'finance.income' })}</div>
         </div>
       </div>

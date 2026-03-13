@@ -18,7 +18,12 @@ export function useSubscription() {
         return res.data;
       } catch (err: unknown) {
         // 404 means no subscription yet — return null instead of throwing
-        if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 404) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'statusCode' in err &&
+          (err as { statusCode: number }).statusCode === 404
+        ) {
           return null;
         }
         throw err;
@@ -36,7 +41,12 @@ export function useSubscriptionPayments() {
         const res = await api.get<ApiResponse<SubscriptionPayment[]>>('/subscription/payments');
         return res.data;
       } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 404) {
+        if (
+          err &&
+          typeof err === 'object' &&
+          'statusCode' in err &&
+          (err as { statusCode: number }).statusCode === 404
+        ) {
           return [];
         }
         throw err;

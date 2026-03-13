@@ -19,6 +19,28 @@ export function SettingsPage() {
   const [welcomeMessage, setWelcomeMessage] = useState(tenant?.branding?.welcomeMessage || '');
   const [primaryColor, setPrimaryColor] = useState(tenant?.branding?.primaryColor || '#6C5CE7');
 
+  // Color presets for quick selection
+  const colorPresets = [
+    '#6C5CE7',
+    '#E84393',
+    '#D63031',
+    '#E17055',
+    '#FDCB6E',
+    '#00B894',
+    '#0984E3',
+    '#6D214F',
+    '#B33771',
+    '#FD7272',
+    '#58B19F',
+    '#2C3A47',
+  ];
+
+  // Apply color preview in real-time
+  const handleColorChange = (color: string) => {
+    setPrimaryColor(color);
+    document.documentElement.style.setProperty('--tenant-primary', color);
+  };
+
   const handleSaveBranding = async () => {
     setSaving(true);
     try {
@@ -27,6 +49,12 @@ export function SettingsPage() {
       updateTenant(res.data);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       setShowBranding(false);
+    } catch {
+      // Revert color on error
+      const prev = tenant?.branding?.primaryColor || '#6C5CE7';
+      document.documentElement.style.setProperty('--tenant-primary', prev);
+      setPrimaryColor(prev);
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
     } finally {
       setSaving(false);
     }
@@ -101,16 +129,47 @@ export function SettingsPage() {
                 display: 'block',
                 fontSize: 13,
                 color: 'var(--color-text-secondary)',
-                marginBottom: 4,
+                marginBottom: 8,
               }}
             >
               {intl.formatMessage({ id: 'settings.primaryColor' })}
             </label>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, 1fr)',
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              {colorPresets.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => {
+                    handleColorChange(color);
+                    getTelegram()?.HapticFeedback.impactOccurred('light');
+                  }}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '1',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: color,
+                    border:
+                      primaryColor === color
+                        ? '3px solid var(--color-text)'
+                        : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s',
+                    transform: primaryColor === color ? 'scale(1.1)' : 'scale(1)',
+                  }}
+                />
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input
                 type="color"
                 value={primaryColor}
-                onChange={(e) => setPrimaryColor(e.target.value)}
+                onChange={(e) => handleColorChange(e.target.value)}
                 style={{
                   width: 48,
                   height: 48,

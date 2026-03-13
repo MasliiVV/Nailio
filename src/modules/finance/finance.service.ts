@@ -156,8 +156,8 @@ export class FinanceService {
       }),
     ]);
 
-    const income = incomeResult._sum.amount || 0;
-    const expense = expenseResult._sum.amount || 0;
+    const income = incomeResult._sum?.amount || 0;
+    const expense = expenseResult._sum?.amount || 0;
 
     return {
       income,
