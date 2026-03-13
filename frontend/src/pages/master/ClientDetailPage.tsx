@@ -49,13 +49,13 @@ export function ClientDetailPage() {
       {/* Stats */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         <div className="stat-card">
-          <div className="stat-card__value">{client.stats.totalBookings}</div>
+          <div className="stat-card__value">{client.stats?.totalBookings ?? 0}</div>
           <div className="stat-card__label">
             {intl.formatMessage({ id: 'analytics.totalBookings' })}
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__value">{(client.stats.totalSpent / 100).toFixed(0)}₴</div>
+          <div className="stat-card__value">{((client.stats?.totalSpent ?? 0) / 100).toFixed(0)}₴</div>
           <div className="stat-card__label">{intl.formatMessage({ id: 'finance.income' })}</div>
         </div>
       </div>
