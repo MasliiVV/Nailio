@@ -287,13 +287,13 @@ export function OnboardingWizard() {
             <Button
               variant="secondary"
               fullWidth
-              onClick={() => getTelegram()?.openTelegramLink?.('https://t.me/BotFather')}
+              onClick={() => getTelegram()?.openTelegramLink?.('https://t.me/BotFather/mybots')}
             >
               {intl.formatMessage({ id: 'onboarding.openBotFatherBtn' })}
             </Button>
             <div className={styles.instructionStep}>
               <span className={styles.instructionNum}>2</span>
-              <span>{intl.formatMessage({ id: 'onboarding.sendNewbot' })}</span>
+              <span>{intl.formatMessage({ id: 'onboarding.createNewBot' })}</span>
             </div>
             <div className={styles.instructionStep}>
               <span className={styles.instructionNum}>3</span>
@@ -301,10 +301,6 @@ export function OnboardingWizard() {
             </div>
             <div className={styles.instructionStep}>
               <span className={styles.instructionNum}>4</span>
-              <span>{intl.formatMessage({ id: 'onboarding.enterUsername' })}</span>
-            </div>
-            <div className={styles.instructionStep}>
-              <span className={styles.instructionNum}>5</span>
               <span>{intl.formatMessage({ id: 'onboarding.copyToken' })}</span>
             </div>
           </div>
