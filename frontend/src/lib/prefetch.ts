@@ -8,7 +8,7 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import { api } from './api';
-import type { ApiResponse, DashboardData, PaginatedResponse, Booking } from '@/types';
+import type { ApiResponse, PaginatedResponse, Booking } from '@/types';
 
 let queryClientRef: QueryClient | null = null;
 
@@ -20,10 +20,10 @@ export function setQueryClient(qc: QueryClient): void {
 export function prefetchMasterData(): void {
   if (!queryClientRef) return;
 
-  // Prefetch dashboard — fire & forget, goes into cache
+  // Prefetch all bookings (calendar landing page needs them)
   queryClientRef.prefetchQuery({
-    queryKey: ['analytics', 'dashboard', 'week'],
-    queryFn: () => api.get<ApiResponse<DashboardData>>('/analytics/dashboard?period=week').then((r) => r.data),
+    queryKey: ['bookings', 'list', undefined],
+    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings').then((r) => r.data),
     staleTime: 60_000,
   });
 

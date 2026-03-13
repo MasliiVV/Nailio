@@ -9,7 +9,7 @@ import { ClientLayout } from '@/layouts/ClientLayout';
 
 // Eager-loaded landing pages (no extra round-trip)
 import { ClientHomePage } from '@/pages/client/HomePage';
-import { DashboardPage } from '@/pages/master/DashboardPage';
+import { CalendarPage } from '@/pages/master/CalendarPage';
 
 // Lazy-loaded pages for code splitting
 const BookingPage = lazy(() =>
@@ -23,9 +23,6 @@ const ClientProfilePage = lazy(() =>
 );
 const ClientOnboardingPage = lazy(() =>
   import('@/pages/client/OnboardingPage').then((m) => ({ default: m.ClientOnboardingPage })),
-);
-const CalendarPage = lazy(() =>
-  import('@/pages/master/CalendarPage').then((m) => ({ default: m.CalendarPage })),
 );
 const ClientsPage = lazy(() =>
   import('@/pages/master/ClientsPage').then((m) => ({ default: m.ClientsPage })),
@@ -159,8 +156,7 @@ export function App() {
           {role === 'master' ? (
             <>
               <Route path="/master" element={<MasterLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="calendar" element={<CalendarPage />} />
+                <Route index element={<CalendarPage />} />
                 <Route path="clients" element={<ClientsPage />} />
                 <Route path="clients/:id" element={<ClientDetailPage />} />
                 <Route path="services" element={<ServicesPage />} />

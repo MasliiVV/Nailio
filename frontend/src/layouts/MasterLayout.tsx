@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useIntl } from 'react-intl';
-import { Home, Calendar, Users, Scissors, Settings } from 'lucide-react';
+import { Calendar, Users, BarChart3, Scissors, Settings } from 'lucide-react';
 import styles from './MasterLayout.module.css';
 import { getTelegram } from '@/lib/telegram';
 import { type ReactNode, useEffect } from 'react';
@@ -8,9 +8,9 @@ import { type ReactNode, useEffect } from 'react';
 const ICON_SIZE = 20;
 
 const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
-  { path: '/master', icon: <Home size={ICON_SIZE} />, labelKey: 'master.dashboard' },
-  { path: '/master/calendar', icon: <Calendar size={ICON_SIZE} />, labelKey: 'master.calendar' },
+  { path: '/master', icon: <Calendar size={ICON_SIZE} />, labelKey: 'master.calendar' },
   { path: '/master/clients', icon: <Users size={ICON_SIZE} />, labelKey: 'master.clients' },
+  { path: '/master/analytics', icon: <BarChart3 size={ICON_SIZE} />, labelKey: 'master.analytics' },
   { path: '/master/services', icon: <Scissors size={ICON_SIZE} />, labelKey: 'master.services' },
   { path: '/master/settings', icon: <Settings size={ICON_SIZE} />, labelKey: 'master.settings' },
 ];

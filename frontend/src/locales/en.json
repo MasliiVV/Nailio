@@ -79,6 +79,12 @@
   "master.noBookingsToday": "No bookings today",
   "master.viewAll": "View all",
 
+  "calendar.addBooking": "Add booking",
+  "calendar.selectClient": "Client",
+  "calendar.walkIn": "No client (walk-in)",
+  "calendar.notes": "Notes",
+  "calendar.notesPlaceholder": "Additional info...",
+
   "services.title": "Services",
   "services.addService": "Add service",
   "services.name": "Service name",
@@ -139,6 +145,7 @@
   "analytics.year": "Year",
   "analytics.popularServices": "Popular services",
   "analytics.cancellationRate": "Cancellation rate",
+  "analytics.bookingOutcomes": "Booking outcomes",
 
   "finance.title": "Finance",
   "finance.income": "Income",

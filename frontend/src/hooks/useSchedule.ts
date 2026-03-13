@@ -34,6 +34,48 @@ export function useUpdateWorkingHours() {
       const res = await api.put<ApiResponse<Schedule>>('/schedule/hours', payload);
       return res.data;
     },
+    // Optimistic update — toggle shows immediately instead of waiting for server
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: scheduleKeys.all });
+      const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.all);
+
+      if (previous && 'dayOfWeek' in payload) {
+        const updatedHours = [...(previous.data?.hours || (previous as unknown as Schedule).hours || [])];
+        const idx = updatedHours.findIndex((h) => h.dayOfWeek === payload.dayOfWeek);
+        const newHour: WorkingHours = {
+          dayOfWeek: payload.dayOfWeek,
+          isWorking: payload.isWorking,
+          startTime: payload.startTime,
+          endTime: payload.endTime,
+        };
+        if (idx >= 0) {
+          updatedHours[idx] = newHour;
+        } else {
+          updatedHours.push(newHour);
+        }
+
+        // Handle both { success, data: Schedule } and raw Schedule formats
+        const isWrapped = previous && 'success' in (previous as unknown as Record<string, unknown>);
+        if (isWrapped) {
+          queryClient.setQueryData(scheduleKeys.all, {
+            ...previous,
+            data: { ...(previous as ApiResponse<Schedule>).data, hours: updatedHours },
+          });
+        } else {
+          queryClient.setQueryData(scheduleKeys.all, {
+            ...(previous as unknown as Schedule),
+            hours: updatedHours,
+          });
+        }
+      }
+      return { previous };
+    },
+    onError: (_err, _payload, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(scheduleKeys.all, context.previous);
+      }
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: scheduleKeys.all });

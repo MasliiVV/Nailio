@@ -79,6 +79,12 @@
   "master.noBookingsToday": "Сьогодні немає записів",
   "master.viewAll": "Дивитись всі",
 
+  "calendar.addBooking": "Додати запис",
+  "calendar.selectClient": "Клієнт",
+  "calendar.walkIn": "Без клієнта (walk-in)",
+  "calendar.notes": "Нотатки",
+  "calendar.notesPlaceholder": "Додаткова інформація...",
+
   "services.title": "Послуги",
   "services.addService": "Додати послугу",
   "services.name": "Назва послуги",
@@ -139,6 +145,7 @@
   "analytics.year": "Рік",
   "analytics.popularServices": "Популярні послуги",
   "analytics.cancellationRate": "Рівень скасувань",
+  "analytics.bookingOutcomes": "Результати записів",
 
   "finance.title": "Фінанси",
   "finance.income": "Дохід",

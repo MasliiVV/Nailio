@@ -58,6 +58,20 @@ export function ClientsPage() {
                   { id: 'clients.totalVisits' },
                   { count: client.stats?.totalBookings ?? 0 },
                 )}
+                {client.lastVisitAt && (
+                  <>
+                    {' · '}
+                    {intl.formatMessage(
+                      { id: 'clients.lastVisit' },
+                      {
+                        date: new Date(client.lastVisitAt).toLocaleDateString('uk-UA', {
+                          day: 'numeric',
+                          month: 'short',
+                        }),
+                      },
+                    )}
+                  </>
+                )}
               </div>
             </div>
             {client.isBlocked && (
