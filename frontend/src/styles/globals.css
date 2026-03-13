@@ -78,19 +78,19 @@ ol {
   /* Telegram theme mappings (set dynamically by telegram.ts) */
   --tg-bg: #ffffff;
   --tg-text: #000000;
-  --tg-hint: #999999;
-  --tg-link: #2481cc;
-  --tg-button: #2481cc;
+  --tg-hint: #8E8E93;
+  --tg-link: #007AFF;
+  --tg-button: #007AFF;
   --tg-button-text: #ffffff;
-  --tg-secondary-bg: #f0f0f0;
+  --tg-secondary-bg: #F2F2F7;
   --tg-header-bg: #ffffff;
-  --tg-accent-text: #2481cc;
+  --tg-accent-text: #007AFF;
   --tg-section-bg: #ffffff;
   --tg-section-header: #6d6d72;
-  --tg-section-separator: #c8c7cc;
-  --tg-subtitle-text: #999999;
-  --tg-destructive: #ff3b30;
-  --tg-bottom-bar: #f7f7f8;
+  --tg-section-separator: #E5E5EA;
+  --tg-subtitle-text: #8E8E93;
+  --tg-destructive: #FF3B30;
+  --tg-bottom-bar: #ffffff;
 
   /* Safe area insets (set dynamically by telegram.ts) */
   --safe-top: 0px;
@@ -100,31 +100,29 @@ ol {
   --content-safe-top: 0px;
   --content-safe-bottom: 0px;
 
-  /* Tenant branding overrides (set from API response) */
-  --tenant-primary: var(--tg-button);
-  --tenant-primary-text: var(--tg-button-text);
+  /* Fixed brand color (branding removed) */
+  --color-primary: #007AFF;
+  --color-primary-text: #ffffff;
 
   /* Semantic color aliases */
-  --color-bg: var(--tg-bg);
+  --color-bg: #F2F2F7;
   --color-text: var(--tg-text);
   --color-text-secondary: var(--tg-hint);
   --color-link: var(--tg-link);
-  --color-primary: var(--tenant-primary);
-  --color-primary-text: var(--tenant-primary-text);
   --color-secondary-bg: var(--tg-secondary-bg);
-  --color-section-bg: var(--tg-section-bg);
+  --color-section-bg: #ffffff;
   --color-section-header: var(--tg-section-header);
   --color-separator: var(--tg-section-separator);
   --color-destructive: var(--tg-destructive);
-  --color-success: #30D158;
+  --color-success: #34C759;
   --color-warning: #FF9F0A;
 
   /* Derived colors for glass effects */
-  --color-glass: rgba(255, 255, 255, 0.72);
-  --color-glass-border: rgba(255, 255, 255, 0.2);
-  --color-glass-shadow: rgba(0, 0, 0, 0.04);
-  --color-primary-soft: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  --color-primary-medium: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --color-glass: rgba(255, 255, 255, 0.82);
+  --color-glass-border: rgba(0, 0, 0, 0.04);
+  --color-glass-shadow: rgba(0, 0, 0, 0.03);
+  --color-primary-soft: rgba(0, 122, 255, 0.1);
+  --color-primary-medium: rgba(0, 122, 255, 0.18);
 
   /* Spacing scale */
   --space-xs: 4px;

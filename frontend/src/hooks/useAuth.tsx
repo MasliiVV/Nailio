@@ -132,21 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [login]);
 
-  // Apply tenant branding
-  useEffect(() => {
-    if (!state.tenant?.branding) return;
-
-    const root = document.documentElement;
-    const { primaryColor, secondaryColor } = state.tenant.branding;
-
-    if (primaryColor) {
-      root.style.setProperty('--tenant-primary', primaryColor);
-    }
-    if (secondaryColor) {
-      root.style.setProperty('--tenant-secondary', secondaryColor);
-    }
-  }, [state.tenant]);
-
   // Setup Telegram back button close behavior
   useEffect(() => {
     const tg = getTelegram();

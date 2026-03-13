@@ -8,23 +8,39 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--bottom-nav-height);
+  padding-bottom: calc(var(--bottom-nav-height) + 24px);
 }
 
-.nav {
+/* ---- Floating pill nav bar ---- */
+.navWrap {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  background: color-mix(in srgb, var(--tg-bottom-bar) 85%, transparent);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-top: 0.5px solid color-mix(in srgb, var(--color-separator) 30%, transparent);
-  height: var(--bottom-nav-height);
-  padding-bottom: var(--safe-bottom);
+  justify-content: center;
+  padding: 0 16px;
+  padding-bottom: calc(var(--safe-bottom) + 8px);
   z-index: 50;
+  pointer-events: none;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-radius: 22px;
+  padding: 6px 8px;
+  gap: 4px;
+  box-shadow:
+    0 2px 16px rgba(0, 0, 0, 0.08),
+    0 0 1px rgba(0, 0, 0, 0.1);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  pointer-events: all;
+  max-width: 400px;
+  width: 100%;
 }
 
 .navItem {
@@ -33,14 +49,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 6px 0;
+  gap: 2px;
+  padding: 8px 4px;
   text-decoration: none;
-  transition: all var(--transition-normal);
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
-  min-height: 44px;
+  border-radius: 16px;
   position: relative;
+  min-height: 44px;
 }
 
 .navIcon {
@@ -49,30 +66,30 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-  opacity: 0.45;
-  transition: all var(--transition-normal);
+  border-radius: 10px;
+  color: #8E8E93;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .navLabel {
   font-size: 10px;
   font-weight: 500;
-  color: var(--color-text-secondary);
-  transition: all var(--transition-normal);
+  color: #8E8E93;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   line-height: 1;
-  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Active state — pill background highlight */
+.active {
+  background: var(--color-primary-soft, rgba(0, 122, 255, 0.1));
 }
 
 .active .navIcon {
-  opacity: 1;
-  color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  transform: translateY(-1px);
+  color: var(--color-primary, #007AFF);
 }
 
 .active .navLabel {
-  color: var(--color-primary);
+  color: var(--color-primary, #007AFF);
   font-weight: 700;
-  opacity: 1;
 }

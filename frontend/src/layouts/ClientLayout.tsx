@@ -39,22 +39,24 @@ export function ClientLayout() {
         <Outlet />
       </main>
 
-      <nav className={styles.nav}>
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/client'}
-            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-            onClick={() => {
-              getTelegram()?.HapticFeedback.selectionChanged();
-            }}
-          >
-            <div className={styles.navIcon}>{item.icon}</div>
-            <span className={styles.navLabel}>{intl.formatMessage({ id: item.labelKey })}</span>
-          </NavLink>
-        ))}
-      </nav>
+      <div className={styles.navWrap}>
+        <nav className={styles.nav}>
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/client'}
+              className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+              onClick={() => {
+                getTelegram()?.HapticFeedback.selectionChanged();
+              }}
+            >
+              <div className={styles.navIcon}>{item.icon}</div>
+              <span className={styles.navLabel}>{intl.formatMessage({ id: item.labelKey })}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }

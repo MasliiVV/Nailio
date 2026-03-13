@@ -8,7 +8,6 @@ import {
   CheckCircle,
   Scissors,
   Calendar,
-  Palette,
   PartyPopper,
   Copy,
   Smartphone,
@@ -18,10 +17,10 @@ import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
-import type { CreateServiceDto, ApiResponse, Tenant, UpdateBrandingDto } from '@/types';
+import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 interface AddedService {
@@ -39,7 +38,7 @@ interface ScheduleDay {
 export function OnboardingWizard() {
   const intl = useIntl();
   const navigate = useNavigate();
-  const { setOnboardingComplete, updateTenant } = useAuth();
+  const { setOnboardingComplete } = useAuth();
   const createService = useCreateService();
 
   const [step, setStep] = useState(1);
@@ -68,11 +67,6 @@ export function OnboardingWizard() {
     { isWorking: true, startTime: '10:00', endTime: '15:00' },
     { isWorking: false, startTime: '10:00', endTime: '15:00' },
   ]);
-
-  // Step 6: Branding
-  const [displayName, setDisplayName] = useState('');
-  const [welcomeMessage, setWelcomeMessage] = useState('');
-  const [primaryColor, setPrimaryColor] = useState('#6C5CE7');
 
   const next = useCallback(() => {
     getTelegram()?.HapticFeedback.impactOccurred('light');
@@ -203,25 +197,7 @@ export function OnboardingWizard() {
     }
   };
 
-  // Step 6: Save branding
-  const handleSaveBranding = async () => {
-    if (displayName || welcomeMessage || primaryColor !== '#6C5CE7') {
-      try {
-        const dto: UpdateBrandingDto = {
-          displayName: displayName || undefined,
-          primaryColor,
-          welcomeMessage: welcomeMessage || undefined,
-        };
-        const res = await api.put<ApiResponse<Tenant>>('/settings/branding', dto);
-        updateTenant(res.data);
-      } catch {
-        // non-critical, skip
-      }
-    }
-    next();
-  };
-
-  // Step 7: Finish
+  // Step 6: Finish
   const handleFinish = () => {
     setOnboardingComplete();
     getTelegram()?.HapticFeedback.notificationOccurred('success');
@@ -520,67 +496,8 @@ export function OnboardingWizard() {
         </div>
       )}
 
-      {/* Step 6: Branding */}
+      {/* Step 6: Done */}
       {step === 6 && (
-        <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}>
-            <Palette size={48} />
-          </div>
-          <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.branding' })}</h1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Input
-              label={intl.formatMessage({ id: 'settings.displayName' })}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-            />
-            <Input
-              label={intl.formatMessage({ id: 'settings.welcomeMessage' })}
-              value={welcomeMessage}
-              onChange={(e) => setWelcomeMessage(e.target.value)}
-            />
-            <div>
-              <label
-                style={{
-                  fontSize: 13,
-                  color: 'var(--color-text-secondary)',
-                  display: 'block',
-                  marginBottom: 4,
-                }}
-              >
-                {intl.formatMessage({ id: 'settings.primaryColor' })}
-              </label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                  }}
-                />
-                <span className="text-secondary">{primaryColor}</span>
-              </div>
-            </div>
-          </div>
-          <div className={styles.navButtons}>
-            <Button variant="ghost" onClick={prev}>
-              ←
-            </Button>
-            <Button fullWidth onClick={handleSaveBranding}>
-              {displayName || welcomeMessage
-                ? `${intl.formatMessage({ id: 'common.next' })} →`
-                : intl.formatMessage({ id: 'onboarding.skip' })}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 7: Done */}
-      {step === 7 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <PartyPopper size={48} />

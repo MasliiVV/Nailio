@@ -213,28 +213,58 @@ export function initTelegramApp(): void {
   applyThemeColors(wa);
 }
 
-/** Apply Telegram theme colors as CSS custom properties */
+/** Apply Telegram theme colors as CSS custom properties.
+ *  Always force LIGHT theme — ignore Telegram dark-mode palette. */
 function applyThemeColors(wa: WebApp): void {
   const root = document.documentElement;
   const tp = wa.themeParams;
+  const isLight = wa.colorScheme === 'light';
 
-  root.style.setProperty('--tg-bg', tp.bg_color ?? '#ffffff');
-  root.style.setProperty('--tg-text', tp.text_color ?? '#000000');
-  root.style.setProperty('--tg-hint', tp.hint_color ?? '#999999');
-  root.style.setProperty('--tg-link', tp.link_color ?? '#2678b6');
-  root.style.setProperty('--tg-button', tp.button_color ?? '#3390ec');
-  root.style.setProperty('--tg-button-text', tp.button_text_color ?? '#ffffff');
-  root.style.setProperty('--tg-secondary-bg', tp.secondary_bg_color ?? '#f0f0f0');
-  root.style.setProperty('--tg-header-bg', tp.header_bg_color ?? '#ffffff');
-  root.style.setProperty('--tg-section-bg', tp.section_bg_color ?? '#ffffff');
-  root.style.setProperty('--tg-section-header', tp.section_header_text_color ?? '#3390ec');
-  root.style.setProperty('--tg-separator', tp.section_separator_color ?? '#e0e0e0');
-  root.style.setProperty('--tg-subtitle', tp.subtitle_text_color ?? '#999999');
-  root.style.setProperty('--tg-accent', tp.accent_text_color ?? '#3390ec');
-  root.style.setProperty('--tg-destructive', tp.destructive_text_color ?? '#df3f40');
-  root.style.setProperty('--tg-bottom-bar', tp.bottom_bar_bg_color ?? '#ffffff');
+  // In light mode use Telegram values; in dark mode override with light defaults
+  root.style.setProperty('--tg-bg', isLight ? (tp.bg_color ?? '#ffffff') : '#ffffff');
+  root.style.setProperty('--tg-text', isLight ? (tp.text_color ?? '#000000') : '#000000');
+  root.style.setProperty('--tg-hint', isLight ? (tp.hint_color ?? '#999999') : '#8E8E93');
+  root.style.setProperty('--tg-link', isLight ? (tp.link_color ?? '#007AFF') : '#007AFF');
+  root.style.setProperty('--tg-button', '#007AFF'); // fixed brand color
+  root.style.setProperty('--tg-button-text', '#ffffff');
+  root.style.setProperty(
+    '--tg-secondary-bg',
+    isLight ? (tp.secondary_bg_color ?? '#F2F2F7') : '#F2F2F7',
+  );
+  root.style.setProperty('--tg-header-bg', isLight ? (tp.header_bg_color ?? '#ffffff') : '#ffffff');
+  root.style.setProperty(
+    '--tg-section-bg',
+    isLight ? (tp.section_bg_color ?? '#ffffff') : '#ffffff',
+  );
+  root.style.setProperty(
+    '--tg-section-header',
+    isLight ? (tp.section_header_text_color ?? '#6d6d72') : '#6d6d72',
+  );
+  root.style.setProperty(
+    '--tg-separator',
+    isLight ? (tp.section_separator_color ?? '#E5E5EA') : '#E5E5EA',
+  );
+  root.style.setProperty(
+    '--tg-subtitle',
+    isLight ? (tp.subtitle_text_color ?? '#8E8E93') : '#8E8E93',
+  );
+  root.style.setProperty('--tg-accent', isLight ? (tp.accent_text_color ?? '#007AFF') : '#007AFF');
+  root.style.setProperty(
+    '--tg-destructive',
+    isLight ? (tp.destructive_text_color ?? '#FF3B30') : '#FF3B30',
+  );
+  root.style.setProperty('--tg-bottom-bar', '#ffffff');
 
-  root.setAttribute('data-theme', wa.colorScheme);
+  // Always force light theme attribute
+  root.setAttribute('data-theme', 'light');
+
+  // Force Telegram header & background to white
+  try {
+    wa.setHeaderColor('#ffffff');
+    wa.setBackgroundColor('#ffffff');
+  } catch {
+    /* older SDK versions may not support this */
+  }
 }
 
 /** Apply safe area insets as CSS variables */
