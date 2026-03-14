@@ -207,7 +207,7 @@ export class WebhookController {
         return;
       }
 
-      if (booking.status !== 'pending') {
+      if (booking.status !== 'pending' && !['restore', 'reply'].includes(action)) {
         const statusText =
           booking.status === 'confirmed' ? '✅ Вже підтверджено' : `Статус: ${booking.status}`;
         await this.answerCallbackQuery(platformBotToken, cbq.id, statusText);
