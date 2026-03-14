@@ -704,22 +704,46 @@ export class WebhookController {
 
     try {
       // Calculate new start/end times based on the suggested time
+      // Use the same date as the original booking, but with the new time
       const tz = booking.tenant?.timezone || 'Europe/Kyiv';
-      const originalDateStr = booking.startTime
-        .toLocaleDateString('en-CA', { timeZone: tz })
-        .split('T')[0];
+
+      // Get the local date string from the original booking (YYYY-MM-DD)
+      const originalDateStr = booking.startTime.toLocaleDateString('en-CA', { timeZone: tz });
 
       const [hours, minutes] = suggestedTime.split(':').map(Number);
+      const hh = String(hours).padStart(2, '0');
+      const mm = String(minutes).padStart(2, '0');
 
-      // Build proper UTC time from local time
-      const tempDate = new Date(
-        `${originalDateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`,
-      );
-      const utcOffset = this.getTimezoneOffset(tempDate, tz);
-      const newStartTimeUtc = new Date(tempDate.getTime() + utcOffset);
+      // Build an ISO string with explicit timezone offset
+      // Create a formatter that gives us the UTC offset for this timezone
+      const offsetParts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        timeZoneName: 'shortOffset',
+      }).formatToParts(booking.startTime);
+      const gmtPart = offsetParts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+2';
+      // Parse "GMT+2" or "GMT+2:30" or "GMT-5" into offset string like "+02:00"
+      const offsetMatch = gmtPart.match(/GMT([+-]?)(\d{1,2}):?(\d{2})?/);
+      let tzOffset = '+00:00';
+      if (offsetMatch) {
+        const sign = offsetMatch[1] || '+';
+        const oh = String(offsetMatch[2]).padStart(2, '0');
+        const om = String(offsetMatch[3] || '0').padStart(2, '0');
+        tzOffset = `${sign}${oh}:${om}`;
+      }
+
+      // Build ISO 8601 string: "2026-03-14T14:30:00+02:00"
+      const isoStr = `${originalDateStr}T${hh}:${mm}:00${tzOffset}`;
+      const newStartTimeUtc = new Date(isoStr);
       const newEndTimeUtc = new Date(
         newStartTimeUtc.getTime() + booking.durationAtBooking * 60 * 1000,
       );
+
+      // Validate the dates are valid
+      if (isNaN(newStartTimeUtc.getTime()) || isNaN(newEndTimeUtc.getTime())) {
+        this.logger.error(`Invalid date calculation: isoStr=${isoStr}, tz=${tz}`);
+        await this.answerCallbackQuery(botToken, cbq.id, '⚠️ Помилка з часом. Спробуйте ще.');
+        return;
+      }
 
       // Update booking with new time and confirm it
       await this.prisma.booking.update({
@@ -1056,15 +1080,6 @@ export class WebhookController {
    */
   private buildTelegramLink(telegramId: bigint): string {
     return `<a href="tg://user?id=${telegramId}">Написати в ТГ</a>`;
-  }
-
-  /**
-   * Calculate timezone offset in milliseconds for converting local→UTC
-   */
-  private getTimezoneOffset(date: Date, timezone: string): number {
-    const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
-    const tzStr = date.toLocaleString('en-US', { timeZone: timezone });
-    return new Date(utcStr).getTime() - new Date(tzStr).getTime();
   }
 
   /**
