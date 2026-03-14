@@ -63,6 +63,7 @@ export class AuthResponseDto {
       secondaryColor?: string;
       welcomeMessage?: string;
     } | null;
+    botUsername?: string | null;
   } | null;
 
   @ApiProperty()

@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Scissors } from 'lucide-react';
+import { AlertCircle, Scissors, MessageCircle } from 'lucide-react';
 import { useServices } from '@/hooks';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, EmptyState, SkeletonList } from '@/components/ui';
@@ -18,6 +18,12 @@ export function ClientHomePage() {
     navigate(`/client/book/${serviceId}`);
   };
 
+  const handleWriteToMaster = () => {
+    if (!tenant?.botUsername) return;
+    getTelegram()?.HapticFeedback.impactOccurred('light');
+    getTelegram()?.openTelegramLink(`https://t.me/${tenant.botUsername}`);
+  };
+
   return (
     <div className="page animate-fade-in">
       {/* Welcome header */}
@@ -28,6 +34,12 @@ export function ClientHomePage() {
         <h1 className={styles.title}>{tenant?.displayName || 'Nailio'}</h1>
         {tenant?.branding?.welcomeMessage && (
           <p className={styles.welcome}>{tenant.branding.welcomeMessage}</p>
+        )}
+        {tenant?.botUsername && (
+          <button className={styles.writeBtn} onClick={handleWriteToMaster}>
+            <MessageCircle size={18} />
+            {intl.formatMessage({ id: 'client.writeToMaster' })}
+          </button>
         )}
       </div>
 

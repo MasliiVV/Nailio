@@ -389,6 +389,7 @@ export class AuthService {
         secondaryColor?: string;
         welcomeMessage?: string;
       } | null;
+      botUsername?: string | null;
     } | null;
   }> {
     if (payload.role === 'master' && payload.tenantId) {
@@ -458,7 +459,7 @@ export class AuthService {
     if (payload.role === 'client' && payload.clientId) {
       const client = await this.prisma.client.findUnique({
         where: { id: payload.clientId },
-        include: { tenant: true },
+        include: { tenant: { include: { bot: { select: { botUsername: true } } } } },
       });
 
       if (client) {
@@ -478,6 +479,7 @@ export class AuthService {
             slug: client.tenant.slug,
             logoUrl: client.tenant.logoUrl,
             branding: this.mapTenantBranding(client.tenant.branding),
+            botUsername: client.tenant.bot?.botUsername || null,
           },
         };
       }

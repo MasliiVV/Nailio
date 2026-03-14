@@ -54,6 +54,7 @@
   "client.profile": "Профіль",
   "client.welcome": "Вітаємо!",
   "client.selectService": "Оберіть послугу для запису",
+  "client.writeToMaster": "Написати майстру",
 
   "client.onboarding.title": "Заповніть профіль",
   "client.onboarding.firstName": "Ваше ім'я",

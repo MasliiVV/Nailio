@@ -54,6 +54,7 @@
   "client.profile": "Profile",
   "client.welcome": "Welcome!",
   "client.selectService": "Select a service to book",
+  "client.writeToMaster": "Message master",
 
   "client.onboarding.title": "Complete your profile",
   "client.onboarding.firstName": "First name",

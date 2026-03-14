@@ -48,6 +48,7 @@ export interface Tenant {
   slug: string;
   logoUrl: string | null;
   branding: TenantBranding | null;
+  botUsername?: string | null;
 }
 
 export interface AdminTenantSummary {

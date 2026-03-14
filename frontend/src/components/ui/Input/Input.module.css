@@ -15,8 +15,8 @@
   width: 100%;
   padding: 12px 16px;
   font-size: var(--font-size-md);
-  background: var(--color-secondary-bg);
-  border: 1.5px solid transparent;
+  background: var(--color-section-bg);
+  border: 1.5px solid var(--color-separator);
   border-radius: var(--radius-md);
   color: var(--color-text);
   transition: all var(--transition-normal);
