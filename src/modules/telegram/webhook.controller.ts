@@ -588,6 +588,7 @@ export class WebhookController {
         duration: booking.durationAtBooking,
         price: booking.priceAtBooking,
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+        clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
       await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
     }
@@ -633,6 +634,7 @@ export class WebhookController {
         duration: booking.durationAtBooking,
         price: booking.priceAtBooking,
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+        clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
       await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
     }
@@ -774,6 +776,7 @@ export class WebhookController {
           duration: booking.durationAtBooking,
           price: booking.priceAtBooking,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+          clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
         });
         await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
       }
@@ -831,6 +834,7 @@ export class WebhookController {
         duration: booking.durationAtBooking,
         price: booking.priceAtBooking,
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+        clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
       await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
     }
@@ -900,6 +904,8 @@ export class WebhookController {
           duration: booking.durationAtBooking,
           price: booking.priceAtBooking,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
+          clientPhone: booking.client.phone || undefined,
+          clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
           reason: message.text,
         });
         await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
@@ -1037,6 +1043,14 @@ export class WebhookController {
       include: { user: true },
     });
     return master?.user?.telegramId || null;
+  }
+
+  /**
+   * Build a clickable Telegram link for a user.
+   * Uses tg://user?id=... which opens a DM with the user in TG.
+   */
+  private buildTelegramLink(telegramId: bigint): string {
+    return `<a href="tg://user?id=${telegramId}">Написати в ТГ</a>`;
   }
 
   /**

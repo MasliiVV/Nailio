@@ -10,6 +10,7 @@ export interface TemplateVariables {
   cancellationWindow?: number;
   clientName?: string;
   clientPhone?: string;
+  clientTelegramLink?: string; // e.g. "<a href='tg://user?id=123'>@username</a>"
   reason?: string;
 }
 
@@ -38,9 +39,9 @@ const templates = {
   // ─── New Booking (to master) ───
   new_booking: {
     uk: (v: TemplateVariables) =>
-      `📅 Новий запис!\n\n👤 ${v.clientName}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n📱 ${v.clientPhone || 'Не вказано'}`,
+      `📅 Новий запис!\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n📱 ${v.clientPhone || 'Не вказано'}`,
     en: (v: TemplateVariables) =>
-      `📅 New booking!\n\n👤 ${v.clientName}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n📱 ${v.clientPhone || 'Not specified'}`,
+      `📅 New booking!\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n📱 ${v.clientPhone || 'Not specified'}`,
   },
 
   // ─── Reminder 24h (to client) ───
@@ -70,9 +71,9 @@ const templates = {
   // ─── Cancellation (to master) ───
   cancellation_master: {
     uk: (v: TemplateVariables) =>
-      `❌ Клієнт скасував запис\n\n👤 ${v.clientName}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\nПричина: ${v.reason || 'Не вказано'}`,
+      `❌ Клієнт скасував запис\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\nПричина: ${v.reason || 'Не вказано'}`,
     en: (v: TemplateVariables) =>
-      `❌ Client cancelled booking\n\n👤 ${v.clientName}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\nReason: ${v.reason || 'Not specified'}`,
+      `❌ Client cancelled booking\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\nReason: ${v.reason || 'Not specified'}`,
   },
 
   // ─── Reschedule (to client) ───
@@ -94,25 +95,25 @@ const templates = {
   // ─── Client on time (to master) ───
   client_ontime: {
     uk: (v: TemplateVariables) =>
-      `✅ Клієнт <b>${v.clientName}</b> підтвердив, що прийде вчасно\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
+      `✅ Клієнт <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} підтвердив, що прийде вчасно\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
     en: (v: TemplateVariables) =>
-      `✅ Client <b>${v.clientName}</b> confirmed they will be on time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
+      `✅ Client <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} confirmed they will be on time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
   },
 
   // ─── Client running late (to master) ───
   client_late: {
     uk: (v: TemplateVariables) =>
-      `⏰ Клієнт <b>${v.clientName}</b> повідомив, що трохи запізниться\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
+      `⏰ Клієнт <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} повідомив, що трохи запізниться\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
     en: (v: TemplateVariables) =>
-      `⏰ Client <b>${v.clientName}</b> informed they will be a bit late\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
+      `⏰ Client <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} informed they will be a bit late\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
   },
 
   // ─── Client message to master ───
   client_message: {
     uk: (v: TemplateVariables) =>
-      `💬 Повідомлення від клієнта <b>${v.clientName}</b>\n\n📋 Запис: ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\n📝 ${v.reason || ''}`,
+      `💬 Повідомлення від клієнта <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📱 ${v.clientPhone || 'Не вказано'}\n\n📋 Запис: ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\n📝 ${v.reason || ''}`,
     en: (v: TemplateVariables) =>
-      `💬 Message from client <b>${v.clientName}</b>\n\n📋 Booking: ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\n📝 ${v.reason || ''}`,
+      `💬 Message from client <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📱 ${v.clientPhone || 'Not specified'}\n\n📋 Booking: ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\n📝 ${v.reason || ''}`,
   },
 
   // ─── Booking confirmed (to client — after master confirms) ───
@@ -126,17 +127,17 @@ const templates = {
   // ─── Time accepted by client (to master) ───
   time_accepted: {
     uk: (v: TemplateVariables) =>
-      `✅ Клієнт <b>${v.clientName}</b> прийняв запропонований час\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\nЗапис підтверджено!`,
+      `✅ Клієнт <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} прийняв запропонований час\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\nЗапис підтверджено!`,
     en: (v: TemplateVariables) =>
-      `✅ Client <b>${v.clientName}</b> accepted the suggested time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\nBooking confirmed!`,
+      `✅ Client <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} accepted the suggested time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\nBooking confirmed!`,
   },
 
   // ─── Time declined by client (to master) ───
   time_declined: {
     uk: (v: TemplateVariables) =>
-      `❌ Клієнт <b>${v.clientName}</b> відхилив запропонований час\n\n📋 ${v.serviceName}`,
+      `❌ Клієнт <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} відхилив запропонований час\n\n📋 ${v.serviceName}`,
     en: (v: TemplateVariables) =>
-      `❌ Client <b>${v.clientName}</b> declined the suggested time\n\n📋 ${v.serviceName}`,
+      `❌ Client <b>${v.clientName}</b>${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''} declined the suggested time\n\n📋 ${v.serviceName}`,
   },
 } as const;
 

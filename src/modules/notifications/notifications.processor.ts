@@ -153,6 +153,7 @@ export class NotificationsProcessor extends WorkerHost {
           cancellationWindow: (settings.cancellation_window_hours as number) || 24,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
           clientPhone: booking.client.phone || undefined,
+          clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
           reason: booking.cancelReason || undefined,
         };
 
@@ -231,19 +232,8 @@ export class NotificationsProcessor extends WorkerHost {
               ],
             ],
           };
-        } else if (type === 'confirmation') {
-          // Client gets "write to master" button on confirmation
-          replyMarkup = {
-            inline_keyboard: [
-              [
-                {
-                  text: '✍️ Написати майстру',
-                  callback_data: `writem:${bookingId}`,
-                },
-              ],
-            ],
-          };
         }
+        // No button on 'confirmation' — booking is still pending, not yet confirmed
 
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
@@ -298,6 +288,14 @@ export class NotificationsProcessor extends WorkerHost {
         throw error; // BullMQ will retry based on job config
       }
     });
+  }
+
+  /**
+   * Build a clickable Telegram link for a user.
+   * Uses tg://user?id=... which opens the user's profile in TG.
+   */
+  private buildTelegramLink(telegramId: bigint): string {
+    return `<a href="tg://user?id=${telegramId}">Написати в ТГ</a>`;
   }
 
   /**
