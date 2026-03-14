@@ -21,6 +21,7 @@ import { Booking, Prisma } from '@prisma/client';
 import {
   CreateBookingDto,
   CancelBookingDto,
+  RescheduleBookingDto,
   BookingListQueryDto,
   SlotsQueryDto,
   SlotsResponseDto,
@@ -491,6 +492,105 @@ export class BookingsService {
       bookingId,
       booking.clientId,
       user.role === 'master' ? 'master' : 'client',
+    );
+
+    return this.formatBookingResponse(updated);
+  }
+
+  // ──────────────────────────────────────────────
+  // Reschedule Booking
+  // POST /api/v1/bookings/:id/reschedule
+  // Change time and/or reassign to another client
+  // ──────────────────────────────────────────────
+
+  async reschedule(tenantId: string, bookingId: string, dto: RescheduleBookingDto) {
+    const booking = await this.prisma.tenantClient.booking.findFirst({
+      where: { id: bookingId, tenantId },
+      include: { service: true },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    if (['completed', 'no_show'].includes(booking.status)) {
+      throw new BadRequestException(`Cannot reschedule booking with status "${booking.status}"`);
+    }
+
+    const newStartTime = new Date(dto.startTime);
+    if (newStartTime <= new Date()) {
+      throw new BadRequestException('Cannot reschedule to a past time');
+    }
+
+    // Calculate new end time using the same duration
+    const totalMinutes = booking.durationAtBooking + (booking.service?.bufferMinutes || 0);
+    const newEndTime = new Date(newStartTime.getTime() + totalMinutes * 60 * 1000);
+
+    // Check for conflicts with other bookings
+    const conflicting = await this.prisma.tenantClient.booking.findFirst({
+      where: {
+        tenantId,
+        id: { not: bookingId },
+        status: { notIn: ['cancelled'] },
+        startTime: { lt: newEndTime },
+        endTime: { gt: newStartTime },
+      },
+    });
+
+    if (conflicting) {
+      throw new ConflictException('Time slot is already booked');
+    }
+
+    // Build update data
+    const updateData: Prisma.BookingUpdateInput = {
+      startTime: newStartTime,
+      endTime: newEndTime,
+      status: booking.status === 'cancelled' ? 'confirmed' : booking.status,
+    };
+
+    // If cancelled, clear cancellation fields
+    if (booking.status === 'cancelled') {
+      updateData.cancelledAt = null;
+      updateData.cancelReason = null;
+    }
+
+    // Reassign to another client if specified
+    if (dto.clientId && dto.clientId !== booking.clientId) {
+      const client = await this.prisma.tenantClient.client.findFirst({
+        where: { id: dto.clientId, tenantId },
+      });
+      if (!client) throw new NotFoundException('Client not found');
+      updateData.client = { connect: { id: dto.clientId } };
+    }
+
+    const updated = await this.prisma.tenantClient.booking.update({
+      where: { id: bookingId },
+      data: updateData,
+      include: {
+        client: {
+          select: { id: true, firstName: true, lastName: true, phone: true },
+        },
+        service: {
+          select: { id: true, name: true, color: true },
+        },
+      },
+    });
+
+    this.logger.log(
+      `Booking rescheduled: ${bookingId} to ${newStartTime.toISOString()} in tenant ${tenantId}`,
+    );
+
+    // Cancel old notifications and reschedule new ones
+    await this.notificationsService.cancelBookingNotifications(
+      tenantId,
+      bookingId,
+      updated.clientId,
+      'master',
+    );
+    await this.notificationsService.scheduleBookingNotifications(
+      tenantId,
+      bookingId,
+      updated.clientId,
+      newStartTime,
+      'master',
     );
 
     return this.formatBookingResponse(updated);

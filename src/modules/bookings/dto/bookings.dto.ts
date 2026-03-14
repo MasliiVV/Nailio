@@ -67,6 +67,19 @@ export class CancelBookingDto {
 }
 
 // ──────────────────────────────────────────────
+// Request: POST /api/v1/bookings/:id/reschedule
+// ──────────────────────────────────────────────
+
+export class RescheduleBookingDto {
+  @IsDateString()
+  startTime!: string; // new ISO 8601 start time
+
+  @IsUUID()
+  @IsOptional()
+  clientId?: string; // optionally reassign to another client
+}
+
+// ──────────────────────────────────────────────
 // Query: GET /api/v1/bookings
 // ──────────────────────────────────────────────
 

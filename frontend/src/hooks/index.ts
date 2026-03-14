@@ -7,6 +7,7 @@ export {
   useCancelBooking,
   useCompleteBooking,
   useNoShowBooking,
+  useRescheduleBooking,
   bookingKeys,
 } from './useBookings';
 export {

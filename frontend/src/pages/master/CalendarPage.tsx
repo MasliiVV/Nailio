@@ -1,11 +1,23 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Calendar, CheckCircle, XCircle, Plus } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Plus,
+  Clock,
+  Ban,
+  UserRoundCog,
+  Pencil,
+  User,
+} from 'lucide-react';
 import {
   useBookings,
   useCompleteBooking,
   useNoShowBooking,
   useCreateBooking,
+  useCancelBooking,
+  useRescheduleBooking,
   useServices,
   useClients,
   useSlots,
@@ -22,7 +34,7 @@ import {
   FormGroup,
 } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
-import type { Service, Client } from '@/types';
+import type { Service, Client, Booking } from '@/types';
 import styles from './CalendarPage.module.css';
 
 function formatTime(iso: string): string {
@@ -50,6 +62,8 @@ export function CalendarPage() {
   const { data: bookingsData, isLoading } = useBookings();
   const completeBooking = useCompleteBooking();
   const noShowBooking = useNoShowBooking();
+  const cancelBooking = useCancelBooking();
+  const rescheduleBooking = useRescheduleBooking();
 
   // Manual booking state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -58,14 +72,29 @@ export function CalendarPage() {
   const [selectedSlot, setSelectedSlot] = useState('');
   const [bookingNotes, setBookingNotes] = useState('');
 
+  // Booking detail state
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [detailMode, setDetailMode] = useState<'view' | 'reschedule' | 'reassign' | 'cancel'>(
+    'view',
+  );
+  const [rescheduleSlot, setRescheduleSlot] = useState('');
+  const [reassignClientId, setReassignClientId] = useState('');
+
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
   const createBooking = useCreateBooking();
+
+  // Slots for add form
   const { data: slotsData } = useSlots(selectedDate, selectedServiceId);
+
+  // Slots for reschedule — use the booking's service
+  const rescheduleServiceId = selectedBooking?.service?.id || '';
+  const { data: rescheduleSlotsData } = useSlots(selectedDate, rescheduleServiceId);
 
   const services = (servicesData as Service[] | undefined) || [];
   const clients = (clientsData?.items as Client[] | undefined) || [];
   const slots = slotsData?.slots?.filter((s) => s.available) || [];
+  const rescheduleSlots = rescheduleSlotsData?.slots?.filter((s) => s.available) || [];
 
   const allBookings = bookingsData?.items || [];
 
@@ -93,6 +122,61 @@ export function CalendarPage() {
     getTelegram()?.HapticFeedback.impactOccurred('medium');
     try {
       await noShowBooking.mutateAsync(id);
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  const handleOpenBookingDetail = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setDetailMode('view');
+    setRescheduleSlot('');
+    setReassignClientId('');
+  };
+
+  const handleCloseDetail = () => {
+    setSelectedBooking(null);
+    setDetailMode('view');
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+    getTelegram()?.HapticFeedback.impactOccurred('heavy');
+    try {
+      await cancelBooking.mutateAsync({ id: selectedBooking.id });
+      handleCloseDetail();
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!selectedBooking || !rescheduleSlot) return;
+    const startTime = `${selectedDate}T${rescheduleSlot}:00`;
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+    try {
+      await rescheduleBooking.mutateAsync({
+        id: selectedBooking.id,
+        dto: { startTime },
+      });
+      handleCloseDetail();
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  const handleReassign = async () => {
+    if (!selectedBooking || !reassignClientId) return;
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+    try {
+      await rescheduleBooking.mutateAsync({
+        id: selectedBooking.id,
+        dto: {
+          startTime: selectedBooking.startTime,
+          clientId: reassignClientId,
+        },
+      });
+      handleCloseDetail();
     } catch {
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     }
@@ -166,7 +250,12 @@ export function CalendarPage() {
       )}
 
       {sorted.map((booking) => (
-        <Card key={booking.id} className={styles.bookingCard}>
+        <Card
+          key={booking.id}
+          className={styles.bookingCard}
+          onClick={() => handleOpenBookingDetail(booking)}
+          style={{ cursor: 'pointer' }}
+        >
           <span className={styles.bookingTime}>{formatTime(booking.startTime)}</span>
           <div className={styles.bookingBody}>
             <div className={styles.bookingService}>{booking.serviceNameSnapshot}</div>
@@ -180,14 +269,20 @@ export function CalendarPage() {
             <div className={styles.bookingActions}>
               <button
                 className="touchable"
-                onClick={() => handleComplete(booking.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleComplete(booking.id);
+                }}
                 aria-label={intl.formatMessage({ id: 'booking.status.completed' })}
               >
                 <CheckCircle size={20} color="var(--color-success)" />
               </button>
               <button
                 className="touchable"
-                onClick={() => handleNoShow(booking.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNoShow(booking.id);
+                }}
                 aria-label={intl.formatMessage({ id: 'booking.status.no_show' })}
               >
                 <XCircle size={20} color="var(--color-destructive)" />
@@ -201,6 +296,239 @@ export function CalendarPage() {
           )}
         </Card>
       ))}
+
+      {/* Booking detail BottomSheet */}
+      {selectedBooking && (
+        <BottomSheet
+          open={!!selectedBooking}
+          onClose={handleCloseDetail}
+          title={intl.formatMessage({ id: 'calendar.bookingDetails' })}
+        >
+          {detailMode === 'view' && (
+            <>
+              {selectedBooking.client && (
+                <div className={styles.detailRow}>
+                  <User size={18} className={styles.detailIcon} />
+                  <div>
+                    <div className={styles.detailLabel}>
+                      {intl.formatMessage({ id: 'clients.title' })}
+                    </div>
+                    <div className={styles.detailValue}>
+                      {selectedBooking.client.firstName} {selectedBooking.client.lastName || ''}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedBooking.client?.phone && (
+                <div className={styles.detailRow}>
+                  <Clock size={18} className={styles.detailIcon} />
+                  <div>
+                    <div className={styles.detailLabel}>
+                      {intl.formatMessage({ id: 'calendar.phone' })}
+                    </div>
+                    <div className={styles.detailValue}>{selectedBooking.client.phone}</div>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.detailRow}>
+                <Clock size={18} className={styles.detailIcon} />
+                <div>
+                  <div className={styles.detailLabel}>
+                    {intl.formatMessage({ id: 'booking.selectTime' })}
+                  </div>
+                  <div className={styles.detailValue}>
+                    {formatTime(selectedBooking.startTime)} — {formatTime(selectedBooking.endTime)}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.detailRow}>
+                <Pencil size={18} className={styles.detailIcon} />
+                <div>
+                  <div className={styles.detailLabel}>
+                    {intl.formatMessage({ id: 'booking.selectService' })}
+                  </div>
+                  <div className={styles.detailValue}>{selectedBooking.serviceNameSnapshot}</div>
+                </div>
+              </div>
+
+              <div className={styles.detailRow}>
+                <Ban size={18} className={styles.detailIcon} />
+                <div>
+                  <div className={styles.detailLabel}>
+                    {intl.formatMessage({ id: 'calendar.status' })}
+                  </div>
+                  <div className={styles.detailValue}>
+                    <Badge variant={statusVariant(selectedBooking.status)}>
+                      {intl.formatMessage({
+                        id: `booking.status.${selectedBooking.status}`,
+                      })}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.detailRow}>
+                <Clock size={18} className={styles.detailIcon} />
+                <div>
+                  <div className={styles.detailLabel}>
+                    {intl.formatMessage({ id: 'calendar.price' })}
+                  </div>
+                  <div className={styles.detailValue}>
+                    {selectedBooking.priceAtBooking} {intl.formatMessage({ id: 'common.uah' })}
+                  </div>
+                </div>
+              </div>
+
+              {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') && (
+                <div className={styles.detailActions}>
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() => setDetailMode('reschedule')}
+                  >
+                    <Clock size={16} />
+                    {intl.formatMessage({ id: 'calendar.reschedule' })}
+                  </button>
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() => setDetailMode('reassign')}
+                  >
+                    <UserRoundCog size={16} />
+                    {intl.formatMessage({ id: 'calendar.reassign' })}
+                  </button>
+                  <button
+                    className={styles.detailActionBtnDanger}
+                    onClick={() => setDetailMode('cancel')}
+                  >
+                    <Ban size={16} />
+                    {intl.formatMessage({ id: 'calendar.cancelBooking' })}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {detailMode === 'reschedule' && (
+            <>
+              <p className={styles.subTitle}>
+                {intl.formatMessage({ id: 'calendar.selectNewTime' })}
+              </p>
+              <div className={styles.datePickerWrap}>
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onSelect={(d) => {
+                    setSelectedDate(d);
+                    setRescheduleSlot('');
+                  }}
+                  daysAhead={60}
+                />
+              </div>
+              {rescheduleSlots.length > 0 ? (
+                <div className={styles.slotsGrid}>
+                  {rescheduleSlots.map((slot) => (
+                    <button
+                      key={slot.startTime}
+                      className={`${styles.slotBtn} ${rescheduleSlot === slot.startTime ? styles.slotActive : ''}`}
+                      onClick={() => setRescheduleSlot(slot.startTime)}
+                    >
+                      {slot.startTime}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.noSlots}>{intl.formatMessage({ id: 'booking.noSlots' })}</p>
+              )}
+              <div className={styles.cancelConfirmActions} style={{ marginTop: 16 }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDetailMode('view')}
+                  style={{ flex: 1 }}
+                >
+                  {intl.formatMessage({ id: 'common.cancel' })}
+                </Button>
+                <Button
+                  onClick={handleReschedule}
+                  disabled={!rescheduleSlot || rescheduleBooking.isPending}
+                  style={{ flex: 1 }}
+                >
+                  {rescheduleBooking.isPending
+                    ? intl.formatMessage({ id: 'common.loading' })
+                    : intl.formatMessage({ id: 'calendar.apply' })}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {detailMode === 'reassign' && (
+            <>
+              <p className={styles.subTitle}>
+                {intl.formatMessage({ id: 'calendar.selectNewClient' })}
+              </p>
+              <select
+                className={styles.selectField}
+                value={reassignClientId}
+                onChange={(e) => setReassignClientId(e.target.value)}
+              >
+                <option value="">—</option>
+                {clients
+                  .filter((c) => c.id !== selectedBooking.client?.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName || ''}
+                    </option>
+                  ))}
+              </select>
+              <div className={styles.cancelConfirmActions} style={{ marginTop: 16 }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDetailMode('view')}
+                  style={{ flex: 1 }}
+                >
+                  {intl.formatMessage({ id: 'common.cancel' })}
+                </Button>
+                <Button
+                  onClick={handleReassign}
+                  disabled={!reassignClientId || rescheduleBooking.isPending}
+                  style={{ flex: 1 }}
+                >
+                  {rescheduleBooking.isPending
+                    ? intl.formatMessage({ id: 'common.loading' })
+                    : intl.formatMessage({ id: 'calendar.apply' })}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {detailMode === 'cancel' && (
+            <div className={styles.cancelConfirm}>
+              <p className={styles.cancelConfirmText}>
+                {intl.formatMessage({ id: 'calendar.confirmCancel' })}
+              </p>
+              <div className={styles.cancelConfirmActions}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDetailMode('view')}
+                  style={{ flex: 1 }}
+                >
+                  {intl.formatMessage({ id: 'common.cancel' })}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelBooking}
+                  disabled={cancelBooking.isPending}
+                  style={{ flex: 1 }}
+                >
+                  {cancelBooking.isPending
+                    ? intl.formatMessage({ id: 'common.loading' })
+                    : intl.formatMessage({ id: 'calendar.cancelBooking' })}
+                </Button>
+              </div>
+            </div>
+          )}
+        </BottomSheet>
+      )}
 
       {/* Manual booking BottomSheet */}
       <BottomSheet

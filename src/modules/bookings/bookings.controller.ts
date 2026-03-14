@@ -17,6 +17,7 @@ import { BookingsService } from './bookings.service';
 import {
   CreateBookingDto,
   CancelBookingDto,
+  RescheduleBookingDto,
   BookingListQueryDto,
   SlotsQueryDto,
 } from './dto/bookings.dto';
@@ -93,6 +94,20 @@ export class BookingsController {
     @Body() dto: CancelBookingDto,
   ) {
     return this.bookingsService.cancel(tenantId, id, user, dto);
+  }
+
+  /**
+   * POST /api/v1/bookings/:id/reschedule — Reschedule booking 🔑👑
+   * Change time and/or reassign to another client
+   */
+  @Post(':id/reschedule')
+  @Roles('master')
+  async reschedule(
+    @CurrentTenant() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RescheduleBookingDto,
+  ) {
+    return this.bookingsService.reschedule(tenantId, id, dto);
   }
 
   /**

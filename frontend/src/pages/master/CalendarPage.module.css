@@ -156,3 +156,108 @@
   text-align: center;
   padding: 12px 0;
 }
+
+/* Booking detail sheet */
+.detailRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-separator);
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.detailIcon {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.detailLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 1px;
+}
+
+.detailValue {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.detailActions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.detailActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-separator);
+  background: var(--color-section-bg);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition-fast);
+}
+
+.detailActionBtn:active {
+  transform: scale(0.96);
+  opacity: 0.7;
+}
+
+.detailActionBtnDanger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-destructive);
+  background: var(--color-section-bg);
+  color: var(--color-destructive);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all var(--transition-fast);
+}
+
+.detailActionBtnDanger:active {
+  transform: scale(0.96);
+  opacity: 0.7;
+}
+
+.cancelConfirm {
+  text-align: center;
+  padding: var(--space-lg) 0;
+}
+
+.cancelConfirmText {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  margin-bottom: var(--space-lg);
+}
+
+.cancelConfirmActions {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.subTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--space-md);
+}

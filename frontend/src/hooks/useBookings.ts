@@ -5,6 +5,7 @@ import type {
   Booking,
   CancelBookingDto,
   CreateBookingDto,
+  RescheduleBookingDto,
   PaginatedResponse,
   SlotsResponse,
 } from '@/types';
@@ -140,6 +141,28 @@ export function useNoShowBooking() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+  });
+}
+
+// ---- Reschedule booking (master) ----
+export function useRescheduleBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: RescheduleBookingDto }) => {
+      const res = await api.post<ApiResponse<Booking>>(`/bookings/${id}/reschedule`, dto);
+      return res.data;
+    },
+    onSuccess: (_data, variables) => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('success');
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+    onError: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('error');
     },
   });
 }

@@ -212,6 +212,11 @@ export interface CancelBookingDto {
   reason?: string;
 }
 
+export interface RescheduleBookingDto {
+  startTime: string;
+  clientId?: string;
+}
+
 // ---- Client (CRM) ----
 export interface Client {
   id: string;
