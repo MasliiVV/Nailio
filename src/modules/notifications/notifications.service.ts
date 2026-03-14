@@ -71,7 +71,7 @@ export class NotificationsService {
     tenantId: string,
     bookingId: string,
     clientId: string,
-    cancelledBy: 'master' | 'client',
+    _cancelledBy: 'master' | 'client',
   ) {
     // Find all pending notifications for this booking
     const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
@@ -102,10 +102,8 @@ export class NotificationsService {
     // Schedule cancellation notification to client (immediate)
     await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation', 0);
 
-    // If cancelled by client, also notify master via platform bot
-    if (cancelledBy === 'client') {
-      await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation_master', 0);
-    }
+    // Notify master with restore button (both when client or master cancels)
+    await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation_master', 0);
 
     this.logger.log(`Notifications cancelled for booking ${bookingId} in tenant ${tenantId}`);
   }

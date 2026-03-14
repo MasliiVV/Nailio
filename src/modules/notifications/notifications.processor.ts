@@ -232,6 +232,18 @@ export class NotificationsProcessor extends WorkerHost {
               ],
             ],
           };
+        } else if (type === 'cancellation_master') {
+          // Master gets restore button on cancellation
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '♻️ Відновити запис',
+                  callback_data: `restore:${bookingId}`,
+                },
+              ],
+            ],
+          };
         }
         // No button on 'confirmation' — booking is still pending, not yet confirmed
 

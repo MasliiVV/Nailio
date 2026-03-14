@@ -71,9 +71,9 @@ const templates = {
   // ─── Cancellation (to master) ───
   cancellation_master: {
     uk: (v: TemplateVariables) =>
-      `❌ Клієнт скасував запис\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\nПричина: ${v.reason || 'Не вказано'}`,
+      `❌ Запис скасовано\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\nПричина: ${v.reason || 'Не вказано'}`,
     en: (v: TemplateVariables) =>
-      `❌ Client cancelled booking\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\nReason: ${v.reason || 'Not specified'}`,
+      `❌ Booking cancelled\n\n👤 ${v.clientName}${v.clientTelegramLink ? ` (${v.clientTelegramLink})` : ''}\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\nReason: ${v.reason || 'Not specified'}`,
   },
 
   // ─── Reschedule (to client) ───

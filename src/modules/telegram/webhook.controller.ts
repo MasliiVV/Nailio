@@ -184,7 +184,7 @@ export class WebhookController {
     if (!cbq?.data) return;
 
     const [action, bookingId] = cbq.data.split(':');
-    if (!bookingId || !['confirm', 'reject', 'suggest'].includes(action)) return;
+    if (!bookingId || !['confirm', 'reject', 'suggest', 'restore'].includes(action)) return;
 
     // Determine the bot (could be platform bot or tenant bot)
     // The callback comes to the platform bot since new_booking goes via PLATFORM_BOT_TOKEN
@@ -283,7 +283,7 @@ export class WebhookController {
       } else if (action === 'suggest') {
         // Master wants to suggest another time
         await this.handleSuggestCallback(platformBotToken, cbq, booking);
-      } else {
+      } else if (action === 'reject') {
         // Reject booking (cancel)
         await this.prisma.booking.update({
           where: { id: bookingId },
@@ -294,26 +294,34 @@ export class WebhookController {
           },
         });
 
+        // Cancel pending notification jobs (reminders etc.)
+        await this.notificationsService.cancelBookingNotifications(
+          booking.tenantId,
+          bookingId,
+          booking.clientId,
+          'master',
+        );
+
         await this.answerCallbackQuery(platformBotToken, cbq.id, '❌ Запис відхилено');
 
-        // Edit original message
+        // Edit original message with restore button
         if (cbq.message) {
-          await this.editMessageText(
+          await this.editMessageTextWithKeyboard(
             platformBotToken,
             cbq.message.chat.id,
             cbq.message.message_id,
-            `❌ <b>Запис відхилено</b>\n\n👤 ${booking.client.firstName} ${booking.client.lastName || ''}\n📋 ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}`,
+            `❌ <b>Запис скасовано</b>\n\n👤 ${booking.client.firstName} ${booking.client.lastName || ''}\n📋 ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}`,
+            {
+              inline_keyboard: [
+                [{ text: '♻️ Відновити запис', callback_data: `restore:${bookingId}` }],
+              ],
+            },
           );
         }
 
-        // Notify client about rejection via tenant bot
-        await this.notifyClient(
-          booking.tenantId,
-          booking.client.user.telegramId,
-          `❌ На жаль, майстер не може прийняти вас у цей час.\n\n📋 ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}\n\nСпробуйте обрати інший час.`,
-        );
-
         this.logger.log(`Booking ${bookingId} rejected via bot by master`);
+      } else if (action === 'restore') {
+        await this.handleRestoreCallback(platformBotToken, cbq, bookingId);
       }
     } catch (error) {
       this.logger.error(`Callback query processing error: ${error}`);
@@ -872,6 +880,115 @@ export class WebhookController {
   }
 
   // ──────────────────────────────────────────────
+  // Restore Cancelled Booking (platform bot → master)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Handle "restore" callback: master wants to restore a cancelled booking.
+   * Sets booking back to "confirmed" and re-schedules notifications.
+   */
+  private async handleRestoreCallback(
+    platformBotToken: string,
+    cbq: NonNullable<TelegramUpdate['callback_query']>,
+    bookingId: string,
+  ): Promise<void> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        client: { include: { user: true } },
+        tenant: true,
+      },
+    });
+
+    if (!booking) {
+      await this.answerCallbackQuery(platformBotToken, cbq.id, '❌ Запис не знайдено');
+      return;
+    }
+
+    if (booking.status !== 'cancelled') {
+      await this.answerCallbackQuery(
+        platformBotToken,
+        cbq.id,
+        `Запис вже у статусі: ${booking.status}`,
+      );
+      return;
+    }
+
+    // Check if the time slot is still in the future
+    if (booking.startTime.getTime() < Date.now()) {
+      await this.answerCallbackQuery(platformBotToken, cbq.id, '⚠️ Час запису вже минув');
+      return;
+    }
+
+    // Restore booking to confirmed
+    await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        status: 'confirmed',
+        cancelledAt: null,
+        cancelReason: null,
+      },
+    });
+
+    // Re-schedule notifications (reminders)
+    await this.notificationsService.scheduleBookingNotifications(
+      booking.tenantId,
+      bookingId,
+      booking.clientId,
+      booking.startTime,
+      'master',
+    );
+
+    await this.answerCallbackQuery(platformBotToken, cbq.id, '✅ Запис відновлено!');
+
+    // Format date/time
+    const tz = booking.tenant?.timezone || 'Europe/Kyiv';
+    const dateFmt = new Intl.DateTimeFormat('uk-UA', {
+      timeZone: tz,
+      day: 'numeric',
+      month: 'long',
+    });
+    const timeFmt = new Intl.DateTimeFormat('uk-UA', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const dateStr = dateFmt.format(booking.startTime);
+    const timeStr = timeFmt.format(booking.startTime);
+
+    // Edit master's message to show restored status
+    if (cbq.message) {
+      await this.editMessageText(
+        platformBotToken,
+        cbq.message.chat.id,
+        cbq.message.message_id,
+        `✅ <b>Запис відновлено</b>\n\n👤 ${booking.client.firstName} ${booking.client.lastName || ''}\n📋 ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}`,
+      );
+    }
+
+    // Notify client that booking is restored
+    const restoreText = `✅ <b>Ваш запис відновлено!</b>\n\n📋 ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}\n⏱ ${booking.durationAtBooking} хв\n💰 ${(booking.priceAtBooking / 100).toFixed(0)} грн\n\nДо зустрічі! 💅`;
+    await this.notifyClientWithKeyboard(
+      booking.tenantId,
+      booking.client.user.telegramId,
+      restoreText,
+      {
+        inline_keyboard: [
+          [
+            {
+              text: '✍️ Написати майстру',
+              callback_data: `writem:${bookingId}`,
+            },
+          ],
+        ],
+      },
+    );
+
+    this.logger.log(`Booking ${bookingId} restored by master`);
+  }
+
+  // ──────────────────────────────────────────────
   // Client → Master messaging
   // ──────────────────────────────────────────────
 
@@ -1026,6 +1143,27 @@ export class WebhookController {
   }
 
   /**
+   * Send a message via the platform bot WITH inline keyboard
+   */
+  private async sendPlatformMessageWithKeyboard(
+    botToken: string,
+    chatId: number | bigint,
+    text: string,
+    replyMarkup: Record<string, unknown>,
+  ): Promise<void> {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId.toString(),
+        text,
+        parse_mode: 'HTML',
+        reply_markup: replyMarkup,
+      }),
+    });
+  }
+
+  /**
    * Load booking with client + user + tenant for callback processing
    */
   private async loadBookingForCallback(bookingId: string) {
@@ -1118,6 +1256,29 @@ export class WebhookController {
         message_id: messageId,
         text,
         parse_mode: 'HTML',
+      }),
+    });
+  }
+
+  /**
+   * Edit message text WITH inline keyboard
+   */
+  private async editMessageTextWithKeyboard(
+    botToken: string,
+    chatId: number,
+    messageId: number,
+    text: string,
+    replyMarkup: Record<string, unknown>,
+  ): Promise<void> {
+    await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       }),
     });
   }
