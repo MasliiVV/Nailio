@@ -126,20 +126,19 @@ export class WebhookController {
     }
 
     // ── Tenant bots ──
-    // Step 1: Verify webhook secret
-    const isValid = await this.botService.verifyWebhookSecret(botId, secretToken);
-    if (!isValid) {
-      throw new ForbiddenException('Invalid webhook secret');
-    }
-
-    // Step 2: Load bot info for tenant context
+    // Step 1: Look up bot by tenantId (webhook URL is /webhook/{tenantId})
     const bot = await this.prisma.bot.findUnique({
-      where: { id: botId },
+      where: { tenantId: botId },
       include: { tenant: true },
     });
 
     if (!bot || !bot.isActive) {
-      return { ok: true }; // Silently ignore inactive bots
+      return { ok: true }; // Silently ignore unknown/inactive bots
+    }
+
+    // Step 2: Verify webhook secret
+    if (bot.webhookSecret !== secretToken) {
+      throw new ForbiddenException('Invalid webhook secret');
     }
 
     // Step 3: Process update asynchronously (respond quickly)
@@ -743,14 +742,20 @@ export class WebhookController {
         });
       }
 
-      // Schedule new reminders for the updated time
-      await this.notificationsService.scheduleBookingNotifications(
-        booking.tenantId,
-        bookingId,
-        booking.clientId,
-        newStartTimeUtc,
-        'master',
-      );
+      // Schedule new reminders for the updated time (non-blocking)
+      this.notificationsService
+        .scheduleBookingNotifications(
+          booking.tenantId,
+          bookingId,
+          booking.clientId,
+          newStartTimeUtc,
+          'master',
+        )
+        .catch((err) => {
+          this.logger.error(
+            `Failed to schedule reminders for rescheduled booking ${bookingId}: ${err}`,
+          );
+        });
 
       await this.answerCallbackQuery(botToken, cbq.id, '✅ Час підтверджено!');
 
