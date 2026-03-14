@@ -27,11 +27,12 @@ import { renderTemplate, TemplateVariables } from '../notifications/templates';
  * Stored in-memory — suitable for single-instance deployment.
  */
 interface ConversationState {
-  action: 'awaiting_time' | 'awaiting_message';
+  action: 'awaiting_time' | 'awaiting_message' | 'awaiting_reply';
   bookingId: string;
   tenantId: string;
   chatId: number;
   messageId?: number;
+  clientTelegramId?: bigint; // for master→client reply
   expiresAt: number; // timestamp — auto-cleanup after 10 min
 }
 
@@ -184,7 +185,8 @@ export class WebhookController {
     if (!cbq?.data) return;
 
     const [action, bookingId] = cbq.data.split(':');
-    if (!bookingId || !['confirm', 'reject', 'suggest', 'restore'].includes(action)) return;
+    const allowedActions = ['confirm', 'reject', 'suggest', 'restore', 'reply'];
+    if (!bookingId || !allowedActions.includes(action)) return;
 
     // Determine the bot (could be platform bot or tenant bot)
     // The callback comes to the platform bot since new_booking goes via PLATFORM_BOT_TOKEN
@@ -322,6 +324,8 @@ export class WebhookController {
         this.logger.log(`Booking ${bookingId} rejected via bot by master`);
       } else if (action === 'restore') {
         await this.handleRestoreCallback(platformBotToken, cbq, bookingId);
+      } else if (action === 'reply') {
+        await this.handleReplyToClientCallback(platformBotToken, cbq, bookingId);
       }
     } catch (error) {
       this.logger.error(`Callback query processing error: ${error}`);
@@ -392,8 +396,17 @@ export class WebhookController {
     const userId = message.from.id.toString();
     const state = this.conversationState.get(userId);
 
-    if (!state || state.action !== 'awaiting_time' || Date.now() >= state.expiresAt) {
+    if (!state || Date.now() >= state.expiresAt) {
       return; // Not in a conversation flow
+    }
+
+    if (state.action === 'awaiting_reply') {
+      await this.handleMasterReplyToClient(update, state);
+      return;
+    }
+
+    if (state.action !== 'awaiting_time') {
+      return;
     }
 
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
@@ -989,6 +1002,109 @@ export class WebhookController {
   }
 
   // ──────────────────────────────────────────────
+  // Master → Client reply
+  // ──────────────────────────────────────────────
+
+  /**
+   * Handle "reply" callback: master wants to reply to a client message.
+   * Sets conversation state to "awaiting_reply" and prompts master to type.
+   */
+  private async handleReplyToClientCallback(
+    platformBotToken: string,
+    cbq: NonNullable<TelegramUpdate['callback_query']>,
+    bookingId: string,
+  ): Promise<void> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        client: { include: { user: true } },
+        tenant: true,
+      },
+    });
+
+    if (!booking) {
+      await this.answerCallbackQuery(platformBotToken, cbq.id, '❌ Запис не знайдено');
+      return;
+    }
+
+    const userId = cbq.from.id.toString();
+
+    // Set conversation state
+    this.conversationState.set(userId, {
+      action: 'awaiting_reply',
+      bookingId,
+      tenantId: booking.tenantId,
+      chatId: cbq.message?.chat.id || 0,
+      clientTelegramId: booking.client.user.telegramId,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    await this.answerCallbackQuery(platformBotToken, cbq.id, '✍️ Напишіть відповідь');
+
+    await this.sendPlatformMessage(
+      platformBotToken,
+      cbq.message?.chat.id || cbq.from.id,
+      `✍️ Напишіть відповідь для <b>${booking.client.firstName} ${booking.client.lastName || ''}</b>:`,
+    );
+  }
+
+  /**
+   * Handle master's reply text — forward to client via tenant bot.
+   */
+  private async handleMasterReplyToClient(
+    update: TelegramUpdate,
+    state: ConversationState,
+  ): Promise<void> {
+    const message = update.message;
+    if (!message?.text || !message.from) return;
+
+    const userId = message.from.id.toString();
+
+    // Remove conversation state
+    this.conversationState.delete(userId);
+
+    const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+
+    try {
+      const booking = await this.loadBookingForCallback(state.bookingId);
+      if (!booking) {
+        await this.sendPlatformMessage(platformBotToken, message.chat.id, '❌ Запис не знайдено');
+        return;
+      }
+
+      // Confirm to master
+      await this.sendPlatformMessage(
+        platformBotToken,
+        message.chat.id,
+        '✅ Відповідь надіслано клієнту!',
+      );
+
+      // Format date/time for context
+      const { dateStr, timeStr } = this.formatBookingDateTime(booking);
+
+      // Send to client via tenant bot
+      const replyText = `💬 <b>Відповідь від майстра</b>\n\n📋 Запис: ${booking.serviceNameSnapshot}\n📅 ${dateStr} о ${timeStr}\n\n📝 ${message.text}`;
+
+      if (state.clientTelegramId) {
+        await this.notifyClientWithKeyboard(booking.tenantId, state.clientTelegramId, replyText, {
+          inline_keyboard: [
+            [{ text: '✍️ Написати майстру', callback_data: `writem:${state.bookingId}` }],
+          ],
+        });
+      }
+
+      this.logger.log(`Master replied to client for booking ${state.bookingId}`);
+    } catch (error) {
+      this.logger.error(`Master reply error: ${error}`);
+      await this.sendPlatformMessage(
+        platformBotToken,
+        message.chat.id,
+        '⚠️ Помилка надсилання. Спробуйте ще.',
+      );
+    }
+  }
+
+  // ──────────────────────────────────────────────
   // Client → Master messaging
   // ──────────────────────────────────────────────
 
@@ -1054,7 +1170,16 @@ export class WebhookController {
           clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
           reason: message.text,
         });
-        await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
+        await this.sendPlatformMessageWithKeyboard(
+          platformBotToken,
+          Number(masterTelegramId),
+          text,
+          {
+            inline_keyboard: [
+              [{ text: '💬 Відповісти клієнту', callback_data: `reply:${state.bookingId}` }],
+            ],
+          },
+        );
       }
 
       this.logger.log(`Client message forwarded to master for booking ${state.bookingId}`);
