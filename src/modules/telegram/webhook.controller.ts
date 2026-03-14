@@ -531,7 +531,7 @@ export class WebhookController {
           await this.handleWriteToMasterCallback(botToken, cbq, bookingId);
           break;
         case 'accept': {
-          const suggestedTime = parts[2]; // HH:MM
+          const suggestedTime = parts.slice(2).join(':'); // "12:45" from ["accept","id","12","45"]
           if (suggestedTime) {
             await this.handleAcceptTimeCallback(botToken, cbq, bookingId, suggestedTime);
           }
