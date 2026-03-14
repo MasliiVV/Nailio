@@ -54,9 +54,9 @@ const templates = {
   // ─── Reminder 1h (to client) ───
   reminder_1h: {
     uk: (v: TemplateVariables) =>
-      `⏰ Через 1 годину у вас запис:\n\n📋 ${v.serviceName}\n📅 Сьогодні о ${v.time}`,
+      `⏰ Через 1 годину у вас запис:\n\n📋 ${v.serviceName}\n📅 Сьогодні о ${v.time}\n⏱ ${v.duration} хв\n💰 ${_formatPrice(v.price)} грн\n\nПідтвердіть свій візит 👇`,
     en: (v: TemplateVariables) =>
-      `⏰ Your appointment is in 1 hour:\n\n📋 ${v.serviceName}\n📅 Today at ${v.time}`,
+      `⏰ Your appointment is in 1 hour:\n\n📋 ${v.serviceName}\n📅 Today at ${v.time}\n⏱ ${v.duration} min\n💰 ${_formatPrice(v.price)} UAH\n\nConfirm your visit 👇`,
   },
 
   // ─── Cancellation (to client) ───
@@ -81,6 +81,62 @@ const templates = {
       `📅 Запис перенесено\n\n📋 ${v.serviceName}\n📅 Новий час: ${v.date} о ${v.time}\n⏱ ${v.duration} хв`,
     en: (v: TemplateVariables) =>
       `📅 Booking rescheduled\n\n📋 ${v.serviceName}\n📅 New time: ${v.date} at ${v.time}\n⏱ ${v.duration} min`,
+  },
+
+  // ─── Time suggestion (to client — master proposes another time) ───
+  time_suggestion: {
+    uk: (v: TemplateVariables) =>
+      `🕐 <b>Майстер пропонує інший час</b>\n\nНа жаль, обраний вами час недоступний.\nМайстер пропонує інший варіант для запису:\n\n📋 ${v.serviceName}\n⏱ ${v.duration} хв\n💰 ${_formatPrice(v.price)} грн\n\nОберіть зручний час нижче 👇`,
+    en: (v: TemplateVariables) =>
+      `🕐 <b>Master suggests another time</b>\n\nUnfortunately, your chosen time is not available.\nThe master suggests an alternative:\n\n📋 ${v.serviceName}\n⏱ ${v.duration} min\n💰 ${_formatPrice(v.price)} UAH\n\nChoose a convenient time below 👇`,
+  },
+
+  // ─── Client on time (to master) ───
+  client_ontime: {
+    uk: (v: TemplateVariables) =>
+      `✅ Клієнт <b>${v.clientName}</b> підтвердив, що прийде вчасно\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
+    en: (v: TemplateVariables) =>
+      `✅ Client <b>${v.clientName}</b> confirmed they will be on time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
+  },
+
+  // ─── Client running late (to master) ───
+  client_late: {
+    uk: (v: TemplateVariables) =>
+      `⏰ Клієнт <b>${v.clientName}</b> повідомив, що трохи запізниться\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}`,
+    en: (v: TemplateVariables) =>
+      `⏰ Client <b>${v.clientName}</b> informed they will be a bit late\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}`,
+  },
+
+  // ─── Client message to master ───
+  client_message: {
+    uk: (v: TemplateVariables) =>
+      `💬 Повідомлення від клієнта <b>${v.clientName}</b>\n\n📋 Запис: ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\n📝 ${v.reason || ''}`,
+    en: (v: TemplateVariables) =>
+      `💬 Message from client <b>${v.clientName}</b>\n\n📋 Booking: ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\n📝 ${v.reason || ''}`,
+  },
+
+  // ─── Booking confirmed (to client — after master confirms) ───
+  booking_confirmed: {
+    uk: (v: TemplateVariables) =>
+      `✅ <b>Ваш запис підтверджено!</b>\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n⏱ ${v.duration} хв\n💰 ${_formatPrice(v.price)} грн\n\nДо зустрічі! 💅`,
+    en: (v: TemplateVariables) =>
+      `✅ <b>Your booking is confirmed!</b>\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n⏱ ${v.duration} min\n💰 ${_formatPrice(v.price)} UAH\n\nSee you! 💅`,
+  },
+
+  // ─── Time accepted by client (to master) ───
+  time_accepted: {
+    uk: (v: TemplateVariables) =>
+      `✅ Клієнт <b>${v.clientName}</b> прийняв запропонований час\n\n📋 ${v.serviceName}\n📅 ${v.date} о ${v.time}\n\nЗапис підтверджено!`,
+    en: (v: TemplateVariables) =>
+      `✅ Client <b>${v.clientName}</b> accepted the suggested time\n\n📋 ${v.serviceName}\n📅 ${v.date} at ${v.time}\n\nBooking confirmed!`,
+  },
+
+  // ─── Time declined by client (to master) ───
+  time_declined: {
+    uk: (v: TemplateVariables) =>
+      `❌ Клієнт <b>${v.clientName}</b> відхилив запропонований час\n\n📋 ${v.serviceName}`,
+    en: (v: TemplateVariables) =>
+      `❌ Client <b>${v.clientName}</b> declined the suggested time\n\n📋 ${v.serviceName}`,
   },
 } as const;
 

@@ -172,24 +172,78 @@ export class NotificationsProcessor extends WorkerHost {
         }
 
         // 10. Send via Telegram Bot API
-        //    For new_booking → send inline keyboard with confirm/reject buttons
-        const replyMarkup =
-          type === 'new_booking'
-            ? {
-                inline_keyboard: [
-                  [
-                    {
-                      text: '✅ Підтвердити',
-                      callback_data: `confirm:${bookingId}`,
-                    },
-                    {
-                      text: '❌ Відхилити',
-                      callback_data: `reject:${bookingId}`,
-                    },
-                  ],
-                ],
-              }
-            : undefined;
+        //    Build reply_markup based on notification type
+        let replyMarkup: Record<string, unknown> | undefined;
+
+        if (type === 'new_booking') {
+          // Master gets confirm / reject / suggest-another-time buttons
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '✅ Підтвердити',
+                  callback_data: `confirm:${bookingId}`,
+                },
+                {
+                  text: '❌ Відхилити',
+                  callback_data: `reject:${bookingId}`,
+                },
+              ],
+              [
+                {
+                  text: '🕐 Запропонувати інший час',
+                  callback_data: `suggest:${bookingId}`,
+                },
+              ],
+            ],
+          };
+        } else if (type === 'reminder_1h') {
+          // Client gets "on time" / "running late" / "write to master" buttons
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '✅ Прийду вчасно',
+                  callback_data: `ontime:${bookingId}`,
+                },
+                {
+                  text: '⏰ Трохи запізнююсь',
+                  callback_data: `late:${bookingId}`,
+                },
+              ],
+              [
+                {
+                  text: '✍️ Написати майстру',
+                  callback_data: `writem:${bookingId}`,
+                },
+              ],
+            ],
+          };
+        } else if (type === 'reminder_24h') {
+          // Client gets "write to master" button on 24h reminder
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '✍️ Написати майстру',
+                  callback_data: `writem:${bookingId}`,
+                },
+              ],
+            ],
+          };
+        } else if (type === 'confirmation') {
+          // Client gets "write to master" button on confirmation
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '✍️ Написати майстру',
+                  callback_data: `writem:${bookingId}`,
+                },
+              ],
+            ],
+          };
+        }
 
         const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
