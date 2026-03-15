@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { Copy, FileText, MessageCircle } from 'lucide-react';
 import { useClient, useBlockClient, useUnblockClient } from '@/hooks';
 import {
   Avatar,
@@ -12,6 +12,7 @@ import {
   StatGrid,
   Section,
 } from '@/components/ui';
+import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
 import type { Booking } from '@/types';
 import styles from './ClientDetailPage.module.css';
 
@@ -40,6 +41,17 @@ export function ClientDetailPage() {
 
   if (!client) return null;
 
+  const handleCopyTelegramId = async () => {
+    if (!client.telegramId) return;
+
+    try {
+      await navigator.clipboard.writeText(client.telegramId);
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+    } catch {
+      getTelegram()?.showAlert?.(client.telegramId);
+    }
+  };
+
   return (
     <div className="page animate-fade-in">
       {/* Profile header */}
@@ -49,10 +61,40 @@ export function ClientDetailPage() {
           {client.firstName} {client.lastName || ''}
         </h2>
         {client.phone && <p className={styles.profilePhone}>{client.phone}</p>}
+        {client.telegramId && (
+          <p className={styles.profilePhone}>Telegram ID: {client.telegramId}</p>
+        )}
         {client.isBlocked && (
           <Badge variant="destructive">{intl.formatMessage({ id: 'clients.blocked' })}</Badge>
         )}
       </div>
+
+      {client.telegramId && (
+        <Card className={styles.notesCard}>
+          <div className={styles.notesLabel}>
+            {intl.formatMessage({ id: 'clients.telegramId' })}
+          </div>
+          <p className={styles.notesText}>{client.telegramId}</p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => openTelegramUserChat(client.telegramId as string)}
+              icon={<MessageCircle size={16} />}
+            >
+              {intl.formatMessage({ id: 'clients.writeInTelegram' })}
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleCopyTelegramId}
+              icon={<Copy size={16} />}
+            >
+              {intl.formatMessage({ id: 'common.copy' })}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className={styles.statsSection}>

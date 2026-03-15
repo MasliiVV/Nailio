@@ -33,6 +33,7 @@ export interface Profile {
   lastName: string | null;
   phone: string | null;
   avatarUrl: string | null;
+  telegramId?: string | null;
 }
 
 export interface UpdateProfileDto {
@@ -194,6 +195,7 @@ export interface Booking {
     firstName: string;
     lastName: string | null;
     phone: string | null;
+    telegramId?: string | null;
   };
   service?: {
     id: string;
@@ -235,6 +237,7 @@ export interface Client {
   firstName: string;
   lastName: string | null;
   phone: string | null;
+  telegramId?: string | null;
   notes: string | null;
   tags: string[];
   isBlocked: boolean;

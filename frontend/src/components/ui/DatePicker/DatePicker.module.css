@@ -1,35 +1,68 @@
 .container {
-  margin: 0 calc(-1 * var(--space-xl));
-}
-
-.scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 6px;
-  padding: var(--space-sm) var(--space-xl);
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.dateWrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  scroll-snap-align: start;
-  flex-shrink: 0;
+  gap: 10px;
+  padding: var(--space-sm);
+  background: var(--color-background, var(--color-bg));
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
-.monthLabel {
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.monthTitle {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--color-section-bg);
+  border: 1px solid transparent;
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.navButton:disabled {
+  opacity: 0.35;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.weekday {
+  display: flex;
+  justify-content: center;
   font-size: var(--font-size-2xs, 10px);
   color: var(--color-text-secondary);
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.emptyCell {
+  min-height: 56px;
 }
 
 .dateItem {
@@ -37,26 +70,23 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 64px;
+  width: 100%;
+  min-height: 56px;
   border-radius: var(--radius-lg);
-  gap: 4px;
+  gap: 2px;
   transition: all 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   background: var(--color-section-bg);
   border: 1px solid transparent;
   box-shadow: var(--shadow-xs);
+  padding: 6px 4px;
 }
 
 .dateItem:active {
   transform: scale(0.93);
 }
 
-.dayName {
-  font-size: var(--font-size-2xs, 10px);
-  color: var(--color-text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.dateItem:disabled {
+  cursor: not-allowed;
 }
 
 .dayNumber {
@@ -65,14 +95,25 @@
   color: var(--color-text);
 }
 
+.dayStatus {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.dayHint {
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+
 .selected {
   background: var(--color-primary);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent);
   transform: scale(1.02);
 }
 
-.selected .dayName,
-.selected .dayNumber {
+.selected .dayNumber,
+.selected .dayHint {
   color: var(--color-primary-text);
 }
 
@@ -84,4 +125,18 @@
 .today:not(.selected) .dayNumber {
   color: var(--color-primary);
   font-weight: 800;
+}
+
+.loading {
+  opacity: 0.75;
+}
+
+.unavailable {
+  opacity: 0.55;
+  border-color: color-mix(in srgb, var(--color-danger, #ff3b30) 35%, transparent);
+}
+
+.unavailable .dayNumber,
+.unavailable .dayHint {
+  color: var(--color-text-secondary);
 }

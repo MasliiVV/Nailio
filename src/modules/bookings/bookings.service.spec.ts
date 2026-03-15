@@ -6,6 +6,8 @@ import { BookingsService } from './bookings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { FinanceService } from '../finance/finance.service';
+import { ConfigService } from '@nestjs/config';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SlotsQueryDto } from './dto/bookings.dto';
 
@@ -15,6 +17,8 @@ describe('BookingsService', () => {
   let prisma: any;
   let scheduleService: any;
   let notificationsService: any;
+  let financeService: any;
+  let configService: any;
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const tenantId = 'tenant-uuid-1';
@@ -43,12 +47,22 @@ describe('BookingsService', () => {
       cancelBookingNotifications: jest.fn(),
     };
 
+    financeService = {
+      createBookingTransaction: jest.fn(),
+    };
+
+    configService = {
+      getOrThrow: jest.fn().mockReturnValue('test-token'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookingsService,
         { provide: PrismaService, useValue: prisma },
         { provide: ScheduleService, useValue: scheduleService },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: FinanceService, useValue: financeService },
+        { provide: ConfigService, useValue: configService },
       ],
     }).compile();
 

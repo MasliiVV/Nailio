@@ -72,6 +72,13 @@ export class ClientsService {
   async findById(tenantId: string, clientId: string) {
     const client = await this.prisma.tenantClient.client.findFirst({
       where: { id: clientId, tenantId },
+      include: {
+        user: {
+          select: {
+            telegramId: true,
+          },
+        },
+      },
     });
 
     if (!client) throw new NotFoundException('Client not found');
@@ -117,6 +124,7 @@ export class ClientsService {
       firstName: client.firstName,
       lastName: client.lastName,
       phone: client.phone,
+      telegramId: client.user?.telegramId?.toString() || null,
       notes: client.notes,
       tags: client.tags,
       isBlocked: client.isBlocked,
@@ -239,6 +247,7 @@ export class ClientsService {
       firstName: updated.firstName,
       lastName: updated.lastName,
       phone: updated.phone,
+      telegramId: user.telegramId ? String(user.telegramId) : null,
     };
   }
 

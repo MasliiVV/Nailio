@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Calendar, Plus, Clock, Ban, UserRoundCog, Pencil, User, Trash2 } from 'lucide-react';
+import {
+  Calendar,
+  Plus,
+  Clock,
+  Ban,
+  UserRoundCog,
+  Pencil,
+  User,
+  Trash2,
+  MessageCircle,
+} from 'lucide-react';
 import {
   useBookings,
   useCreateBooking,
@@ -23,7 +33,7 @@ import {
   Button,
   FormGroup,
 } from '@/components/ui';
-import { getTelegram } from '@/lib/telegram';
+import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
 import type { Service, Client, Booking } from '@/types';
 import styles from './CalendarPage.module.css';
 
@@ -329,6 +339,18 @@ export function CalendarPage() {
                 </div>
               )}
 
+              {selectedBooking.client?.telegramId && (
+                <div className={styles.detailRow}>
+                  <MessageCircle size={18} className={styles.detailIcon} />
+                  <div>
+                    <div className={styles.detailLabel}>
+                      {intl.formatMessage({ id: 'clients.telegramId' })}
+                    </div>
+                    <div className={styles.detailValue}>{selectedBooking.client.telegramId}</div>
+                  </div>
+                </div>
+              )}
+
               <div className={styles.detailRow}>
                 <Clock size={18} className={styles.detailIcon} />
                 <div>
@@ -393,6 +415,17 @@ export function CalendarPage() {
               )}
 
               <div className={styles.detailActions}>
+                {selectedBooking.client?.telegramId && (
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() =>
+                      openTelegramUserChat(selectedBooking.client?.telegramId as string)
+                    }
+                  >
+                    <MessageCircle size={16} />
+                    {intl.formatMessage({ id: 'clients.writeInTelegram' })}
+                  </button>
+                )}
                 <button
                   className={styles.detailActionBtn}
                   onClick={() => {

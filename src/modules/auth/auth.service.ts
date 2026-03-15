@@ -378,6 +378,7 @@ export class AuthService {
       lastName: string | null;
       phone: string | null;
       avatarUrl: string | null;
+      telegramId?: string | null;
     };
     tenant: {
       id: string;
@@ -395,7 +396,14 @@ export class AuthService {
     if (payload.role === 'master' && payload.tenantId) {
       const master = await this.prisma.master.findFirst({
         where: { userId: payload.sub, tenantId: payload.tenantId },
-        include: { tenant: true },
+        include: {
+          tenant: true,
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
       });
 
       if (master) {
@@ -444,6 +452,7 @@ export class AuthService {
             lastName: master.lastName,
             phone: master.phone,
             avatarUrl: null,
+            telegramId: master.user?.telegramId?.toString() || null,
           },
           tenant: {
             id: master.tenant.id,
@@ -459,7 +468,14 @@ export class AuthService {
     if (payload.role === 'client' && payload.clientId) {
       const client = await this.prisma.client.findUnique({
         where: { id: payload.clientId },
-        include: { tenant: { include: { bot: { select: { botUsername: true } } } } },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+          tenant: { include: { bot: { select: { botUsername: true } } } },
+        },
       });
 
       if (client) {
@@ -472,6 +488,7 @@ export class AuthService {
             lastName: client.lastName,
             phone: client.phone,
             avatarUrl: null,
+            telegramId: client.user?.telegramId?.toString() || null,
           },
           tenant: {
             id: client.tenant.id,
@@ -494,6 +511,7 @@ export class AuthService {
         lastName: validatedData?.user.last_name || payload.profile?.lastName || 'Admin',
         phone: null,
         avatarUrl: null,
+        telegramId: payload.telegramId ? String(payload.telegramId) : null,
       },
       tenant: null,
     };

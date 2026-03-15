@@ -45,8 +45,8 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-success, #34c759) 12%, transparent);
-  color: var(--color-success, #34c759);
+  background: color-mix(in srgb, var(--color-success, #4CAF82) 12%, transparent);
+  color: var(--color-success, #4CAF82);
   display: flex;
   align-items: center;
   justify-content: center;

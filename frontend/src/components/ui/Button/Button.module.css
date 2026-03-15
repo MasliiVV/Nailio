@@ -28,18 +28,18 @@
 
 /* Variants */
 .primary {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple-muted) 100%);
   color: var(--color-primary-text);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: var(--shadow-button);
 }
 
 .primary:hover:not(:disabled) {
   filter: brightness(1.06);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  box-shadow: var(--shadow-button-hover);
 }
 
 .primary:active:not(:disabled) {
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 25%, transparent);
+  box-shadow: 0 2px 8px rgba(110, 90, 230, 0.2);
 }
 
 .secondary {
@@ -57,13 +57,13 @@
 }
 
 .ghost:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: rgba(110, 90, 230, 0.08);
 }
 
 .destructive {
   background: var(--color-destructive);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.25);
+  box-shadow: 0 2px 8px rgba(212, 90, 110, 0.25);
 }
 
 .destructive:hover:not(:disabled) {

@@ -50,6 +50,7 @@ export class AuthResponseDto {
     lastName: string | null;
     phone: string | null;
     avatarUrl: string | null;
+    telegramId?: string | null;
   };
 
   @ApiProperty({ nullable: true })

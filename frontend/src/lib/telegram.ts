@@ -194,6 +194,17 @@ export function getLanguage(): 'uk' | 'en' {
   return lang === 'en' ? 'en' : 'uk';
 }
 
+export function openTelegramUserChat(telegramId: string | number): void {
+  const url = `tg://user?id=${telegramId}`;
+
+  try {
+    getTelegram().openLink(url);
+    return;
+  } catch {
+    window.location.href = url;
+  }
+}
+
 /** Initialize the Mini App */
 export function initTelegramApp(): void {
   const wa = getWebApp();

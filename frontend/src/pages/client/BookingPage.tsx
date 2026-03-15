@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useIntl } from 'react-intl';
 import { CheckCircle, CalendarOff } from 'lucide-react';
 import { useService, useSlots, useCreateBooking } from '@/hooks';
 import { DatePicker, EmptyState } from '@/components/ui';
+import { api } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
+import type { ApiResponse, SlotsResponse } from '@/types';
 import styles from './BookingPage.module.css';
 
 function formatDateKey(d: Date): string {
@@ -27,12 +30,68 @@ export function BookingPage() {
   const { data: slotsData, isLoading: slotsLoading } = useSlots(selectedDate, serviceId || '');
   const createBooking = useCreateBooking();
 
+  const calendarDates = useMemo(() => {
+    const result: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 30; i++) {
+      const nextDate = new Date(today);
+      nextDate.setDate(today.getDate() + i);
+      result.push(formatDateKey(nextDate));
+    }
+
+    return result;
+  }, []);
+
+  const calendarAvailabilityQueries = useQueries({
+    queries: calendarDates.map((date) => ({
+      queryKey: ['bookings', 'slots-calendar', date, serviceId || ''],
+      queryFn: async () => {
+        const res = await api.get<ApiResponse<SlotsResponse>>(
+          `/bookings/slots?date=${date}&serviceId=${serviceId}`,
+        );
+        return res.data;
+      },
+      enabled: !!serviceId,
+      staleTime: 30_000,
+    })),
+  });
+
+  const availabilityByDate = useMemo(() => {
+    const nextMap: Record<string, 'available' | 'unavailable' | 'loading'> = {};
+
+    calendarDates.forEach((date, index) => {
+      const query = calendarAvailabilityQueries[index];
+      if (!query || query.isLoading) {
+        nextMap[date] = 'loading';
+        return;
+      }
+
+      const hasAvailableSlots = (query.data?.slots || []).some((slot) => slot.available);
+      nextMap[date] = hasAvailableSlots ? 'available' : 'unavailable';
+    });
+
+    return nextMap;
+  }, [calendarAvailabilityQueries, calendarDates]);
+
+  const firstAvailableDate = useMemo(
+    () => calendarDates.find((date) => availabilityByDate[date] === 'available') || null,
+    [availabilityByDate, calendarDates],
+  );
+
   const availableSlots = slotsData?.slots.filter((s) => s.available) || [];
 
   // Reset slot selection when date changes
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (!firstAvailableDate) return;
+    if (availabilityByDate[selectedDate] === 'available') return;
+    setSelectedDate(firstAvailableDate);
+  }, [availabilityByDate, firstAvailableDate, selectedDate]);
 
   // MainButton pattern per docs/telegram/mini-app.md
   const handleConfirm = useCallback(async () => {
@@ -122,7 +181,12 @@ export function BookingPage() {
       {/* Step 1: Select date */}
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>{intl.formatMessage({ id: 'booking.selectDate' })}</h3>
-        <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={30} />
+        <DatePicker
+          selectedDate={selectedDate}
+          onSelect={setSelectedDate}
+          daysAhead={30}
+          availabilityByDate={availabilityByDate}
+        />
       </div>
 
       {/* Step 2: Select time */}

@@ -276,6 +276,11 @@ export class BookingsService {
                   firstName: true,
                   lastName: true,
                   phone: true,
+                  user: {
+                    select: {
+                      telegramId: true,
+                    },
+                  },
                 },
               },
             },
@@ -364,6 +369,11 @@ export class BookingsService {
             firstName: true,
             lastName: true,
             phone: true,
+            user: {
+              select: {
+                telegramId: true,
+              },
+            },
           },
         },
       },
@@ -389,6 +399,9 @@ export class BookingsService {
               firstName: string;
               lastName: string | null;
               phone: string | null;
+              user?: {
+                telegramId?: bigint | null;
+              };
             };
           },
         ) => this.formatBookingResponse(b),
@@ -413,6 +426,11 @@ export class BookingsService {
             firstName: true,
             lastName: true,
             phone: true,
+            user: {
+              select: {
+                telegramId: true,
+              },
+            },
           },
         },
         service: {
@@ -989,6 +1007,16 @@ export class BookingsService {
    * docs/api/endpoints.md — Booking response format
    */
   private formatBookingResponse(booking: Record<string, unknown>): Record<string, unknown> {
+    const rawClient = booking.client as
+      | {
+          id: string;
+          firstName: string;
+          lastName: string | null;
+          phone: string | null;
+          user?: { telegramId?: bigint | null };
+        }
+      | undefined;
+
     return {
       id: booking.id,
       serviceNameSnapshot: booking.serviceNameSnapshot,
@@ -1004,7 +1032,17 @@ export class BookingsService {
         : undefined,
       cancelReason: booking.cancelReason || undefined,
       createdAt: (booking.createdAt as Date)?.toISOString?.() ?? booking.createdAt,
-      ...(booking.client ? { client: booking.client } : {}),
+      ...(rawClient
+        ? {
+            client: {
+              id: rawClient.id,
+              firstName: rawClient.firstName,
+              lastName: rawClient.lastName,
+              phone: rawClient.phone,
+              telegramId: rawClient.user?.telegramId?.toString() || null,
+            },
+          }
+        : {}),
       ...(booking.service ? { service: booking.service } : {}),
     };
   }

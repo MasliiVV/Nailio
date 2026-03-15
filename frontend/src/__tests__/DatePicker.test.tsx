@@ -8,20 +8,23 @@ describe('DatePicker', () => {
 
   it('renders date buttons', () => {
     render(<DatePicker selectedDate={todayKey} onSelect={() => {}} />);
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((button) => !button.textContent?.includes('‹') && !button.textContent?.includes('›'));
     expect(buttons.length).toBeGreaterThan(0);
   });
 
-  it('renders 30 days by default', () => {
+  it('renders month navigation', () => {
     render(<DatePicker selectedDate={todayKey} onSelect={() => {}} />);
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(30);
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText('Попередній місяць')).toBeInTheDocument();
+    expect(screen.getByLabelText('Наступний місяць')).toBeInTheDocument();
   });
 
-  it('renders custom daysAhead', () => {
+  it('renders visible dates for custom daysAhead', () => {
     render(<DatePicker selectedDate={todayKey} onSelect={() => {}} daysAhead={7} />);
-    const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(7);
+    expect(screen.getByText(String(today.getDate()))).toBeInTheDocument();
   });
 
   it('highlights selected date', () => {
@@ -33,7 +36,9 @@ describe('DatePicker', () => {
 
   it('marks today with special class', () => {
     render(<DatePicker selectedDate="" onSelect={() => {}} />);
-    const buttons = screen.getAllByRole('button');
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('aria-label')?.includes(String(today.getDate())));
     const todayBtn = buttons.find((btn) => btn.className.includes('today'));
     expect(todayBtn).toBeTruthy();
   });
@@ -41,15 +46,16 @@ describe('DatePicker', () => {
   it('calls onSelect with date key on click', () => {
     const onSelect = vi.fn();
     render(<DatePicker selectedDate={todayKey} onSelect={onSelect} daysAhead={7} />);
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[1]!); // Click second date
+    const dayButtons = screen
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('aria-label') && !button.hasAttribute('disabled'));
+    fireEvent.click(dayButtons[1]!);
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
   });
 
-  it('renders month labels', () => {
+  it('renders month title', () => {
     render(<DatePicker selectedDate={todayKey} onSelect={() => {}} daysAhead={60} />);
-    // Should have at least one month label visible
     const monthLabels = [
       'Січ',
       'Лют',
@@ -65,14 +71,30 @@ describe('DatePicker', () => {
       'Гру',
     ];
     const currentMonthLabel = monthLabels[today.getMonth()];
-    expect(screen.getByText(currentMonthLabel!)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`${currentMonthLabel}\\s+${today.getFullYear()}`)),
+    ).toBeInTheDocument();
   });
 
-  it('renders day names in Ukrainian', () => {
+  it('renders weekday header in Ukrainian', () => {
     render(<DatePicker selectedDate={todayKey} onSelect={() => {}} />);
-    const dayNames = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-    // At least one day name should be present
-    const found = dayNames.some((name) => screen.queryAllByText(name).length > 0);
-    expect(found).toBe(true);
+    const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+    dayNames.forEach((name) => {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('disables unavailable dates and shows cross mark', () => {
+    render(
+      <DatePicker
+        selectedDate={todayKey}
+        onSelect={() => {}}
+        availabilityByDate={{ [todayKey]: 'unavailable' }}
+      />,
+    );
+
+    const todayButton = screen.getByLabelText(new RegExp(String(today.getDate())));
+    expect(todayButton).toBeDisabled();
+    expect(screen.getByText('❌')).toBeInTheDocument();
   });
 });

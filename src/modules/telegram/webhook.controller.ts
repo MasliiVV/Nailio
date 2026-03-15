@@ -116,6 +116,12 @@ export class WebhookController {
         });
       }
 
+      if (update.message?.text?.startsWith('/')) {
+        this.handlePlatformCommand(update).catch((error) => {
+          this.logger.error('Platform bot command error', error);
+        });
+      }
+
       // Platform bot also handles text messages from masters (time suggestions)
       if (update.message?.text && !update.message.text.startsWith('/')) {
         this.handlePlatformTextMessage(update).catch((error) => {
@@ -1425,6 +1431,56 @@ export class WebhookController {
         reply_markup: { inline_keyboard: [] },
       }),
     });
+  }
+
+  /**
+   * Handle platform bot commands for master onboarding.
+   */
+  private async handlePlatformCommand(update: TelegramUpdate): Promise<void> {
+    const message = update.message;
+    if (!message?.text) return;
+
+    const command = message.text.split(' ')[0].toLowerCase();
+    const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+    const miniAppUrl = this.configService.get<string>('MINI_APP_URL', 'https://app.platform.com');
+
+    switch (command) {
+      case '/start':
+        await this.sendPlatformMessageWithKeyboard(
+          platformBotToken,
+          message.chat.id,
+          '👋 Вітаю!\n\nВідкрийте міні-додаток, щоб зареєструватися як майстер, налаштувати бота та керувати записами.',
+          {
+            inline_keyboard: [
+              [
+                {
+                  text: '🚀 Відкрити кабінет майстра',
+                  web_app: {
+                    url: miniAppUrl,
+                  },
+                },
+              ],
+            ],
+          },
+        );
+        break;
+
+      case '/help':
+        await this.sendPlatformMessage(
+          platformBotToken,
+          message.chat.id,
+          '📌 <b>Платформний бот Nailio</b>\n\n/start — відкрити кабінет майстра\n/help — показати підказку\n\nЯкщо ви новий майстер, натисніть кнопку з міні-додатком і пройдіть онбординг.',
+        );
+        break;
+
+      default:
+        await this.sendPlatformMessage(
+          platformBotToken,
+          message.chat.id,
+          'Використайте /start, щоб відкрити кабінет майстра.',
+        );
+        break;
+    }
   }
 
   /**

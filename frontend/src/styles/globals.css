@@ -1,7 +1,7 @@
 /* ============================================
    Nailio — Global Styles 2025
-   Modern Telegram Mini App Design System
-   Glassmorphism · Fluid Animations · Premium Feel
+   Premium Beauty Design System
+   Elegant Purple · Soft Gradients · Luxury Feel
    ============================================ */
 
 /* ---- CSS Reset ---- */
@@ -26,7 +26,7 @@ body {
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   color: var(--color-text);
-  background-color: var(--color-bg);
+  background: var(--color-bg);
   min-height: 100%;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -73,24 +73,41 @@ ol {
   list-style: none;
 }
 
+/* ============================================
+   Premium Beauty Color Palette
+   ============================================
+   Primary Purple:    #6E5AE6  — CTA, buttons, active
+   Soft Lavender:     #AFA3FF  — secondary highlights
+   Light Lilac BG:    #F4F2FF  — page background
+   Muted Violet:      #8C7AE6  — accent tones
+   Deep Purple:       #4C3F91  — headings, emphasis
+   Cream White:       #FDFCFF  — card surfaces
+   Warm Gray Text:    #3D3654  — body text
+   Muted Hint:        #8E85A3  — secondary text
+   Success:           #4CAF82  — muted green
+   Warning:           #E6A55A  — warm amber
+   Destructive:       #D45A6E  — soft rose-red
+   Gradient:          #F4F2FF → #E9E5FF → #D8D1FF
+   ============================================ */
+
 /* ---- Theme Variables ---- */
 :root {
-  /* Telegram theme mappings (set dynamically by telegram.ts) */
-  --tg-bg: #ffffff;
-  --tg-text: #000000;
-  --tg-hint: #8E8E93;
-  --tg-link: #007AFF;
-  --tg-button: #007AFF;
+  /* Telegram theme mappings (overridden by brand) */
+  --tg-bg: #F4F2FF;
+  --tg-text: #3D3654;
+  --tg-hint: #8E85A3;
+  --tg-link: #6E5AE6;
+  --tg-button: #6E5AE6;
   --tg-button-text: #ffffff;
-  --tg-secondary-bg: #F2F2F7;
-  --tg-header-bg: #ffffff;
-  --tg-accent-text: #007AFF;
-  --tg-section-bg: #ffffff;
-  --tg-section-header: #6d6d72;
-  --tg-section-separator: #E5E5EA;
-  --tg-subtitle-text: #8E8E93;
-  --tg-destructive: #FF3B30;
-  --tg-bottom-bar: #ffffff;
+  --tg-secondary-bg: #EBE8FF;
+  --tg-header-bg: #F4F2FF;
+  --tg-accent-text: #6E5AE6;
+  --tg-section-bg: #FDFCFF;
+  --tg-section-header: #8E85A3;
+  --tg-section-separator: #E2DFF0;
+  --tg-subtitle-text: #8E85A3;
+  --tg-destructive: #D45A6E;
+  --tg-bottom-bar: #FDFCFF;
 
   /* Safe area insets (set dynamically by telegram.ts) */
   --safe-top: 0px;
@@ -100,31 +117,42 @@ ol {
   --content-safe-top: 0px;
   --content-safe-bottom: 0px;
 
-  /* Fixed brand color (branding removed) */
-  --color-primary: #007AFF;
+  /* ── Brand colors ── */
+  --color-primary: #6E5AE6;
+  --color-primary-hover: #5D4BD4;
   --color-primary-text: #ffffff;
 
-  /* Semantic color aliases */
-  --color-bg: #F2F2F7;
-  --color-text: var(--tg-text);
-  --color-text-secondary: var(--tg-hint);
-  --color-link: var(--tg-link);
-  --color-secondary-bg: var(--tg-secondary-bg);
-  --color-section-bg: #ffffff;
-  --color-section-header: var(--tg-section-header);
-  --color-separator: var(--tg-section-separator);
-  --color-destructive: var(--tg-destructive);
-  --color-success: #34C759;
-  --color-warning: #FF9F0A;
+  /* ── Semantic colors ── */
+  --color-bg: #F4F2FF;
+  --color-bg-gradient: linear-gradient(180deg, #F4F2FF 0%, #E9E5FF 50%, #F4F2FF 100%);
+  --color-text: #3D3654;
+  --color-text-secondary: #8E85A3;
+  --color-link: #6E5AE6;
+  --color-secondary-bg: #EBE8FF;
+  --color-section-bg: #FDFCFF;
+  --color-section-header: #8E85A3;
+  --color-separator: #E2DFF0;
+  --color-destructive: #D45A6E;
+  --color-success: #4CAF82;
+  --color-warning: #E6A55A;
 
-  /* Derived colors for glass effects */
-  --color-glass: rgba(255, 255, 255, 0.82);
-  --color-glass-border: rgba(0, 0, 0, 0.04);
-  --color-glass-shadow: rgba(0, 0, 0, 0.03);
-  --color-primary-soft: rgba(0, 122, 255, 0.1);
-  --color-primary-medium: rgba(0, 122, 255, 0.18);
+  /* ── Purple palette tones ── */
+  --color-purple-deep: #4C3F91;
+  --color-purple-primary: #6E5AE6;
+  --color-purple-muted: #8C7AE6;
+  --color-purple-soft: #AFA3FF;
+  --color-purple-light: #D8D1FF;
+  --color-purple-wash: #EBE8FF;
+  --color-purple-ghost: #F4F2FF;
 
-  /* Spacing scale */
+  /* ── Glass & surface effects ── */
+  --color-glass: rgba(253, 252, 255, 0.85);
+  --color-glass-border: rgba(110, 90, 230, 0.06);
+  --color-glass-shadow: rgba(76, 63, 145, 0.04);
+  --color-primary-soft: rgba(110, 90, 230, 0.1);
+  --color-primary-medium: rgba(110, 90, 230, 0.18);
+
+  /* ── Spacing scale ── */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
@@ -134,32 +162,35 @@ ol {
   --space-3xl: 32px;
   --space-4xl: 40px;
 
-  /* Border radius — modern generous radii */
-  --radius-xs: 6px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
+  /* ── Border radius — generous & soft ── */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
   --radius-lg: 20px;
   --radius-xl: 24px;
   --radius-2xl: 28px;
   --radius-full: 9999px;
 
-  /* Shadows — layered for depth */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 20px color-mix(in srgb, var(--color-primary) 25%, transparent);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 0 1px rgba(0, 0, 0, 0.06);
+  /* ── Shadows — soft purple-tinted ── */
+  --shadow-xs: 0 1px 2px rgba(76, 63, 145, 0.04);
+  --shadow-sm: 0 1px 4px rgba(76, 63, 145, 0.06), 0 1px 2px rgba(76, 63, 145, 0.04);
+  --shadow-md: 0 4px 16px rgba(76, 63, 145, 0.07), 0 1px 4px rgba(76, 63, 145, 0.04);
+  --shadow-lg: 0 8px 32px rgba(76, 63, 145, 0.08), 0 2px 8px rgba(76, 63, 145, 0.04);
+  --shadow-xl: 0 16px 48px rgba(76, 63, 145, 0.1), 0 4px 12px rgba(76, 63, 145, 0.05);
+  --shadow-glow: 0 0 24px rgba(110, 90, 230, 0.2);
+  --shadow-card: 0 2px 12px rgba(76, 63, 145, 0.05), 0 0 1px rgba(76, 63, 145, 0.08);
+  --shadow-card-hover: 0 8px 24px rgba(76, 63, 145, 0.1), 0 2px 6px rgba(76, 63, 145, 0.06);
+  --shadow-button: 0 4px 14px rgba(110, 90, 230, 0.3);
+  --shadow-button-hover: 0 6px 20px rgba(110, 90, 230, 0.4);
 
-  /* Transitions — spring-like curves */
+  /* ── Transitions — smooth & refined ── */
   --transition-fast: 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --transition-normal: 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --transition-slow: 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
   --transition-bounce: 600ms cubic-bezier(0.68, -0.6, 0.32, 1.6);
 
-  /* Typography — refined scale */
+  /* ── Typography — elegant scale ── */
   --font-size-2xs: 0.625rem;  /* 10px */
   --font-size-xs: 0.6875rem;  /* 11px */
   --font-size-sm: 0.8125rem;  /* 13px */
@@ -170,21 +201,13 @@ ol {
   --font-size-3xl: 1.75rem;   /* 28px */
   --font-size-4xl: 2.125rem;  /* 34px */
 
-  /* Layout */
+  /* ── Layout ── */
   --bottom-nav-height: 64px;
   --header-height: 44px;
 
-  /* Beauty/Spa default palette (overrideable by tenant branding) */
-  --beauty-primary: #EC4899;
-  --beauty-secondary: #F9A8D4;
-  --beauty-accent: #8B5CF6;
-  --beauty-bg: #FDF2F8;
-  --beauty-text: #831843;
-  --beauty-border: #FBCFE8;
-
-  /* Focus ring */
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 40%, transparent);
-  --focus-ring-offset: 0 0 0 1px var(--color-bg), 0 0 0 4px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  /* ── Focus ring — purple-tinted ── */
+  --focus-ring: 0 0 0 3px rgba(110, 90, 230, 0.35);
+  --focus-ring-offset: 0 0 0 1px var(--color-bg), 0 0 0 4px rgba(110, 90, 230, 0.35);
 }
 
 /* ---- Safe area body padding ---- */
@@ -243,7 +266,7 @@ small {
 .page-title {
   font-size: var(--font-size-3xl);
   font-weight: 800;
-  color: var(--color-text);
+  color: var(--color-purple-deep);
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
@@ -263,7 +286,7 @@ small {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   box-shadow: var(--shadow-card);
-  border: 0.5px solid var(--color-glass-border);
+  border: 1px solid var(--color-glass-border);
 }
 
 .card + .card {
@@ -418,8 +441,8 @@ small {
 .spinner {
   width: 24px;
   height: 24px;
-  border: 2.5px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-  border-top-color: var(--color-primary);
+  border: 2.5px solid var(--color-purple-light);
+  border-top-color: var(--color-purple-primary);
   border-radius: 50%;
   animation: spin 0.7s cubic-bezier(0.5, 0, 0.5, 1) infinite;
 }
@@ -491,21 +514,21 @@ small {
 
 .badge--primary {
   background: var(--color-primary-soft);
-  color: var(--color-primary);
+  color: var(--color-purple-primary);
 }
 
 .badge--success {
-  background: rgba(48, 209, 88, 0.12);
+  background: rgba(76, 175, 130, 0.12);
   color: var(--color-success);
 }
 
 .badge--warning {
-  background: rgba(255, 159, 10, 0.12);
+  background: rgba(230, 165, 90, 0.12);
   color: var(--color-warning);
 }
 
 .badge--destructive {
-  background: rgba(255, 59, 48, 0.12);
+  background: rgba(212, 90, 110, 0.1);
   color: var(--color-destructive);
 }
 
@@ -556,8 +579,8 @@ small {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-primary-text);
+  background: linear-gradient(135deg, var(--color-purple-primary), var(--color-purple-muted));
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -565,7 +588,7 @@ small {
   font-weight: 600;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 0 0 2px var(--color-bg), var(--shadow-sm);
+  box-shadow: 0 0 0 2.5px var(--color-bg), var(--shadow-sm);
 }
 
 .avatar--sm {
@@ -682,7 +705,7 @@ small {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 60%, var(--color-success)));
+  background: linear-gradient(90deg, var(--color-purple-primary), var(--color-purple-soft));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 

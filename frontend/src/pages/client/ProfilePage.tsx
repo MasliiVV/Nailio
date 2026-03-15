@@ -59,6 +59,14 @@ export function ClientProfilePage() {
           type="tel"
           placeholder="+380..."
         />
+        {profile?.telegramId && (
+          <Input
+            label={intl.formatMessage({ id: 'clients.telegramId' })}
+            value={profile.telegramId}
+            onChange={() => undefined}
+            disabled
+          />
+        )}
         <Button fullWidth loading={saving} onClick={handleSave}>
           {intl.formatMessage({ id: 'common.save' })}
         </Button>

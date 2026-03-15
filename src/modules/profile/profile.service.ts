@@ -21,6 +21,13 @@ export class ProfileService {
     if (user.role === 'master' && user.tenantId) {
       const master = await this.prisma.master.findFirst({
         where: { userId: user.sub, tenantId: user.tenantId },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
       });
       if (!master) throw new NotFoundException('Master profile not found');
 
@@ -34,6 +41,7 @@ export class ProfileService {
         firstName: master.firstName,
         lastName: master.lastName,
         phone: master.phone,
+        telegramId: master.user?.telegramId?.toString() || null,
         tenant: tenant
           ? {
               id: tenant.id,
@@ -48,6 +56,13 @@ export class ProfileService {
     if (user.role === 'client' && user.clientId && user.tenantId) {
       const client = await this.prisma.tenantClient.client.findFirst({
         where: { id: user.clientId, tenantId: user.tenantId },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
       });
       if (!client) throw new NotFoundException('Client profile not found');
 
@@ -57,6 +72,7 @@ export class ProfileService {
         firstName: client.firstName,
         lastName: client.lastName,
         phone: client.phone,
+        telegramId: client.user?.telegramId?.toString() || null,
         lastVisitAt: client.lastVisitAt?.toISOString(),
       };
     }
@@ -71,6 +87,13 @@ export class ProfileService {
     if (user.role === 'master' && user.tenantId) {
       const master = await this.prisma.master.findFirst({
         where: { userId: user.sub, tenantId: user.tenantId },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
       });
       if (!master) throw new NotFoundException('Master profile not found');
 
@@ -91,10 +114,23 @@ export class ProfileService {
         firstName: updated.firstName,
         lastName: updated.lastName,
         phone: updated.phone,
+        telegramId: master.user?.telegramId?.toString() || null,
       };
     }
 
     if (user.role === 'client' && user.clientId && user.tenantId) {
+      const existingClient = await this.prisma.tenantClient.client.findFirst({
+        where: { id: user.clientId, tenantId: user.tenantId },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
+      });
+      if (!existingClient) throw new NotFoundException('Client profile not found');
+
       const updated = await this.prisma.tenantClient.client.update({
         where: { id: user.clientId },
         data: {
@@ -112,6 +148,7 @@ export class ProfileService {
         firstName: updated.firstName,
         lastName: updated.lastName,
         phone: updated.phone,
+        telegramId: existingClient.user?.telegramId?.toString() || null,
       };
     }
 

@@ -16,17 +16,17 @@
 }
 
 .success {
-  background: rgba(48, 209, 88, 0.12);
+  background: rgba(76, 175, 130, 0.12);
   color: var(--color-success);
 }
 
 .warning {
-  background: rgba(255, 159, 10, 0.12);
+  background: rgba(230, 165, 90, 0.12);
   color: var(--color-warning);
 }
 
 .destructive {
-  background: rgba(255, 59, 48, 0.12);
+  background: rgba(212, 90, 110, 0.1);
   color: var(--color-destructive);
 }
 

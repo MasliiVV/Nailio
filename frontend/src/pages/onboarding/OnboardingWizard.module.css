@@ -10,7 +10,7 @@
 
 .progressBar {
   height: 4px;
-  background: var(--color-bg-secondary);
+  background: var(--color-secondary-bg);
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -67,7 +67,7 @@
   font-size: 15px;
   text-decoration: none;
   padding: 12px;
-  background: var(--color-bg-secondary);
+  background: var(--color-secondary-bg);
   border-radius: var(--radius-md);
 }
 
@@ -110,7 +110,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: var(--color-bg-secondary);
+  background: var(--color-secondary-bg);
   border-radius: var(--radius-md);
   padding: 12px;
 }
@@ -132,7 +132,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  background: var(--color-bg-secondary);
+  background: var(--color-secondary-bg);
   border-radius: var(--radius-sm);
 }
 
@@ -181,7 +181,7 @@
   text-align: center;
   font-size: 14px;
   color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
+  background: var(--color-secondary-bg);
   padding: 12px;
   border-radius: var(--radius-md);
   margin-bottom: 8px;
