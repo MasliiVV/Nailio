@@ -61,6 +61,26 @@ export class NotificationsService {
   }
 
   /**
+   * Silently remove pending BullMQ jobs for a booking (no notifications sent).
+   * Used for hard-delete — just clean up Redis queue.
+   */
+  async silentlyRemoveBookingJobs(tenantId: string, bookingId: string) {
+    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
+      where: { tenantId, bookingId, status: 'pending' },
+    });
+    for (const notif of pendingNotifs) {
+      if (notif.jobId) {
+        try {
+          const job = await this.notifQueue.getJob(notif.jobId);
+          if (job) await job.remove();
+        } catch {
+          // Job may already be processed
+        }
+      }
+    }
+  }
+
+  /**
    * Cancel all pending notifications for a booking.
    * docs/telegram/notifications.md — Edge Case #1
    *   → Remove pending BullMQ jobs

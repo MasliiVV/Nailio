@@ -514,14 +514,10 @@ export class BookingsService {
 
     if (!booking) throw new NotFoundException('Booking not found');
 
-    // Cancel any scheduled notifications
-    await this.notificationsService.cancelBookingNotifications(
-      tenantId,
-      bookingId,
-      booking.clientId,
-      'master',
-    );
+    // Silently remove pending BullMQ jobs (no notification to client)
+    await this.notificationsService.silentlyRemoveBookingJobs(tenantId, bookingId);
 
+    // Delete booking (notifications cascade-deleted via FK)
     await this.prisma.tenantClient.booking.delete({
       where: { id: bookingId },
     });
