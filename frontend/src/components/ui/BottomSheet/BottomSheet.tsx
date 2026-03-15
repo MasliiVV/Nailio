@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './BottomSheet.module.css';
 
 interface BottomSheetProps {
@@ -76,7 +77,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
 
   if (!visible) return null;
 
-  return (
+  return createPortal(
     <>
       <div
         className={`${styles.backdrop} ${animating ? styles.backdropVisible : ''}`}
@@ -89,6 +90,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         {title && <h3 className={styles.title}>{title}</h3>}
         <div className={styles.content} ref={contentRef}>{children}</div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
