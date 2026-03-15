@@ -60,6 +60,20 @@ function formatDateDisplay(iso: string): string {
   });
 }
 
+function timeToMinutes(time: string): number {
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(totalMinutes: number): string {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60)
+    .toString()
+    .padStart(2, '0');
+  const minutes = (normalized % 60).toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 export function CalendarPage() {
   const intl = useIntl();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
@@ -92,6 +106,7 @@ export function CalendarPage() {
   const [dayDraftIsDayOff, setDayDraftIsDayOff] = useState(false);
   const [showResolutionStep, setShowResolutionStep] = useState(false);
   const [bookingResolutions, setBookingResolutions] = useState<Record<string, string>>({});
+  const [autoArrangeStartTime, setAutoArrangeStartTime] = useState('09:00');
 
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
@@ -131,6 +146,7 @@ export function CalendarPage() {
     setDayDraftIsDayOff(dayScheduleData.isDayOff && dayScheduleData.slots.length === 0);
     setShowResolutionStep(false);
     setBookingResolutions({});
+    setAutoArrangeStartTime(dayScheduleData.slots[0]?.time || '09:00');
   }, [dayScheduleData, showDayEditor]);
 
   const handleOpenBookingDetail = (booking: Booking) => {
@@ -282,15 +298,42 @@ export function CalendarPage() {
     (slotTime) => !retainedBookedTimes.includes(slotTime),
   );
 
+  const handleAutoArrangeDaySlots = () => {
+    if (sorted.length === 0) {
+      return;
+    }
+
+    const nextAssignments: Record<string, string> = {};
+    let cursor = timeToMinutes(autoArrangeStartTime);
+
+    for (const booking of sorted) {
+      const nextTime = minutesToTime(cursor);
+      nextAssignments[booking.id] = nextTime;
+      cursor += booking.durationAtBooking;
+    }
+
+    const bookedTimesNow = bookedDaySlots.map((slot) => slot.time);
+    const freeTimes = normalizedDayDraftSlots.filter((slot) => !bookedTimesNow.includes(slot));
+    const arrangedTimes = Object.values(nextAssignments);
+
+    setDayDraftIsDayOff(false);
+    setDayDraftSlots(normalizeSlotTimes([...freeTimes, ...arrangedTimes]));
+    setBookingResolutions((previous) => ({
+      ...previous,
+      ...nextAssignments,
+    }));
+    getTelegram()?.HapticFeedback.notificationOccurred('success');
+  };
+
   const handleSaveDaySlots = async () => {
     if (impactedBookings.length > 0 && !showResolutionStep) {
-      setBookingResolutions(
-        Object.fromEntries(
+      setBookingResolutions((previous) => ({
+        ...Object.fromEntries(
           impactedBookings
             .filter((slot) => slot.booking)
-            .map((slot) => [slot.booking!.id, 'cancel']),
+            .map((slot) => [slot.booking!.id, previous[slot.booking!.id] || 'cancel']),
         ),
-      );
+      }));
       setShowResolutionStep(true);
       return;
     }
@@ -960,6 +1003,32 @@ export function CalendarPage() {
           </div>
         ) : (
           <div className={styles.dayEditorSheet}>
+            {sorted.length > 0 && (
+              <div className={styles.autoArrangeCard}>
+                <div className={styles.autoArrangeHeader}>
+                  <div>
+                    <div className={styles.autoArrangeTitle}>
+                      {intl.formatMessage({ id: 'schedule.autoArrange' })}
+                    </div>
+                    <div className={styles.autoArrangeHint}>
+                      {intl.formatMessage({ id: 'schedule.autoArrangeHint' })}
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.autoArrangeControls}>
+                  <input
+                    type="time"
+                    className={styles.timeInput}
+                    value={autoArrangeStartTime}
+                    onChange={(e) => setAutoArrangeStartTime(e.target.value)}
+                  />
+                  <Button variant="secondary" onClick={handleAutoArrangeDaySlots}>
+                    {intl.formatMessage({ id: 'schedule.autoArrangeAction' })}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <label className={styles.checkboxRow}>
               <input
                 type="checkbox"

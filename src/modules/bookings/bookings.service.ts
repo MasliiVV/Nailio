@@ -91,10 +91,6 @@ export class BookingsService {
 
     const now = new Date();
 
-    const bookedTimes = new Set(
-      existingBookings.map((booking) => this.formatTimeInTimezone(booking.startTime, timezone)),
-    );
-
     const slots = configuredSlots
       .map((slotStartStr) => {
         const slotStartDt = this.buildDateTimeInTz(query.date, slotStartStr, timezone);
@@ -103,10 +99,14 @@ export class BookingsService {
         }
 
         const slotEndDt = new Date(slotStartDt.getTime() + service.durationMinutes * 60 * 1000);
+        const isOverlapping = existingBookings.some(
+          (booking: Booking) => slotStartDt < booking.endTime && slotEndDt > booking.startTime,
+        );
+
         return {
           startTime: slotStartStr,
           endTime: this.formatTimeInTimezone(slotEndDt, timezone),
-          available: !bookedTimes.has(slotStartStr),
+          available: !isOverlapping,
         } satisfies SlotDto;
       })
       .filter((slot): slot is SlotDto => Boolean(slot));
@@ -191,15 +191,16 @@ export class BookingsService {
     try {
       const booking = await this.prisma.$transaction(
         async (tx) => {
-          const bookedSlot = await tx.booking.findFirst({
+          const overlapping = await tx.booking.findFirst({
             where: {
               tenantId,
               status: { notIn: ['cancelled'] },
-              startTime,
+              startTime: { lt: endTime },
+              endTime: { gt: startTime },
             },
           });
 
-          if (bookedSlot) {
+          if (overlapping) {
             throw new ConflictException('Time slot is already booked');
           }
 
@@ -577,6 +578,20 @@ export class BookingsService {
         booking.startTime.getTime() + service.durationMinutes * 60 * 1000,
       );
 
+      const conflicting = await this.prisma.tenantClient.booking.findFirst({
+        where: {
+          tenantId,
+          id: { not: bookingId },
+          status: { notIn: ['cancelled'] },
+          startTime: { lt: newEndTime },
+          endTime: { gt: booking.startTime },
+        },
+      });
+
+      if (conflicting) {
+        throw new ConflictException('New service duration conflicts with another booking');
+      }
+
       updateData.service = { connect: { id: dto.serviceId } };
       updateData.serviceNameSnapshot = service.name;
       updateData.priceAtBooking = service.price;
@@ -644,7 +659,8 @@ export class BookingsService {
         tenantId,
         id: { not: bookingId },
         status: { notIn: ['cancelled'] },
-        startTime: newStartTime,
+        startTime: { lt: newEndTime },
+        endTime: { gt: newStartTime },
       },
     });
 
