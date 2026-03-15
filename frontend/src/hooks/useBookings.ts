@@ -16,14 +16,17 @@ import { getTelegram } from '@/lib/telegram';
 // ---- Query keys ----
 export const bookingKeys = {
   all: ['bookings'] as const,
+  lists: () => [...bookingKeys.all, 'list'] as const,
   list: (params?: Record<string, string>) => [...bookingKeys.all, 'list', params] as const,
+  details: () => [...bookingKeys.all, 'detail'] as const,
   detail: (id: string) => [...bookingKeys.all, id] as const,
+  slotsRoot: () => [...bookingKeys.all, 'slots'] as const,
   slots: (date: string, serviceId: string) =>
     [...bookingKeys.all, 'slots', date, serviceId] as const,
 };
 
 // ---- Fetch slots ----
-export function useSlots(date: string, serviceId: string) {
+export function useSlots(date: string, serviceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: bookingKeys.slots(date, serviceId),
     queryFn: async () => {
@@ -32,17 +35,27 @@ export function useSlots(date: string, serviceId: string) {
       );
       return res.data;
     },
-    enabled: !!date && !!serviceId,
+    enabled: !!date && !!serviceId && (options?.enabled ?? true),
     staleTime: 30_000, // 30 seconds — slots can change
   });
 }
 
 // ---- Fetch bookings list ----
-export function useBookings(params?: { status?: string; upcoming?: boolean; cursor?: string }) {
+export function useBookings(params?: {
+  status?: string;
+  upcoming?: boolean;
+  cursor?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  clientId?: string;
+}) {
   const searchParams = new URLSearchParams();
   if (params?.status) searchParams.set('status', params.status);
   if (params?.upcoming !== undefined) searchParams.set('upcoming', String(params.upcoming));
   if (params?.cursor) searchParams.set('cursor', params.cursor);
+  if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+  if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+  if (params?.clientId) searchParams.set('clientId', params.clientId);
 
   const qs = searchParams.toString();
 
@@ -82,7 +95,8 @@ export function useCreateBooking() {
     onSuccess: () => {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       const tg = getTelegram();
@@ -104,7 +118,8 @@ export function useCancelBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('warning');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       const tg = getTelegram();
@@ -126,7 +141,7 @@ export function useCompleteBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
     },
   });
 }
@@ -142,7 +157,7 @@ export function useNoShowBooking() {
     },
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
     },
   });
 }
@@ -159,7 +174,8 @@ export function useDeleteBooking() {
     onSuccess: () => {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       const tg = getTelegram();
@@ -181,7 +197,8 @@ export function useRescheduleBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       const tg = getTelegram();
@@ -203,7 +220,8 @@ export function useUpdateBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       const tg = getTelegram();

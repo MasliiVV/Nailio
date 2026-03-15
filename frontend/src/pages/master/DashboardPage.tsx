@@ -14,6 +14,13 @@ import {
 import type { Booking } from '@/types';
 import styles from './DashboardPage.module.css';
 
+function formatDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 }
@@ -22,20 +29,16 @@ export function DashboardPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { data: dashboard, isLoading: dashLoading } = useDashboard('week');
+  const today = formatDateKey(new Date());
   const { data: bookingsData, isLoading: bookingsLoading } = useBookings({
     upcoming: true,
+    dateFrom: today,
+    dateTo: today,
   });
 
-  const todayBookings = (bookingsData?.items || []).filter((b: Booking) => {
-    const d = new Date(b.startTime);
-    const now = new Date();
-    return (
-      d.getDate() === now.getDate() &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear() &&
-      (b.status === 'pending' || b.status === 'confirmed')
-    );
-  });
+  const todayBookings = (bookingsData?.items || []).filter(
+    (b: Booking) => b.status === 'pending' || b.status === 'confirmed',
+  );
 
   return (
     <div className="page animate-fade-in">

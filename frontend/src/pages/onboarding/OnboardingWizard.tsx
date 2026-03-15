@@ -18,11 +18,9 @@ import { Button, Input, Card } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import {
-  createEmptyWeeklySchedule,
-  getNextSlotTime,
-  normalizeSlotTimes,
   WEEK_DAY_KEYS,
 } from '@/lib/schedule';
+import { useWeeklyScheduleDraft } from '@/hooks';
 import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
 
@@ -57,7 +55,15 @@ export function OnboardingWizard() {
   const [scheduleError, setScheduleError] = useState('');
 
   // Step 5: Schedule
-  const [schedule, setSchedule] = useState(createEmptyWeeklySchedule());
+  const {
+    draft: schedule,
+    toggleDay,
+    addSlot,
+    copyPreviousDay,
+    changeSlot,
+    removeSlot,
+    serializeDays,
+  } = useWeeklyScheduleDraft();
 
   const next = useCallback(() => {
     getTelegram()?.HapticFeedback.impactOccurred('light');
@@ -166,11 +172,7 @@ export function OnboardingWizard() {
     setLoading(true);
     try {
       await api.put('/schedule/hours', {
-        days: schedule.map((day) => ({
-          ...day,
-          slots: day.isDayOff ? [] : normalizeSlotTimes(day.slots),
-          isDayOff: day.isDayOff || normalizeSlotTimes(day.slots).length === 0,
-        })),
+        days: serializeDays(),
       });
       next();
     } catch (error) {
@@ -426,17 +428,7 @@ export function OnboardingWizard() {
                       type="checkbox"
                       checked={!day.isDayOff}
                       onChange={() => {
-                        setSchedule((prev) => {
-                          const updated = [...prev];
-                          updated[index] = day.isDayOff
-                            ? {
-                                ...day,
-                                isDayOff: false,
-                                slots: day.slots.length > 0 ? day.slots : ['09:00'],
-                              }
-                            : { ...day, isDayOff: true, slots: [] };
-                          return updated;
-                        });
+                        toggleDay(day.dayOfWeek);
                       }}
                     />
                     <span>{intl.formatMessage({ id: `schedule.${dayKey}` })}</span>
@@ -450,34 +442,14 @@ export function OnboardingWizard() {
                             className={styles.timeInput}
                             value={slot}
                             onChange={(e) => {
-                              setSchedule((prev) => {
-                                const updated = [...prev];
-                                updated[index] = {
-                                  ...day,
-                                  slots: day.slots.map((currentSlot, currentIndex) =>
-                                    currentIndex === slotIndex ? e.target.value : currentSlot,
-                                  ),
-                                };
-                                return updated;
-                              });
+                              changeSlot(day.dayOfWeek, slotIndex, e.target.value);
                             }}
                           />
                           <button
                             type="button"
                             className={styles.removeSlotBtn}
                             onClick={() => {
-                              setSchedule((prev) => {
-                                const updated = [...prev];
-                                const nextSlots = day.slots.filter(
-                                  (_, currentIndex) => currentIndex !== slotIndex,
-                                );
-                                updated[index] = {
-                                  ...day,
-                                  slots: nextSlots,
-                                  isDayOff: nextSlots.length === 0,
-                                };
-                                return updated;
-                              });
+                              removeSlot(day.dayOfWeek, slotIndex);
                             }}
                           >
                             ×
@@ -490,20 +462,7 @@ export function OnboardingWizard() {
                             type="button"
                             className={styles.secondarySlotBtn}
                             onClick={() => {
-                              setSchedule((prev) => {
-                                const updated = [...prev];
-                                const sourceDay = prev[index - 1];
-                                if (!sourceDay || sourceDay.isDayOff || sourceDay.slots.length === 0) {
-                                  return prev;
-                                }
-
-                                updated[index] = {
-                                  ...day,
-                                  isDayOff: false,
-                                  slots: [...sourceDay.slots],
-                                };
-                                return updated;
-                              });
+                              copyPreviousDay(day.dayOfWeek);
                             }}
                           >
                             {intl.formatMessage({ id: 'schedule.copyPreviousDay' })}
@@ -513,15 +472,7 @@ export function OnboardingWizard() {
                           type="button"
                           className={styles.addSlotBtn}
                           onClick={() => {
-                            setSchedule((prev) => {
-                              const updated = [...prev];
-                              updated[index] = {
-                                ...day,
-                                isDayOff: false,
-                                slots: [...day.slots, getNextSlotTime(day.slots)],
-                              };
-                              return updated;
-                            });
+                            addSlot(day.dayOfWeek);
                           }}
                         >
                           + {intl.formatMessage({ id: 'schedule.addSlot' })}

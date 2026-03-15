@@ -8,11 +8,13 @@ import { WebhookController } from './webhook.controller';
 import { BotController } from './bot.controller';
 import { TenantsModule } from '../tenants/tenants.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { TelegramApiService } from './telegram-api.service';
+import { ConversationStateService } from './conversation-state.service';
 
 @Module({
   imports: [TenantsModule, forwardRef(() => NotificationsModule)],
   controllers: [BotController, WebhookController],
-  providers: [BotService, BotCryptoService],
-  exports: [BotService, BotCryptoService],
+  providers: [BotService, BotCryptoService, TelegramApiService, ConversationStateService],
+  exports: [BotService, BotCryptoService, TelegramApiService, ConversationStateService],
 })
 export class TelegramModule {}

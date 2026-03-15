@@ -9,13 +9,14 @@ export const serviceKeys = {
   detail: (id: string) => [...serviceKeys.all, id] as const,
 };
 
-export function useServices() {
+export function useServices(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: serviceKeys.list(),
     queryFn: async () => {
       const res = await api.get<ApiResponse<Service[]>>('/services');
       return res.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 120_000,
   });
 }

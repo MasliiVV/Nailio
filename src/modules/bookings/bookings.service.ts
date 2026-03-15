@@ -21,6 +21,11 @@ import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { renderTemplate } from '../notifications/templates';
 import { Booking, BookingStatus, Prisma } from '@prisma/client';
 import {
+  buildDateTimeInTimezone,
+  formatBookingDateTime,
+  formatTimeInTimezone,
+} from '../../common/utils/date-time.util';
+import {
   CreateBookingDto,
   CancelBookingDto,
   RescheduleBookingDto,
@@ -77,8 +82,8 @@ export class BookingsService {
       return { date: query.date, timezone, slots: [] };
     }
 
-    const dayStart = this.buildDateTimeInTz(query.date, '00:00', timezone);
-    const dayEnd = this.buildDateTimeInTz(query.date, '23:59', timezone);
+    const dayStart = buildDateTimeInTimezone(query.date, '00:00', timezone);
+    const dayEnd = buildDateTimeInTimezone(query.date, '23:59', timezone);
 
     const existingBookings = await this.prisma.tenantClient.booking.findMany({
       where: {
@@ -93,19 +98,17 @@ export class BookingsService {
 
     const slots = configuredSlots
       .map((slotStartStr) => {
-        const slotStartDt = this.buildDateTimeInTz(query.date, slotStartStr, timezone);
+        const slotStartDt = buildDateTimeInTimezone(query.date, slotStartStr, timezone);
         if (slotStartDt <= now) {
           return null;
         }
 
         const slotEndDt = new Date(slotStartDt.getTime() + service.durationMinutes * 60 * 1000);
-        const isOverlapping = existingBookings.some(
-          (booking: Booking) => slotStartDt < booking.endTime && slotEndDt > booking.startTime,
-        );
+        const isOverlapping = this.hasOverlappingInterval(slotStartDt, slotEndDt, existingBookings);
 
         return {
           startTime: slotStartStr,
-          endTime: this.formatTimeInTimezone(slotEndDt, timezone),
+          endTime: formatTimeInTimezone(slotEndDt, timezone),
           available: !isOverlapping,
         } satisfies SlotDto;
       })
@@ -645,7 +648,7 @@ export class BookingsService {
 
     const timezone = tenant.timezone || 'Europe/Kyiv';
     const localDateStr = newStartTime.toLocaleDateString('en-CA', { timeZone: timezone });
-    const localTimeStr = this.formatTimeInTimezone(newStartTime, timezone);
+    const localTimeStr = formatTimeInTimezone(newStartTime, timezone);
     const allowedSlots = await this.scheduleService.getSlotTimesForDate(tenantId, localDateStr);
 
     if (!allowedSlots.includes(localTimeStr)) {
@@ -829,63 +832,43 @@ export class BookingsService {
   // Helpers
   // ──────────────────────────────────────────────
 
-  /**
-   * Build a Date object from date string + time string in a given timezone.
-   * e.g. buildDateTimeInTz("2026-03-15", "09:00", "Europe/Kyiv")
-   */
-  private buildDateTimeInTz(dateStr: string, timeStr: string, timezone: string): Date {
-    // Create a date string interpreted in the given timezone
-    const dateTimeStr = `${dateStr}T${timeStr}:00`;
-    // Use Intl to get the UTC offset for this timezone on this date
-    const tempDate = new Date(dateTimeStr + 'Z');
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'longOffset',
-    });
-    const parts = formatter.formatToParts(tempDate);
-    const tzPart = parts.find((p) => p.type === 'timeZoneName');
-    const offset = tzPart?.value || '+00:00';
-
-    // Parse offset like "GMT+02:00" → "+02:00"
-    const offsetStr = offset.replace('GMT', '') || '+00:00';
-
-    return new Date(`${dateStr}T${timeStr}:00${offsetStr}`);
-  }
-
-  /**
-   * Convert minutes since midnight to "HH:mm" format
-   */
-  private minutesToTime(minutes: number): string {
-    const h = Math.floor(minutes / 60)
-      .toString()
-      .padStart(2, '0');
-    const m = (minutes % 60).toString().padStart(2, '0');
-    return `${h}:${m}`;
-  }
-
-  private formatTimeInTimezone(date: Date, timezone: string): string {
-    return date.toLocaleTimeString('en-GB', {
-      timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  }
-
   private formatBookingDateTimeForTimezone(startTime: Date, timezone: string) {
-    const date = new Intl.DateTimeFormat('uk-UA', {
-      timeZone: timezone,
-      day: 'numeric',
-      month: 'long',
-    }).format(startTime);
-    const time = new Intl.DateTimeFormat('uk-UA', {
-      timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(startTime);
+    return formatBookingDateTime(startTime, timezone);
+  }
 
-    return { date, time };
+  private hasOverlappingInterval(slotStart: Date, slotEnd: Date, bookings: Booking[]): boolean {
+    const slotStartMs = slotStart.getTime();
+    const slotEndMs = slotEnd.getTime();
+    let activeInterval: { start: number; end: number } | null = null;
+
+    for (const booking of bookings) {
+      const interval = {
+        start: booking.startTime.getTime(),
+        end: booking.endTime.getTime(),
+      };
+
+      if (interval.end <= slotStartMs) {
+        continue;
+      }
+
+      if (!activeInterval) {
+        activeInterval = interval;
+      } else if (interval.start <= activeInterval.end) {
+        activeInterval.end = Math.max(activeInterval.end, interval.end);
+      } else {
+        activeInterval = interval;
+      }
+
+      if (activeInterval.start < slotEndMs && activeInterval.end > slotStartMs) {
+        return true;
+      }
+
+      if (activeInterval.start >= slotEndMs) {
+        return false;
+      }
+    }
+
+    return false;
   }
 
   // ──────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { bookingKeys } from './useBookings';
 import type {
   ApiResponse,
   Schedule,
@@ -12,16 +13,19 @@ import { getTelegram } from '@/lib/telegram';
 
 export const scheduleKeys = {
   all: ['schedule'] as const,
-  day: (date: string) => [...scheduleKeys.all, 'day', date] as const,
+  weekly: () => [...scheduleKeys.all, 'weekly'] as const,
+  days: () => [...scheduleKeys.all, 'day'] as const,
+  day: (date: string) => [...scheduleKeys.days(), date] as const,
 };
 
-export function useSchedule() {
+export function useSchedule(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: scheduleKeys.all,
+    queryKey: scheduleKeys.weekly(),
     queryFn: async () => {
       const res = await api.get<ApiResponse<Schedule>>('/schedule');
       return res.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 120_000,
   });
 }
@@ -35,11 +39,11 @@ export function useUpdateWorkingHours() {
       return res.data;
     },
     onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: scheduleKeys.all });
-      const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.all);
+      await queryClient.cancelQueries({ queryKey: scheduleKeys.weekly() });
+      const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.weekly());
 
       if (previous) {
-        queryClient.setQueryData(scheduleKeys.all, {
+        queryClient.setQueryData(scheduleKeys.weekly(), {
           ...previous,
           data: { ...(previous as ApiResponse<Schedule>).data, weekly: payload.days },
         });
@@ -48,13 +52,15 @@ export function useUpdateWorkingHours() {
     },
     onError: (_err, _payload, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(scheduleKeys.all, context.previous);
+        queryClient.setQueryData(scheduleKeys.weekly(), context.previous);
       }
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
   });
 }
@@ -69,19 +75,21 @@ export function useCreateOverride() {
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
   });
 }
 
-export function useDaySchedule(date: string) {
+export function useDaySchedule(date: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: scheduleKeys.day(date),
     queryFn: async () => {
       const res = await api.get<ApiResponse<DaySchedule>>(`/schedule/date/${date}`);
       return res.data;
     },
-    enabled: !!date,
+    enabled: !!date && (options?.enabled ?? true),
     staleTime: 30_000,
   });
 }
@@ -97,8 +105,8 @@ export function useUpdateDaySchedule(date: string) {
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: scheduleKeys.day(date) });
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
     onError: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('error');
@@ -114,7 +122,9 @@ export function useDeleteOverride() {
       await api.delete(`/schedule/overrides/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
     },
   });
 }

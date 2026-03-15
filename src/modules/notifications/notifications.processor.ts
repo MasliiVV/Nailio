@@ -21,6 +21,7 @@ import { PrismaService, TENANT_ID_KEY } from '../../prisma/prisma.service';
 import { BotCryptoService } from '../telegram/bot-crypto.service';
 import { QUEUE_NAMES, NotificationJobData } from '../../common/bullmq/tenant-context';
 import { renderTemplate, TemplateVariables } from './templates';
+import { buildTelegramUserLink, formatBookingDateTime } from '../../common/utils/date-time.util';
 
 @Injectable()
 @Processor(QUEUE_NAMES.NOTIFICATIONS)
@@ -136,28 +137,23 @@ export class NotificationsProcessor extends WorkerHost {
         }
 
         // 7. Format date/time in tenant timezone
-        const dateFormatter = new Intl.DateTimeFormat(langCode === 'en' ? 'en-US' : 'uk-UA', {
-          timeZone: tenant.timezone || 'Europe/Kyiv',
-          day: 'numeric',
-          month: 'long',
-        });
-        const timeFormatter = new Intl.DateTimeFormat(langCode === 'en' ? 'en-US' : 'uk-UA', {
-          timeZone: tenant.timezone || 'Europe/Kyiv',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        });
+        const locale = langCode === 'en' ? 'en-US' : 'uk-UA';
+        const { date, time } = formatBookingDateTime(
+          booking.startTime,
+          tenant.timezone || 'Europe/Kyiv',
+          locale,
+        );
 
         const templateVars: TemplateVariables = {
           serviceName: booking.serviceNameSnapshot,
-          date: dateFormatter.format(booking.startTime),
-          time: timeFormatter.format(booking.startTime),
+          date,
+          time,
           duration: booking.durationAtBooking,
           price: booking.priceAtBooking,
           cancellationWindow: (settings.cancellation_window_hours as number) || 24,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
           clientPhone: booking.client.phone || undefined,
-          clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
+          clientTelegramLink: buildTelegramUserLink(booking.client.user.telegramId),
           reason: booking.cancelReason || undefined,
         };
 
@@ -304,14 +300,6 @@ export class NotificationsProcessor extends WorkerHost {
         throw error; // BullMQ will retry based on job config
       }
     });
-  }
-
-  /**
-   * Build a clickable Telegram link for a user.
-   * Uses tg://user?id=... which opens the user's profile in TG.
-   */
-  private buildTelegramLink(telegramId: bigint): string {
-    return `<a href="tg://user?id=${telegramId}">Написати в ТГ</a>`;
   }
 
   /**

@@ -11,6 +11,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOverrideDto, UpdateWorkingHoursDto } from './dto/schedule.dto';
+import {
+  buildDateTimeInTimezone,
+  formatTimeInTimezone as formatTimeInTimezoneValue,
+} from '../../common/utils/date-time.util';
 
 interface SlotDayConfig {
   dayOfWeek: number;
@@ -497,24 +501,10 @@ export class ScheduleService {
   }
 
   private buildDateTimeInTz(dateStr: string, timeStr: string, timezone: string): Date {
-    const tempDate = new Date(`${dateStr}T${timeStr}:00Z`);
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'longOffset',
-    });
-    const offset =
-      formatter.formatToParts(tempDate).find((part) => part.type === 'timeZoneName')?.value ||
-      'GMT+00:00';
-
-    return new Date(`${dateStr}T${timeStr}:00${offset.replace('GMT', '') || '+00:00'}`);
+    return buildDateTimeInTimezone(dateStr, timeStr, timezone);
   }
 
   private formatTimeInTimezone(date: Date, timezone: string): string {
-    return date.toLocaleTimeString('en-GB', {
-      timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    return formatTimeInTimezoneValue(date, timezone);
   }
 }

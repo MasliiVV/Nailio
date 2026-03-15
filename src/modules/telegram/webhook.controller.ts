@@ -21,20 +21,9 @@ import { ConfigService } from '@nestjs/config';
 import { BotCryptoService } from './bot-crypto.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { renderTemplate, TemplateVariables } from '../notifications/templates';
-
-/**
- * State entry for tracking conversation flows (time suggestion, message to master).
- * Stored in-memory — suitable for single-instance deployment.
- */
-interface ConversationState {
-  action: 'awaiting_time' | 'awaiting_message' | 'awaiting_reply';
-  bookingId: string;
-  tenantId: string;
-  chatId: number;
-  messageId?: number;
-  clientTelegramId?: bigint; // for master→client reply
-  expiresAt: number; // timestamp — auto-cleanup after 10 min
-}
+import { ConversationState, ConversationStateService } from './conversation-state.service';
+import { TelegramApiService } from './telegram-api.service';
+import { buildTelegramUserLink, formatBookingDateTime } from '../../common/utils/date-time.util';
 
 interface TelegramUpdate {
   update_id: number;
@@ -57,33 +46,15 @@ interface TelegramUpdate {
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
-  /**
-   * In-memory conversation state for multi-step flows:
-   * - Master suggests another time (awaiting_time)
-   * - Client writes message to master (awaiting_message)
-   * Key: telegramUserId as string
-   */
-  private readonly conversationState = new Map<string, ConversationState>();
-
   constructor(
     private readonly botService: BotService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly botCrypto: BotCryptoService,
     private readonly notificationsService: NotificationsService,
-  ) {
-    // Cleanup expired conversation states every 5 minutes
-    setInterval(() => this.cleanupExpiredStates(), 5 * 60 * 1000);
-  }
-
-  private cleanupExpiredStates() {
-    const now = Date.now();
-    for (const [key, state] of this.conversationState.entries()) {
-      if (state.expiresAt < now) {
-        this.conversationState.delete(key);
-      }
-    }
-  }
+    private readonly conversationStateService: ConversationStateService,
+    private readonly telegramApiService: TelegramApiService,
+  ) {}
 
   /**
    * Receive webhook from Telegram
@@ -170,7 +141,7 @@ export class WebhookController {
     if (update.message?.text) {
       // Check if client is in a conversation flow (awaiting message to master)
       const userId = update.message.from.id.toString();
-      const state = this.conversationState.get(userId);
+      const state = this.conversationStateService.get(userId);
       if (state && state.action === 'awaiting_message' && Date.now() < state.expiresAt) {
         await this.handleClientMessageToMaster(botDbId, update);
         return;
@@ -363,7 +334,7 @@ export class WebhookController {
     const masterId = cbq.from.id.toString();
 
     // Set conversation state — expect time input from master
-    this.conversationState.set(masterId, {
+    this.conversationStateService.set(masterId, {
       action: 'awaiting_time',
       bookingId: booking.id,
       tenantId: booking.tenantId,
@@ -400,7 +371,7 @@ export class WebhookController {
     if (!message?.text || !message.from) return;
 
     const userId = message.from.id.toString();
-    const state = this.conversationState.get(userId);
+    const state = this.conversationStateService.get(userId);
 
     if (!state || Date.now() >= state.expiresAt) {
       return; // Not in a conversation flow
@@ -447,7 +418,7 @@ export class WebhookController {
     }
 
     // Remove conversation state
-    this.conversationState.delete(userId);
+    this.conversationStateService.delete(userId);
 
     try {
       // Load booking with full details
@@ -685,7 +656,7 @@ export class WebhookController {
     const userId = cbq.from.id.toString();
 
     // Set conversation state
-    this.conversationState.set(userId, {
+    this.conversationStateService.set(userId, {
       action: 'awaiting_message',
       bookingId: booking.id,
       tenantId: booking.tenantId,
@@ -696,20 +667,16 @@ export class WebhookController {
     await this.answerCallbackQuery(botToken, cbq.id, '✍️ Напишіть повідомлення');
 
     // Send instruction message
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: cbq.message?.chat.id,
-        text: `✍️ Напишіть повідомлення для майстра.\n\n📋 Запис: ${booking.serviceNameSnapshot}\n\n<i>Просто напишіть текст і він буде надісланий майстру.</i>`,
-        parse_mode: 'HTML',
-        reply_markup: {
-          force_reply: true,
-          selective: true,
-          input_field_placeholder: 'Ваше повідомлення майстру...',
-        },
-      }),
-    });
+    await this.telegramApiService.sendMessage(
+      botToken,
+      cbq.message?.chat.id || cbq.from.id,
+      `✍️ Напишіть повідомлення для майстра.\n\n📋 Запис: ${booking.serviceNameSnapshot}\n\n<i>Просто напишіть текст і він буде надісланий майстру.</i>`,
+      {
+        force_reply: true,
+        selective: true,
+        input_field_placeholder: 'Ваше повідомлення майстру...',
+      },
+    );
 
     this.logger.log(`Client ${userId} initiated message to master for booking ${bookingId}`);
   }
@@ -1036,7 +1003,7 @@ export class WebhookController {
     const userId = cbq.from.id.toString();
 
     // Set conversation state
-    this.conversationState.set(userId, {
+    this.conversationStateService.set(userId, {
       action: 'awaiting_reply',
       bookingId,
       tenantId: booking.tenantId,
@@ -1067,7 +1034,7 @@ export class WebhookController {
     const userId = message.from.id.toString();
 
     // Remove conversation state
-    this.conversationState.delete(userId);
+    this.conversationStateService.delete(userId);
 
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
 
@@ -1126,39 +1093,32 @@ export class WebhookController {
     if (!message?.text || !message.from) return;
 
     const userId = message.from.id.toString();
-    const state = this.conversationState.get(userId);
+    const state = this.conversationStateService.get(userId);
 
     if (!state || state.action !== 'awaiting_message') return;
 
     // Remove conversation state
-    this.conversationState.delete(userId);
+    this.conversationStateService.delete(userId);
 
     try {
       const botToken = await this.botService.getDecryptedToken(botDbId);
 
       const booking = await this.loadBookingForCallback(state.bookingId);
       if (!booking) {
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: message.chat.id,
-            text: '❌ Запис не знайдено',
-          }),
-        });
+        await this.telegramApiService.sendMessage(
+          botToken,
+          message.chat.id,
+          '❌ Запис не знайдено',
+        );
         return;
       }
 
       // Confirm to client
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: message.chat.id,
-          text: '✅ Ваше повідомлення надіслано майстру!',
-          parse_mode: 'HTML',
-        }),
-      });
+      await this.telegramApiService.sendMessage(
+        botToken,
+        message.chat.id,
+        '✅ Ваше повідомлення надіслано майстру!',
+      );
 
       // Forward to master via platform bot
       const { dateStr, timeStr } = this.formatBookingDateTime(booking);
@@ -1209,15 +1169,7 @@ export class WebhookController {
       if (!bot) return;
 
       const botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: clientTelegramId.toString(),
-          text,
-          parse_mode: 'HTML',
-        }),
-      });
+      await this.telegramApiService.sendMessage(botToken, clientTelegramId, text);
     } catch (error) {
       this.logger.error(`Failed to notify client ${clientTelegramId}: ${error}`);
     }
@@ -1239,16 +1191,7 @@ export class WebhookController {
       if (!bot) return;
 
       const botToken = await this.botCrypto.decrypt(bot.botTokenEncrypted);
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: clientTelegramId.toString(),
-          text,
-          parse_mode: 'HTML',
-          reply_markup: replyMarkup,
-        }),
-      });
+      await this.telegramApiService.sendMessage(botToken, clientTelegramId, text, replyMarkup);
     } catch (error) {
       this.logger.error(`Failed to notify client with keyboard ${clientTelegramId}: ${error}`);
     }
@@ -1315,20 +1258,10 @@ export class WebhookController {
     tenant?: { timezone: string | null } | null;
   }): { dateStr: string; timeStr: string } {
     const tz = booking.tenant?.timezone || 'Europe/Kyiv';
-    const dateFmt = new Intl.DateTimeFormat('uk-UA', {
-      timeZone: tz,
-      day: 'numeric',
-      month: 'long',
-    });
-    const timeFmt = new Intl.DateTimeFormat('uk-UA', {
-      timeZone: tz,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    const formatted = formatBookingDateTime(booking.startTime, tz);
     return {
-      dateStr: dateFmt.format(booking.startTime),
-      timeStr: timeFmt.format(booking.startTime),
+      dateStr: formatted.date,
+      timeStr: formatted.time,
     };
   }
 
@@ -1348,7 +1281,7 @@ export class WebhookController {
    * Uses tg://user?id=... which opens a DM with the user in TG.
    */
   private buildTelegramLink(telegramId: bigint): string {
-    return `<a href="tg://user?id=${telegramId}">Написати в ТГ</a>`;
+    return buildTelegramUserLink(telegramId);
   }
 
   /**
@@ -1359,15 +1292,7 @@ export class WebhookController {
     callbackQueryId: string,
     text: string,
   ): Promise<void> {
-    await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        callback_query_id: callbackQueryId,
-        text,
-        show_alert: true,
-      }),
-    });
+    await this.telegramApiService.answerCallbackQuery(botToken, callbackQueryId, text);
   }
 
   /**
@@ -1379,16 +1304,7 @@ export class WebhookController {
     messageId: number,
     text: string,
   ): Promise<void> {
-    await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: 'HTML',
-      }),
-    });
+    await this.telegramApiService.editMessageText(botToken, chatId, messageId, text);
   }
 
   /**
@@ -1401,17 +1317,7 @@ export class WebhookController {
     text: string,
     replyMarkup: Record<string, unknown>,
   ): Promise<void> {
-    await fetch(`https://api.telegram.org/bot${botToken}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        text,
-        parse_mode: 'HTML',
-        reply_markup: replyMarkup,
-      }),
-    });
+    await this.telegramApiService.editMessageText(botToken, chatId, messageId, text, replyMarkup);
   }
 
   /**
@@ -1422,15 +1328,7 @@ export class WebhookController {
     chatId: number,
     messageId: number,
   ): Promise<void> {
-    await fetch(`https://api.telegram.org/bot${botToken}/editMessageReplyMarkup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-        reply_markup: { inline_keyboard: [] },
-      }),
-    });
+    await this.telegramApiService.editMessageReplyMarkup(botToken, chatId, messageId);
   }
 
   /**

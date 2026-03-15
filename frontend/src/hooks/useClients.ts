@@ -9,7 +9,7 @@ export const clientKeys = {
   detail: (id: string) => [...clientKeys.all, id] as const,
 };
 
-export function useClients(search?: string) {
+export function useClients(search?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: clientKeys.list(search),
     queryFn: async () => {
@@ -21,6 +21,7 @@ export function useClients(search?: string) {
       );
       return res.data;
     },
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   });
 }

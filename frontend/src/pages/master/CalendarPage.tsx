@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import {
   Calendar,
@@ -79,7 +79,10 @@ export function CalendarPage() {
   const intl = useIntl();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const [manualBookingDate, setManualBookingDate] = useState(formatDateKey(new Date()));
-  const { data: bookingsData, isLoading } = useBookings();
+  const { data: bookingsData, isLoading } = useBookings({
+    dateFrom: selectedDate,
+    dateTo: selectedDate,
+  });
   const cancelBooking = useCancelBooking();
   const deleteBooking = useDeleteBooking();
   const rescheduleBooking = useRescheduleBooking();
@@ -109,36 +112,39 @@ export function CalendarPage() {
   const [bookingResolutions, setBookingResolutions] = useState<Record<string, string>>({});
   const [autoArrangeStartTime, setAutoArrangeStartTime] = useState('09:00');
 
-  const { data: servicesData } = useServices();
-  const { data: clientsData } = useClients();
-  const { data: scheduleData } = useSchedule();
+  const needsServices = showAddForm || detailMode === 'edit';
+  const needsClients = showAddForm || detailMode === 'reassign';
+  const needsWeeklySchedule = showDayEditor;
+  const needsDaySchedule = showDayEditor;
+  const needsManualSlots = showAddForm && !!selectedServiceId;
+  const needsRescheduleSlots = detailMode === 'reschedule' && !!selectedBooking?.service?.id;
+
+  const { data: servicesData } = useServices({ enabled: needsServices });
+  const { data: clientsData } = useClients(undefined, { enabled: needsClients });
+  const { data: scheduleData } = useSchedule({ enabled: needsWeeklySchedule });
   const createBooking = useCreateBooking();
-  const { data: dayScheduleData } = useDaySchedule(selectedDate);
+  const { data: dayScheduleData } = useDaySchedule(selectedDate, { enabled: needsDaySchedule });
   const updateDaySchedule = useUpdateDaySchedule(selectedDate);
 
   // Slots for add form
-  const { data: slotsData } = useSlots(manualBookingDate, selectedServiceId);
+  const { data: slotsData } = useSlots(manualBookingDate, selectedServiceId, {
+    enabled: needsManualSlots,
+  });
 
   // Slots for reschedule — use the booking's service
   const rescheduleServiceId = selectedBooking?.service?.id || '';
-  const { data: rescheduleSlotsData } = useSlots(selectedDate, rescheduleServiceId);
+  const { data: rescheduleSlotsData } = useSlots(selectedDate, rescheduleServiceId, {
+    enabled: needsRescheduleSlots,
+  });
 
   const services = (servicesData as Service[] | undefined) || [];
   const clients = (clientsData?.items as Client[] | undefined) || [];
   const slots = slotsData?.slots?.filter((s) => s.available) || [];
   const rescheduleSlots = rescheduleSlotsData?.slots?.filter((s) => s.available) || [];
 
-  const allBookings = bookingsData?.items || [];
-
-  // Filter bookings by selected date
-  const bookings = allBookings.filter((b) => {
-    const bookingDate = new Date(b.startTime).toISOString().split('T')[0];
-    return bookingDate === selectedDate;
-  });
-
-  // Sort by time
-  const sorted = [...bookings].sort(
-    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+  const sorted = useMemo(
+    () => [...(bookingsData?.items || [])].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [bookingsData?.items],
   );
 
   useEffect(() => {
@@ -288,7 +294,15 @@ export function CalendarPage() {
     );
   };
 
-  const bookedDaySlots = dayScheduleData?.slots.filter((slot) => slot.booking) || [];
+  const bookingBySlotTime = useMemo(
+    () => new Map((dayScheduleData?.slots || []).map((slot) => [slot.time, slot.booking])),
+    [dayScheduleData?.slots],
+  );
+
+  const bookedDaySlots = useMemo(
+    () => (dayScheduleData?.slots || []).filter((slot) => slot.booking),
+    [dayScheduleData?.slots],
+  );
   const normalizedDayDraftSlots = dayDraftIsDayOff ? [] : normalizeSlotTimes(dayDraftSlots);
   const impactedBookings = bookedDaySlots.filter(
     (slot) => !normalizedDayDraftSlots.includes(slot.time),
@@ -1067,9 +1081,7 @@ export function CalendarPage() {
                 </button>
 
                 {dayDraftSlots.map((slot, index) => {
-                  const booking = dayScheduleData?.slots.find(
-                    (daySlot) => daySlot.time === slot && daySlot.booking,
-                  )?.booking;
+                  const booking = bookingBySlotTime.get(slot);
 
                   return (
                     <div key={`day-slot-${index}`} className={styles.daySlotRow}>

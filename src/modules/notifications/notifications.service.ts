@@ -65,19 +65,7 @@ export class NotificationsService {
    * Used for hard-delete — just clean up Redis queue.
    */
   async silentlyRemoveBookingJobs(tenantId: string, bookingId: string) {
-    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
-      where: { tenantId, bookingId, status: 'pending' },
-    });
-    for (const notif of pendingNotifs) {
-      if (notif.jobId) {
-        try {
-          const job = await this.notifQueue.getJob(notif.jobId);
-          if (job) await job.remove();
-        } catch {
-          // Job may already be processed
-        }
-      }
-    }
+    await this.cleanupPendingNotifications(tenantId, bookingId, false);
   }
 
   /**
@@ -93,31 +81,7 @@ export class NotificationsService {
     clientId: string,
     _cancelledBy: 'master' | 'client',
   ) {
-    // Find all pending notifications for this booking
-    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
-      where: {
-        tenantId,
-        bookingId,
-        status: 'pending',
-      },
-    });
-
-    // Remove BullMQ jobs and mark as cancelled
-    for (const notif of pendingNotifs) {
-      if (notif.jobId) {
-        try {
-          const job = await this.notifQueue.getJob(notif.jobId);
-          if (job) await job.remove();
-        } catch {
-          // Job may already be processed or removed
-        }
-      }
-
-      await this.prisma.tenantClient.notification.update({
-        where: { id: notif.id },
-        data: { status: 'cancelled' },
-      });
-    }
+    await this.cleanupPendingNotifications(tenantId, bookingId, true);
 
     // Schedule cancellation notification to client (immediate)
     await this.addNotificationJob(tenantId, bookingId, clientId, 'cancellation', 0);
@@ -134,29 +98,7 @@ export class NotificationsService {
     clientId: string,
     newStartTime: Date,
   ) {
-    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
-      where: {
-        tenantId,
-        bookingId,
-        status: 'pending',
-      },
-    });
-
-    for (const notif of pendingNotifs) {
-      if (notif.jobId) {
-        try {
-          const job = await this.notifQueue.getJob(notif.jobId);
-          if (job) await job.remove();
-        } catch {
-          // ignore removed jobs
-        }
-      }
-
-      await this.prisma.tenantClient.notification.update({
-        where: { id: notif.id },
-        data: { status: 'cancelled' },
-      });
-    }
+    await this.cleanupPendingNotifications(tenantId, bookingId, true);
 
     await this.addNotificationJob(tenantId, bookingId, clientId, 'reschedule', 0);
 
@@ -173,6 +115,50 @@ export class NotificationsService {
     }
 
     this.logger.log(`Notifications rescheduled for booking ${bookingId} in tenant ${tenantId}`);
+  }
+
+  private async cleanupPendingNotifications(
+    tenantId: string,
+    bookingId: string,
+    markCancelled: boolean,
+  ) {
+    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
+      where: {
+        tenantId,
+        bookingId,
+        status: 'pending',
+      },
+      select: {
+        id: true,
+        jobId: true,
+      },
+    });
+
+    await Promise.all(
+      pendingNotifs.map(async (notif) => {
+        if (!notif.jobId) {
+          return;
+        }
+
+        try {
+          const job = await this.notifQueue.getJob(notif.jobId);
+          if (job) {
+            await job.remove();
+          }
+        } catch {
+          // Job may already be processed or removed
+        }
+      }),
+    );
+
+    if (markCancelled && pendingNotifs.length > 0) {
+      await this.prisma.tenantClient.notification.updateMany({
+        where: { id: { in: pendingNotifs.map((notif) => notif.id) } },
+        data: { status: 'cancelled' },
+      });
+    }
+
+    return pendingNotifs;
   }
 
   /**
