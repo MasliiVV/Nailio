@@ -192,6 +192,12 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
   margin-top: var(--space-lg);
+  position: sticky;
+  bottom: 0;
+  background: var(--color-bg);
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  z-index: 1;
 }
 
 .detailActionBtn {
