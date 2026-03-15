@@ -154,10 +154,10 @@
 
 .scheduleTime {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 150px;
 }
 
 .timeInput {
@@ -169,6 +169,31 @@
   color: var(--color-text);
   font-size: 14px;
   text-align: center;
+}
+
+.scheduleSlotRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.removeSlotBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--color-separator);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.addSlotBtn {
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-primary);
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .botLink {

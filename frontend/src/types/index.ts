@@ -136,31 +136,56 @@ export interface UpdateServiceDto extends Partial<CreateServiceDto> {
 }
 
 // ---- Schedule ----
-export interface WorkingHours {
-  dayOfWeek: number; // 0=Mon ... 6=Sun
-  isWorking: boolean;
-  startTime: string; // "09:00"
-  endTime: string; // "18:00"
+export interface ScheduleDay {
+  dayOfWeek: number;
+  isDayOff: boolean;
+  slots: string[];
 }
 
 export interface ScheduleOverride {
   id: string;
   date: string;
   isDayOff: boolean;
-  startTime: string | null;
-  endTime: string | null;
+  slots: string[];
 }
 
 export interface Schedule {
-  hours: WorkingHours[];
+  weekly: ScheduleDay[];
   overrides: ScheduleOverride[];
+}
+
+export interface BookingSlotReassignmentDto {
+  bookingId: string;
+  newTime: string;
 }
 
 export interface CreateOverrideDto {
   date: string;
   isDayOff: boolean;
-  startTime?: string;
-  endTime?: string;
+  slots: string[];
+  reassignments?: BookingSlotReassignmentDto[];
+  cancelBookingIds?: string[];
+}
+
+export interface DayScheduleSlotBooking {
+  id: string;
+  clientName: string;
+  serviceName: string;
+  status: BookingStatus;
+}
+
+export interface DayScheduleSlot {
+  time: string;
+  isBooked: boolean;
+  locked: boolean;
+  booking?: DayScheduleSlotBooking;
+}
+
+export interface DaySchedule {
+  date: string;
+  isDayOff: boolean;
+  source: 'template' | 'override';
+  slots: DayScheduleSlot[];
 }
 
 // ---- Slots ----

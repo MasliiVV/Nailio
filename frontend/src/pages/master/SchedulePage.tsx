@@ -1,88 +1,79 @@
-import { useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { Trash2 } from 'lucide-react';
-import { useSchedule, useUpdateWorkingHours, useCreateOverride, useDeleteOverride } from '@/hooks';
-import {
-  Card,
-  Button,
-  Input,
-  BottomSheet,
-  SkeletonList,
-  PageHeader,
-  Section,
-  Toggle,
-  FormGroup,
-} from '@/components/ui';
+import { Plus, Trash2 } from 'lucide-react';
+import { useSchedule, useUpdateWorkingHours } from '@/hooks';
+import { Card, Button, SkeletonList, Section, PageHeader, Toggle } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
-import type { WorkingHours, CreateOverrideDto } from '@/types';
+import type { ScheduleDay } from '@/types';
+import { createEmptyWeeklySchedule, normalizeSlotTimes, WEEK_DAY_KEYS } from '@/lib/schedule';
 import styles from './SchedulePage.module.css';
-
-const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 export function SchedulePage() {
   const intl = useIntl();
   const { data: schedule, isLoading } = useSchedule();
   const updateHours = useUpdateWorkingHours();
-  const createOverride = useCreateOverride();
-  const deleteOverride = useDeleteOverride();
+  const [draft, setDraft] = useState<ScheduleDay[]>(createEmptyWeeklySchedule());
 
-  const [showOverrideForm, setShowOverrideForm] = useState(false);
-  const [overrideDate, setOverrideDate] = useState('');
-  const [overrideIsDayOff, setOverrideIsDayOff] = useState(true);
-  const [overrideStart, setOverrideStart] = useState('09:00');
-  const [overrideEnd, setOverrideEnd] = useState('18:00');
-
-  const handleToggleDay = (dayOfWeek: number, hours: WorkingHours | undefined) => {
-    getTelegram()?.HapticFeedback.selectionChanged();
-    if (hours?.isWorking) {
-      updateHours.mutate({
-        dayOfWeek,
-        isWorking: false,
-        startTime: hours.startTime,
-        endTime: hours.endTime,
-      });
-    } else {
-      updateHours.mutate({
-        dayOfWeek,
-        isWorking: true,
-        startTime: hours?.startTime || '09:00',
-        endTime: hours?.endTime || '18:00',
-      });
+  useEffect(() => {
+    if (schedule?.weekly?.length) {
+      setDraft(
+        createEmptyWeeklySchedule().map((day) => {
+          const existing = schedule.weekly.find((entry) => entry.dayOfWeek === day.dayOfWeek);
+          return existing ? { ...existing, slots: [...existing.slots] } : day;
+        }),
+      );
     }
+  }, [schedule]);
+
+  const updateDay = (dayOfWeek: number, updater: (day: ScheduleDay) => ScheduleDay) => {
+    setDraft((previous) =>
+      previous.map((day) => (day.dayOfWeek === dayOfWeek ? updater(day) : day)),
+    );
   };
 
-  const timeChangeTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-  const handleTimeChange = useCallback(
-    (dayOfWeek: number, field: 'startTime' | 'endTime', value: string) => {
-      const key = `${dayOfWeek}-${field}`;
-      if (timeChangeTimers.current[key]) {
-        clearTimeout(timeChangeTimers.current[key]);
+  const handleToggleDay = (dayOfWeek: number) => {
+    getTelegram()?.HapticFeedback.selectionChanged();
+    updateDay(dayOfWeek, (day) => {
+      if (day.isDayOff) {
+        return { ...day, isDayOff: false, slots: day.slots.length > 0 ? day.slots : ['09:00'] };
       }
-      timeChangeTimers.current[key] = setTimeout(() => {
-        const existing = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === dayOfWeek);
-        updateHours.mutate({
-          dayOfWeek,
-          isWorking: true,
-          startTime: field === 'startTime' ? value : existing?.startTime || '09:00',
-          endTime: field === 'endTime' ? value : existing?.endTime || '18:00',
-        });
-      }, 600);
-    },
-    [schedule, updateHours],
-  );
+      return { ...day, isDayOff: true, slots: [] };
+    });
+  };
 
-  const handleAddOverride = () => {
-    const dto: CreateOverrideDto = {
-      date: overrideDate,
-      isDayOff: overrideIsDayOff,
-      ...(overrideIsDayOff ? {} : { startTime: overrideStart, endTime: overrideEnd }),
-    };
-    createOverride.mutate(dto, {
-      onSuccess: () => {
-        setShowOverrideForm(false);
-        setOverrideDate('');
-      },
+  const handleAddSlot = (dayOfWeek: number) => {
+    updateDay(dayOfWeek, (day) => ({
+      ...day,
+      isDayOff: false,
+      slots: normalizeSlotTimes([...day.slots, '09:00']),
+    }));
+  };
+
+  const handleSlotChange = (dayOfWeek: number, index: number, value: string) => {
+    updateDay(dayOfWeek, (day) => ({
+      ...day,
+      slots: day.slots.map((slot, slotIndex) => (slotIndex === index ? value : slot)),
+    }));
+  };
+
+  const handleRemoveSlot = (dayOfWeek: number, index: number) => {
+    updateDay(dayOfWeek, (day) => {
+      const nextSlots = day.slots.filter((_, slotIndex) => slotIndex !== index);
+      return {
+        ...day,
+        slots: nextSlots,
+        isDayOff: nextSlots.length === 0,
+      };
+    });
+  };
+
+  const handleSave = () => {
+    updateHours.mutate({
+      days: draft.map((day) => ({
+        ...day,
+        slots: day.isDayOff ? [] : normalizeSlotTimes(day.slots),
+        isDayOff: day.isDayOff || normalizeSlotTimes(day.slots).length === 0,
+      })),
     });
   };
 
@@ -98,11 +89,10 @@ export function SchedulePage() {
     <div className="page animate-fade-in">
       <PageHeader title={intl.formatMessage({ id: 'schedule.title' })} />
 
-      <Section title={intl.formatMessage({ id: 'schedule.workingHours' })}>
+      <Section title={intl.formatMessage({ id: 'schedule.slotTemplate' })}>
         <Card padding="none">
-          {DAY_KEYS.map((dayKey, index) => {
-            const hours = schedule?.hours?.find((h: WorkingHours) => h.dayOfWeek === index);
-            const isWorking = hours?.isWorking ?? false;
+          {WEEK_DAY_KEYS.map((dayKey, index) => {
+            const day = draft[index]!;
 
             return (
               <div key={dayKey} className={styles.dayRow}>
@@ -110,23 +100,42 @@ export function SchedulePage() {
                   <span className={styles.dayName}>
                     {intl.formatMessage({ id: `schedule.${dayKey}` })}
                   </span>
-                  <Toggle checked={isWorking} onChange={() => handleToggleDay(index, hours)} />
+                  <Toggle checked={!day.isDayOff} onChange={() => handleToggleDay(index)} />
                 </div>
-                {isWorking && (
-                  <div className={styles.timeInputs}>
-                    <input
-                      type="time"
-                      className={styles.timeInput}
-                      value={hours?.startTime || '09:00'}
-                      onChange={(e) => handleTimeChange(index, 'startTime', e.target.value)}
-                    />
-                    <span className={styles.timeSep}>—</span>
-                    <input
-                      type="time"
-                      className={styles.timeInput}
-                      value={hours?.endTime || '18:00'}
-                      onChange={(e) => handleTimeChange(index, 'endTime', e.target.value)}
-                    />
+                {day.isDayOff ? (
+                  <div className={styles.dayOffText}>
+                    {intl.formatMessage({ id: 'schedule.dayOff' })}
+                  </div>
+                ) : (
+                  <div className={styles.slotList}>
+                    {day.slots.map((slot, slotIndex) => (
+                      <div key={`${day.dayOfWeek}-${slotIndex}`} className={styles.slotRow}>
+                        <input
+                          type="time"
+                          className={styles.timeInput}
+                          value={slot}
+                          onChange={(e) =>
+                            handleSlotChange(day.dayOfWeek, slotIndex, e.target.value)
+                          }
+                        />
+                        <button
+                          type="button"
+                          className={styles.iconButton}
+                          onClick={() => handleRemoveSlot(day.dayOfWeek, slotIndex)}
+                          aria-label={intl.formatMessage({ id: 'common.delete' })}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className={styles.addSlotButton}
+                      onClick={() => handleAddSlot(day.dayOfWeek)}
+                    >
+                      <Plus size={16} />
+                      {intl.formatMessage({ id: 'schedule.addSlot' })}
+                    </button>
                   </div>
                 )}
               </div>
@@ -135,87 +144,15 @@ export function SchedulePage() {
         </Card>
       </Section>
 
-      <Section
-        title={intl.formatMessage({ id: 'schedule.overrides' })}
-        action={
-          <Button size="sm" variant="secondary" onClick={() => setShowOverrideForm(true)}>
-            + {intl.formatMessage({ id: 'common.add' })}
-          </Button>
-        }
-      >
-        {schedule?.overrides && schedule.overrides.length > 0 ? (
-          schedule.overrides.map((override) => (
-            <Card key={override.id} className={styles.overrideCard}>
-              <div className={styles.overrideRow}>
-                <div>
-                  <div className={styles.overrideDate}>{override.date}</div>
-                  <div className={styles.overrideMeta}>
-                    {override.isDayOff
-                      ? intl.formatMessage({ id: 'schedule.dayOff' })
-                      : `${override.startTime} — ${override.endTime}`}
-                  </div>
-                </div>
-                <button
-                  className="touchable"
-                  onClick={() => deleteOverride.mutate(override.id)}
-                  aria-label={intl.formatMessage({ id: 'common.delete' })}
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </Card>
-          ))
-        ) : (
-          <p className={styles.emptyText}>{intl.formatMessage({ id: 'schedule.noOverrides' })}</p>
-        )}
+      <Section title={intl.formatMessage({ id: 'schedule.dayOverrides' })}>
+        <Card>
+          <p className={styles.hintText}>{intl.formatMessage({ id: 'schedule.overrideHint' })}</p>
+        </Card>
       </Section>
 
-      <BottomSheet
-        open={showOverrideForm}
-        onClose={() => setShowOverrideForm(false)}
-        title={intl.formatMessage({ id: 'schedule.addOverride' })}
-      >
-        <FormGroup>
-          <Input
-            label={intl.formatMessage({ id: 'schedule.date' })}
-            type="date"
-            value={overrideDate}
-            onChange={(e) => setOverrideDate(e.target.value)}
-          />
-          <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={overrideIsDayOff}
-              onChange={(e) => setOverrideIsDayOff(e.target.checked)}
-            />
-            <span>{intl.formatMessage({ id: 'schedule.dayOff' })}</span>
-          </label>
-          {!overrideIsDayOff && (
-            <div className={styles.timeRow}>
-              <Input
-                label={intl.formatMessage({ id: 'schedule.startTime' })}
-                type="time"
-                value={overrideStart}
-                onChange={(e) => setOverrideStart(e.target.value)}
-              />
-              <Input
-                label={intl.formatMessage({ id: 'schedule.endTime' })}
-                type="time"
-                value={overrideEnd}
-                onChange={(e) => setOverrideEnd(e.target.value)}
-              />
-            </div>
-          )}
-          <Button
-            fullWidth
-            loading={createOverride.isPending}
-            onClick={handleAddOverride}
-            disabled={!overrideDate}
-          >
-            {intl.formatMessage({ id: 'common.save' })}
-          </Button>
-        </FormGroup>
-      </BottomSheet>
+      <Button fullWidth loading={updateHours.isPending} onClick={handleSave}>
+        {intl.formatMessage({ id: 'common.save' })}
+      </Button>
     </div>
   );
 }

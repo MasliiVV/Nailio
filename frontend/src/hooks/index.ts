@@ -26,6 +26,8 @@ export {
   useUpdateWorkingHours,
   useCreateOverride,
   useDeleteOverride,
+  useDaySchedule,
+  useUpdateDaySchedule,
   scheduleKeys,
 } from './useSchedule';
 export { useClients, useClient, useBlockClient, useUnblockClient, clientKeys } from './useClients';

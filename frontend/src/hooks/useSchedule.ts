@@ -3,14 +3,16 @@ import { api } from '@/lib/api';
 import type {
   ApiResponse,
   Schedule,
-  WorkingHours,
   ScheduleOverride,
   CreateOverrideDto,
+  DaySchedule,
+  ScheduleDay,
 } from '@/types';
 import { getTelegram } from '@/lib/telegram';
 
 export const scheduleKeys = {
   all: ['schedule'] as const,
+  day: (date: string) => [...scheduleKeys.all, 'day', date] as const,
 };
 
 export function useSchedule() {
@@ -28,47 +30,19 @@ export function useUpdateWorkingHours() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (
-      payload: { hours: Array<Omit<WorkingHours, 'isWorking'>> } | WorkingHours,
-    ) => {
+    mutationFn: async (payload: { days: ScheduleDay[] }) => {
       const res = await api.put<ApiResponse<Schedule>>('/schedule/hours', payload);
       return res.data;
     },
-    // Optimistic update — toggle shows immediately instead of waiting for server
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey: scheduleKeys.all });
       const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.all);
 
-      if (previous && 'dayOfWeek' in payload) {
-        const updatedHours = [
-          ...(previous.data?.hours || (previous as unknown as Schedule).hours || []),
-        ];
-        const idx = updatedHours.findIndex((h) => h.dayOfWeek === payload.dayOfWeek);
-        const newHour: WorkingHours = {
-          dayOfWeek: payload.dayOfWeek,
-          isWorking: payload.isWorking,
-          startTime: payload.startTime,
-          endTime: payload.endTime,
-        };
-        if (idx >= 0) {
-          updatedHours[idx] = newHour;
-        } else {
-          updatedHours.push(newHour);
-        }
-
-        // Handle both { success, data: Schedule } and raw Schedule formats
-        const isWrapped = previous && 'success' in (previous as unknown as Record<string, unknown>);
-        if (isWrapped) {
-          queryClient.setQueryData(scheduleKeys.all, {
-            ...previous,
-            data: { ...(previous as ApiResponse<Schedule>).data, hours: updatedHours },
-          });
-        } else {
-          queryClient.setQueryData(scheduleKeys.all, {
-            ...(previous as unknown as Schedule),
-            hours: updatedHours,
-          });
-        }
+      if (previous) {
+        queryClient.setQueryData(scheduleKeys.all, {
+          ...previous,
+          data: { ...(previous as ApiResponse<Schedule>).data, weekly: payload.days },
+        });
       }
       return { previous };
     },
@@ -96,6 +70,38 @@ export function useCreateOverride() {
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+    },
+  });
+}
+
+export function useDaySchedule(date: string) {
+  return useQuery({
+    queryKey: scheduleKeys.day(date),
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<DaySchedule>>(`/schedule/date/${date}`);
+      return res.data;
+    },
+    enabled: !!date,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateDaySchedule(date: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (dto: CreateOverrideDto) => {
+      const res = await api.put<ApiResponse<DaySchedule>>(`/schedule/date/${date}`, dto);
+      return res.data;
+    },
+    onSuccess: () => {
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.day(date) });
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+    onError: () => {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
     },
   });
 }

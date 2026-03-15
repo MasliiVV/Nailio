@@ -15,12 +15,15 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  ParseUUIDPipe,
-  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ScheduleService } from './schedule.service';
-import { UpdateWorkingHoursDto, CreateOverrideDto, ScheduleResponseDto } from './dto/schedule.dto';
+import {
+  UpdateWorkingHoursDto,
+  CreateOverrideDto,
+  ScheduleResponseDto,
+  DayScheduleResponseDto,
+} from './dto/schedule.dto';
 import { Roles, RequiresActiveSubscription, CurrentTenant } from '../../common/decorators';
 import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 
@@ -31,65 +34,62 @@ import { JwtAuthGuard, RolesGuard } from '../../common/guards';
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
-  /**
-   * Get schedule (working hours + overrides)
-   * docs/api/endpoints.md — GET /api/v1/schedule 🔑
-   */
   @Get()
-  @ApiOperation({ summary: 'Get working schedule with overrides' })
+  @ApiOperation({ summary: 'Get slot schedule template with future date overrides' })
   @ApiResponse({ status: 200, type: ScheduleResponseDto })
-  async getSchedule(@CurrentTenant() tenantId: string) {
+  async getSchedule(@CurrentTenant() tenantId: string): Promise<ScheduleResponseDto> {
     return this.scheduleService.getSchedule(tenantId);
   }
 
-  /**
-   * Update weekly working hours (full replace)
-   * docs/api/endpoints.md — PUT /api/v1/schedule/hours 🔑👑⚡
-   */
   @Put('hours')
   @Roles('master')
   @RequiresActiveSubscription()
-  @ApiOperation({ summary: 'Update weekly working hours' })
+  @ApiOperation({ summary: 'Update weekly slot template' })
   @ApiResponse({ status: 200, type: ScheduleResponseDto })
-  async updateHours(@CurrentTenant() tenantId: string, @Body() dto: UpdateWorkingHoursDto) {
-    if (Array.isArray(dto.hours)) {
-      return this.scheduleService.updateWorkingHours(tenantId, dto);
-    }
-
-    if (
-      dto.dayOfWeek !== undefined &&
-      dto.isWorking !== undefined &&
-      dto.startTime !== undefined &&
-      dto.endTime !== undefined
-    ) {
-      return this.scheduleService.updateWorkingDay(tenantId, {
-        dayOfWeek: dto.dayOfWeek,
-        isWorking: dto.isWorking,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-      });
-    }
-
-    throw new BadRequestException('Either hours[] or single day payload is required');
+  async updateHours(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: UpdateWorkingHoursDto,
+  ): Promise<ScheduleResponseDto> {
+    return this.scheduleService.updateWorkingHours(tenantId, dto);
   }
 
-  /**
-   * Add schedule override (day off or custom hours)
-   * docs/api/endpoints.md — POST /api/v1/schedule/overrides 🔑👑⚡
-   */
   @Post('overrides')
   @Roles('master')
   @RequiresActiveSubscription()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Add schedule override' })
-  async createOverride(@CurrentTenant() tenantId: string, @Body() dto: CreateOverrideDto) {
+  @ApiOperation({ summary: 'Create or replace slot override for a specific date' })
+  async createOverride(
+    @CurrentTenant() tenantId: string,
+    @Body() dto: CreateOverrideDto,
+  ): Promise<DayScheduleResponseDto> {
     return this.scheduleService.createOverride(tenantId, dto);
   }
 
-  /**
-   * Delete schedule override
-   * docs/api/endpoints.md — DELETE /api/v1/schedule/overrides/:id 🔑👑⚡
-   */
+  @Get('date/:date')
+  @Roles('master')
+  @RequiresActiveSubscription()
+  @ApiOperation({ summary: 'Get effective slots for a specific date with booking occupancy' })
+  @ApiResponse({ status: 200, type: DayScheduleResponseDto })
+  async getDateSchedule(
+    @CurrentTenant() tenantId: string,
+    @Param('date') date: string,
+  ): Promise<DayScheduleResponseDto> {
+    return this.scheduleService.getDateSchedule(tenantId, date);
+  }
+
+  @Put('date/:date')
+  @Roles('master')
+  @RequiresActiveSubscription()
+  @ApiOperation({ summary: 'Create or replace slot override for a specific date' })
+  @ApiResponse({ status: 200, type: DayScheduleResponseDto })
+  async upsertDateSchedule(
+    @CurrentTenant() tenantId: string,
+    @Param('date') date: string,
+    @Body() dto: CreateOverrideDto,
+  ): Promise<DayScheduleResponseDto> {
+    return this.scheduleService.upsertDateOverride(tenantId, date, dto);
+  }
+
   @Delete('overrides/:id')
   @Roles('master')
   @RequiresActiveSubscription()
@@ -97,7 +97,7 @@ export class ScheduleController {
   @ApiOperation({ summary: 'Delete schedule override' })
   @ApiResponse({ status: 204 })
   @ApiResponse({ status: 404, description: 'Override not found' })
-  async deleteOverride(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+  async deleteOverride(@CurrentTenant() tenantId: string, @Param('id') id: string) {
     return this.scheduleService.deleteOverride(tenantId, id);
   }
 }

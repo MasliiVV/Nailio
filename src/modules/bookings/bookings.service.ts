@@ -60,84 +60,56 @@ export class BookingsService {
    * 5. Mark each slot as available/unavailable
    */
   async getAvailableSlots(tenantId: string, query: SlotsQueryDto): Promise<SlotsResponseDto> {
-    // 1. Get tenant settings (timezone, slot_step_minutes)
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
-    const settings = tenant.settings as Record<string, unknown>;
     const timezone = tenant.timezone || 'Europe/Kyiv';
-    const slotStepMinutes = (settings.slot_step_minutes as number) || 30;
 
-    // 2. Get service
     const service = await this.prisma.tenantClient.service.findFirst({
       where: { id: query.serviceId, tenantId, isActive: true },
     });
     if (!service) throw new NotFoundException('Service not found');
 
-    const totalDuration = service.durationMinutes + service.bufferMinutes;
-
-    // 3. Get working hours for the date
-    const dateObj = new Date(query.date + 'T00:00:00');
-    const workingHours = await this.scheduleService.getWorkingHoursForDate(tenantId, dateObj);
-
-    if (!workingHours) {
-      // Day off — no slots
+    const configuredSlots = await this.scheduleService.getSlotTimesForDate(tenantId, query.date);
+    if (configuredSlots.length === 0) {
       return { date: query.date, timezone, slots: [] };
     }
 
-    // 4. Get existing bookings for this date (non-cancelled)
-    const dayStart = this.buildDateTimeInTz(query.date, workingHours.startTime, timezone);
-    const dayEnd = this.buildDateTimeInTz(query.date, workingHours.endTime, timezone);
+    const dayStart = this.buildDateTimeInTz(query.date, '00:00', timezone);
+    const dayEnd = this.buildDateTimeInTz(query.date, '23:59', timezone);
 
     const existingBookings = await this.prisma.tenantClient.booking.findMany({
       where: {
         tenantId,
         status: { notIn: ['cancelled'] },
-        startTime: { gte: dayStart },
-        endTime: { lte: dayEnd },
+        startTime: { gte: dayStart, lte: dayEnd },
       },
       orderBy: { startTime: 'asc' },
     });
 
-    // 5. Generate time slots
-    const slots: SlotDto[] = [];
-    const [startHour, startMin] = workingHours.startTime.split(':').map(Number);
-    const [endHour, endMin] = workingHours.endTime.split(':').map(Number);
-    const workStartMinutes = startHour * 60 + startMin;
-    const workEndMinutes = endHour * 60 + endMin;
-
     const now = new Date();
 
-    for (
-      let slotStart = workStartMinutes;
-      slotStart + totalDuration <= workEndMinutes;
-      slotStart += slotStepMinutes
-    ) {
-      const slotEnd = slotStart + totalDuration;
-      const slotStartStr = this.minutesToTime(slotStart);
-      const slotEndStr = this.minutesToTime(slotStart + service.durationMinutes);
+    const bookedTimes = new Set(
+      existingBookings.map((booking) => this.formatTimeInTimezone(booking.startTime, timezone)),
+    );
 
-      const slotStartDt = this.buildDateTimeInTz(query.date, slotStartStr, timezone);
-      const slotEndDt = this.buildDateTimeInTz(query.date, this.minutesToTime(slotEnd), timezone);
+    const slots = configuredSlots
+      .map((slotStartStr) => {
+        const slotStartDt = this.buildDateTimeInTz(query.date, slotStartStr, timezone);
+        if (slotStartDt <= now) {
+          return null;
+        }
 
-      // Check if slot is in the past
-      if (slotStartDt <= now) {
-        continue; // Skip past slots
-      }
-
-      // Check overlap with existing bookings
-      const isOverlapping = existingBookings.some(
-        (b: Booking) => slotStartDt < b.endTime && slotEndDt > b.startTime,
-      );
-
-      slots.push({
-        startTime: slotStartStr,
-        endTime: slotEndStr,
-        available: !isOverlapping,
-      });
-    }
+        const slotEndDt = new Date(slotStartDt.getTime() + service.durationMinutes * 60 * 1000);
+        return {
+          startTime: slotStartStr,
+          endTime: this.formatTimeInTimezone(slotEndDt, timezone),
+          available: !bookedTimes.has(slotStartStr),
+        } satisfies SlotDto;
+      })
+      .filter((slot): slot is SlotDto => Boolean(slot));
 
     return { date: query.date, timezone, slots };
   }
@@ -187,17 +159,13 @@ export class BookingsService {
     });
     if (!service) throw new NotFoundException('Service not found or inactive');
 
-    // 4. Calculate times
     const startTime = new Date(dto.startTime);
-    const endMinutes = service.durationMinutes + service.bufferMinutes;
-    const endTime = new Date(startTime.getTime() + endMinutes * 60 * 1000);
+    const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
 
-    // 5. Validate: not in the past
     if (startTime <= new Date()) {
       throw new BadRequestException('Cannot book in the past');
     }
 
-    // 6. Validate: within working hours
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
     });
@@ -205,56 +173,36 @@ export class BookingsService {
 
     const timezone = tenant.timezone || 'Europe/Kyiv';
 
-    // Use tenant timezone to determine the correct local date
     const localDateStr = startTime
       .toLocaleDateString('en-CA', { timeZone: timezone })
       .split('T')[0];
-    const dateObj = new Date(localDateStr + 'T00:00:00');
-    const workingHours = await this.scheduleService.getWorkingHoursForDate(tenantId, dateObj);
-
-    if (!workingHours) {
-      throw new BadRequestException('Selected date is a day off');
-    }
-
-    // Validate booking time falls within working hours
     const localTimeStr = startTime.toLocaleTimeString('en-GB', {
       timeZone: timezone,
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     });
-    const localEndTimeStr = endTime.toLocaleTimeString('en-GB', {
-      timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
 
-    if (localTimeStr < workingHours.startTime || localEndTimeStr > workingHours.endTime) {
-      throw new BadRequestException(
-        `Booking time must be within working hours (${workingHours.startTime} - ${workingHours.endTime})`,
-      );
+    const allowedSlots = await this.scheduleService.getSlotTimesForDate(tenantId, localDateStr);
+    if (!allowedSlots.includes(localTimeStr)) {
+      throw new BadRequestException('Selected time is not available in the slot schedule');
     }
 
-    // 7. Atomic overlap check + create inside a serializable transaction
     try {
       const booking = await this.prisma.$transaction(
         async (tx) => {
-          // Double-booking check inside transaction
-          const overlapping = await tx.booking.findFirst({
+          const bookedSlot = await tx.booking.findFirst({
             where: {
               tenantId,
               status: { notIn: ['cancelled'] },
-              startTime: { lt: endTime },
-              endTime: { gt: startTime },
+              startTime,
             },
           });
 
-          if (overlapping) {
+          if (bookedSlot) {
             throw new ConflictException('Time slot is already booked');
           }
 
-          // Create booking with service snapshot
           return tx.booking.create({
             data: {
               tenantId,
@@ -625,24 +573,9 @@ export class BookingsService {
       });
       if (!service) throw new NotFoundException('Service not found');
 
-      // Recalculate end time based on new service duration
-      const totalMinutes = service.durationMinutes + (service.bufferMinutes || 0);
-      const newEndTime = new Date(booking.startTime.getTime() + totalMinutes * 60 * 1000);
-
-      // Check for time conflicts with new duration
-      const conflicting = await this.prisma.tenantClient.booking.findFirst({
-        where: {
-          tenantId,
-          id: { not: bookingId },
-          status: { notIn: ['cancelled'] },
-          startTime: { lt: newEndTime },
-          endTime: { gt: booking.startTime },
-        },
-      });
-
-      if (conflicting) {
-        throw new ConflictException('New service duration conflicts with another booking');
-      }
+      const newEndTime = new Date(
+        booking.startTime.getTime() + service.durationMinutes * 60 * 1000,
+      );
 
       updateData.service = { connect: { id: dto.serviceId } };
       updateData.serviceNameSnapshot = service.name;
@@ -692,18 +625,26 @@ export class BookingsService {
       throw new BadRequestException('Cannot reschedule to a past time');
     }
 
-    // Calculate new end time using the same duration
-    const totalMinutes = booking.durationAtBooking + (booking.service?.bufferMinutes || 0);
-    const newEndTime = new Date(newStartTime.getTime() + totalMinutes * 60 * 1000);
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
 
-    // Check for conflicts with other bookings
+    const timezone = tenant.timezone || 'Europe/Kyiv';
+    const localDateStr = newStartTime.toLocaleDateString('en-CA', { timeZone: timezone });
+    const localTimeStr = this.formatTimeInTimezone(newStartTime, timezone);
+    const allowedSlots = await this.scheduleService.getSlotTimesForDate(tenantId, localDateStr);
+
+    if (!allowedSlots.includes(localTimeStr)) {
+      throw new BadRequestException('Selected time is not available in the slot schedule');
+    }
+
+    const newEndTime = new Date(newStartTime.getTime() + booking.durationAtBooking * 60 * 1000);
+
     const conflicting = await this.prisma.tenantClient.booking.findFirst({
       where: {
         tenantId,
         id: { not: bookingId },
         status: { notIn: ['cancelled'] },
-        startTime: { lt: newEndTime },
-        endTime: { gt: newStartTime },
+        startTime: newStartTime,
       },
     });
 
@@ -750,19 +691,11 @@ export class BookingsService {
       `Booking rescheduled: ${bookingId} to ${newStartTime.toISOString()} in tenant ${tenantId}`,
     );
 
-    // Cancel old notifications and reschedule new ones
-    await this.notificationsService.cancelBookingNotifications(
-      tenantId,
-      bookingId,
-      updated.clientId,
-      'master',
-    );
-    await this.notificationsService.scheduleBookingNotifications(
+    await this.notificationsService.rescheduleBookingNotifications(
       tenantId,
       bookingId,
       updated.clientId,
       newStartTime,
-      'master',
     );
 
     return this.formatBookingResponse(updated);
@@ -912,6 +845,15 @@ export class BookingsService {
       .padStart(2, '0');
     const m = (minutes % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
+  }
+
+  private formatTimeInTimezone(date: Date, timezone: string): string {
+    return date.toLocaleTimeString('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
   }
 
   // ──────────────────────────────────────────────

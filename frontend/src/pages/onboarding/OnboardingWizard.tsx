@@ -17,22 +17,16 @@ import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
+import { createEmptyWeeklySchedule, normalizeSlotTimes, WEEK_DAY_KEYS } from '@/lib/schedule';
 import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
 
 const TOTAL_STEPS = 6;
-const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 interface AddedService {
   name: string;
   price: number;
   durationMinutes: number;
-}
-
-interface ScheduleDay {
-  isWorking: boolean;
-  startTime: string;
-  endTime: string;
 }
 
 export function OnboardingWizard() {
@@ -58,15 +52,7 @@ export function OnboardingWizard() {
   const [scheduleError, setScheduleError] = useState('');
 
   // Step 5: Schedule
-  const [schedule, setSchedule] = useState<ScheduleDay[]>([
-    { isWorking: true, startTime: '09:00', endTime: '18:00' },
-    { isWorking: true, startTime: '09:00', endTime: '18:00' },
-    { isWorking: true, startTime: '09:00', endTime: '18:00' },
-    { isWorking: true, startTime: '09:00', endTime: '18:00' },
-    { isWorking: true, startTime: '09:00', endTime: '18:00' },
-    { isWorking: true, startTime: '10:00', endTime: '15:00' },
-    { isWorking: false, startTime: '10:00', endTime: '15:00' },
-  ]);
+  const [schedule, setSchedule] = useState(createEmptyWeeklySchedule());
 
   const next = useCallback(() => {
     getTelegram()?.HapticFeedback.impactOccurred('light');
@@ -174,16 +160,13 @@ export function OnboardingWizard() {
     setScheduleError('');
     setLoading(true);
     try {
-      const hours = schedule
-        .map((day, index) => ({ day, index }))
-        .filter(({ day }) => day.isWorking)
-        .map(({ day, index }) => ({
-          dayOfWeek: index,
-          startTime: day.startTime,
-          endTime: day.endTime,
-        }));
-
-      await api.put('/schedule/hours', { hours });
+      await api.put('/schedule/hours', {
+        days: schedule.map((day) => ({
+          ...day,
+          slots: day.isDayOff ? [] : normalizeSlotTimes(day.slots),
+          isDayOff: day.isDayOff || normalizeSlotTimes(day.slots).length === 0,
+        })),
+      });
       next();
     } catch (error) {
       setScheduleError(
@@ -429,51 +412,90 @@ export function OnboardingWizard() {
           </h1>
 
           <div className={styles.scheduleList}>
-            {DAY_KEYS.map((dayKey, index) => {
+            {WEEK_DAY_KEYS.map((dayKey, index) => {
               const day = schedule[index]!;
               return (
                 <div key={dayKey} className={styles.scheduleRow}>
                   <label className={styles.scheduleDay}>
                     <input
                       type="checkbox"
-                      checked={day.isWorking}
+                      checked={!day.isDayOff}
                       onChange={() => {
                         setSchedule((prev) => {
                           const updated = [...prev];
-                          updated[index] = { ...day, isWorking: !day.isWorking };
+                          updated[index] = day.isDayOff
+                            ? {
+                                ...day,
+                                isDayOff: false,
+                                slots: day.slots.length > 0 ? day.slots : ['09:00'],
+                              }
+                            : { ...day, isDayOff: true, slots: [] };
                           return updated;
                         });
                       }}
                     />
                     <span>{intl.formatMessage({ id: `schedule.${dayKey}` })}</span>
                   </label>
-                  {day.isWorking && (
+                  {!day.isDayOff && (
                     <div className={styles.scheduleTime}>
-                      <input
-                        type="time"
-                        className={styles.timeInput}
-                        value={day.startTime}
-                        onChange={(e) => {
+                      {day.slots.map((slot, slotIndex) => (
+                        <div key={`${day.dayOfWeek}-${slotIndex}`} className={styles.scheduleSlotRow}>
+                          <input
+                            type="time"
+                            className={styles.timeInput}
+                            value={slot}
+                            onChange={(e) => {
+                              setSchedule((prev) => {
+                                const updated = [...prev];
+                                updated[index] = {
+                                  ...day,
+                                  slots: day.slots.map((currentSlot, currentIndex) =>
+                                    currentIndex === slotIndex ? e.target.value : currentSlot,
+                                  ),
+                                };
+                                return updated;
+                              });
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className={styles.removeSlotBtn}
+                            onClick={() => {
+                              setSchedule((prev) => {
+                                const updated = [...prev];
+                                const nextSlots = day.slots.filter(
+                                  (_, currentIndex) => currentIndex !== slotIndex,
+                                );
+                                updated[index] = {
+                                  ...day,
+                                  slots: nextSlots,
+                                  isDayOff: nextSlots.length === 0,
+                                };
+                                return updated;
+                              });
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        className={styles.addSlotBtn}
+                        onClick={() => {
                           setSchedule((prev) => {
                             const updated = [...prev];
-                            updated[index] = { ...day, startTime: e.target.value };
+                            updated[index] = {
+                              ...day,
+                              isDayOff: false,
+                              slots: normalizeSlotTimes([...day.slots, '09:00']),
+                            };
                             return updated;
                           });
                         }}
-                      />
-                      <span>—</span>
-                      <input
-                        type="time"
-                        className={styles.timeInput}
-                        value={day.endTime}
-                        onChange={(e) => {
-                          setSchedule((prev) => {
-                            const updated = [...prev];
-                            updated[index] = { ...day, endTime: e.target.value };
-                            return updated;
-                          });
-                        }}
-                      />
+                      >
+                        + {intl.formatMessage({ id: 'schedule.addSlot' })}
+                      </button>
                     </div>
                   )}
                 </div>

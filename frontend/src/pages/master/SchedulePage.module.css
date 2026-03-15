@@ -18,13 +18,6 @@
   font-weight: 500;
 }
 
-.timeInputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
 .timeInput {
   flex: 1;
   padding: 8px 12px;
@@ -36,54 +29,52 @@
   text-align: center;
 }
 
-.timeSep {
-  color: var(--color-text-secondary);
-  font-size: 16px;
-}
-
-.overrideCard {
-  margin-top: 8px;
-}
-
-.overrideRow {
+.slotList {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.slotRow {
+  display: flex;
   align-items: center;
-  padding: 8px 12px;
+  gap: 8px;
 }
 
-.overrideDate {
+.iconButton {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.addSlotButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+  font-size: 14px;
   font-weight: 600;
-  font-size: 15px;
 }
 
-.overrideMeta {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
-.emptyText {
-  text-align: center;
-  padding: 16px;
+.dayOffText {
+  margin-top: 10px;
   color: var(--color-text-secondary);
   font-size: 14px;
 }
 
-.timeRow {
-  display: flex;
-  gap: 12px;
-}
-
-.checkboxRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.checkboxRow input[type='checkbox'] {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--color-primary);
+.hintText {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
 }

@@ -48,7 +48,7 @@ describe('BookingsService', () => {
     };
 
     scheduleService = {
-      getWorkingHoursForDate: jest.fn(),
+      getSlotTimesForDate: jest.fn(),
     };
 
     notificationsService = {
@@ -102,7 +102,7 @@ describe('BookingsService', () => {
         isActive: true,
       });
 
-      scheduleService.getWorkingHoursForDate.mockResolvedValue(null); // Day off
+      scheduleService.getSlotTimesForDate.mockResolvedValue([]);
 
       const result = await service.getAvailableSlots(tenantId, query);
 
@@ -110,11 +110,11 @@ describe('BookingsService', () => {
       expect(result.slots).toEqual([]);
     });
 
-    it('should generate slots based on working hours', async () => {
+    it('should return configured slot times', async () => {
       prisma.tenant.findUnique.mockResolvedValue({
         id: tenantId,
         timezone: 'UTC',
-        settings: { slot_step_minutes: 60 },
+        settings: {},
       });
 
       prisma.tenantClient.service.findFirst.mockResolvedValue({
@@ -124,17 +124,13 @@ describe('BookingsService', () => {
         isActive: true,
       });
 
-      scheduleService.getWorkingHoursForDate.mockResolvedValue({
-        startTime: '09:00',
-        endTime: '13:00',
-      });
+      scheduleService.getSlotTimesForDate.mockResolvedValue(['09:00', '11:00', '13:00']);
 
       prisma.tenantClient.booking.findMany.mockResolvedValue([]);
 
       const result = await service.getAvailableSlots(tenantId, query);
 
-      // 09:00-10:00, 10:00-11:00, 11:00-12:00, 12:00-13:00 = 4 slots
-      expect(result.slots.length).toBe(4);
+      expect(result.slots.length).toBe(3);
       expect(result.slots[0].startTime).toBe('09:00');
       expect(result.slots[0].endTime).toBe('10:00');
       expect(result.slots[0].available).toBe(true);
@@ -144,7 +140,7 @@ describe('BookingsService', () => {
       prisma.tenant.findUnique.mockResolvedValue({
         id: tenantId,
         timezone: 'UTC',
-        settings: { slot_step_minutes: 60 },
+        settings: {},
       });
 
       prisma.tenantClient.service.findFirst.mockResolvedValue({
@@ -154,12 +150,8 @@ describe('BookingsService', () => {
         isActive: true,
       });
 
-      scheduleService.getWorkingHoursForDate.mockResolvedValue({
-        startTime: '09:00',
-        endTime: '13:00',
-      });
+      scheduleService.getSlotTimesForDate.mockResolvedValue(['09:00', '10:00', '11:00']);
 
-      // Existing booking 10:00-11:00
       prisma.tenantClient.booking.findMany.mockResolvedValue([
         {
           startTime: new Date('2026-12-15T10:00:00Z'),
@@ -191,7 +183,7 @@ describe('BookingsService', () => {
       prisma.tenant.findUnique.mockResolvedValue({
         id: tenantId,
         timezone: 'UTC',
-        settings: { slot_step_minutes: 30 },
+        settings: {},
       });
 
       prisma.tenantClient.service.findFirst.mockResolvedValue({
@@ -201,18 +193,13 @@ describe('BookingsService', () => {
         isActive: true,
       });
 
-      scheduleService.getWorkingHoursForDate.mockResolvedValue({
-        startTime: '09:00',
-        endTime: '18:00',
-      });
+      scheduleService.getSlotTimesForDate.mockResolvedValue(['09:00', '09:30', '11:00']);
 
       prisma.tenantClient.booking.findMany.mockResolvedValue([]);
 
       const result = await service.getAvailableSlots(tenantId, query);
 
-      // With 60min + 15min buffer = 75min total, step 30min
-      // So slots: 09:00, 09:30, 10:00, ... up to where 75min fits in 18:00
-      expect(result.slots.length).toBeGreaterThan(0);
+      expect(result.slots.length).toBe(3);
       expect(result.slots[0].endTime).toBe('10:00'); // Show service duration, not buffer
     });
   });

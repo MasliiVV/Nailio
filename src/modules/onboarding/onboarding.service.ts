@@ -27,10 +27,11 @@ export class OnboardingService {
     const checklist = (tenant.onboardingChecklist as Record<string, boolean>) || {};
 
     // Auto-calculate checklist based on actual data
-    const [servicesCount, hoursCount] = await Promise.all([
+    const [servicesCount] = await Promise.all([
       this.prisma.tenantClient.service.count({ where: { tenantId, isActive: true } }),
-      this.prisma.tenantClient.workingHour.count({ where: { tenantId } }),
     ]);
+
+    const hasSchedule = this.hasConfiguredSlots(tenant.settings);
 
     const hasBranding = !!(
       (tenant.branding as Record<string, unknown>)?.primary_color || tenant.logoUrl
@@ -41,7 +42,7 @@ export class OnboardingService {
       checklist: {
         hasBot: !!bot,
         hasServices: servicesCount > 0,
-        hasSchedule: hoursCount > 0,
+        hasSchedule,
         hasBranding,
         hasSharedLink: checklist.has_shared_link || false,
       },
@@ -79,18 +80,27 @@ export class OnboardingService {
    * Auto-update checklist after service/schedule changes
    */
   async refreshChecklist(tenantId: string) {
-    const [servicesCount, hoursCount] = await Promise.all([
+    const tenant = await this.tenantsService.findById(tenantId);
+    const [servicesCount] = await Promise.all([
       this.prisma.tenantClient.service.count({ where: { tenantId, isActive: true } }),
-      this.prisma.tenantClient.workingHour.count({ where: { tenantId } }),
     ]);
 
     const updates: Record<string, boolean> = {};
 
     if (servicesCount > 0) updates.has_services = true;
-    if (hoursCount > 0) updates.has_schedule = true;
+    if (this.hasConfiguredSlots(tenant.settings)) updates.has_schedule = true;
 
     if (Object.keys(updates).length > 0) {
       await this.tenantsService.updateOnboardingChecklist(tenantId, updates);
     }
+  }
+
+  private hasConfiguredSlots(settings: unknown): boolean {
+    const schedule = (settings as { slot_schedule?: { weekly?: Array<{ slots?: string[] }> } })
+      ?.slot_schedule;
+
+    return (
+      schedule?.weekly?.some((day) => Array.isArray(day.slots) && day.slots.length > 0) || false
+    );
   }
 }

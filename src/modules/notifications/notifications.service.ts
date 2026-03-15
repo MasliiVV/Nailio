@@ -128,6 +128,53 @@ export class NotificationsService {
     this.logger.log(`Notifications cancelled for booking ${bookingId} in tenant ${tenantId}`);
   }
 
+  async rescheduleBookingNotifications(
+    tenantId: string,
+    bookingId: string,
+    clientId: string,
+    newStartTime: Date,
+  ) {
+    const pendingNotifs = await this.prisma.tenantClient.notification.findMany({
+      where: {
+        tenantId,
+        bookingId,
+        status: 'pending',
+      },
+    });
+
+    for (const notif of pendingNotifs) {
+      if (notif.jobId) {
+        try {
+          const job = await this.notifQueue.getJob(notif.jobId);
+          if (job) await job.remove();
+        } catch {
+          // ignore removed jobs
+        }
+      }
+
+      await this.prisma.tenantClient.notification.update({
+        where: { id: notif.id },
+        data: { status: 'cancelled' },
+      });
+    }
+
+    await this.addNotificationJob(tenantId, bookingId, clientId, 'reschedule', 0);
+
+    const now = Date.now();
+    const bookingTime = newStartTime.getTime();
+    const delay24h = bookingTime - 24 * 60 * 60 * 1000 - now;
+    if (delay24h > 60000) {
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'reminder_24h', delay24h);
+    }
+
+    const delay1h = bookingTime - 1 * 60 * 60 * 1000 - now;
+    if (delay1h > 60000) {
+      await this.addNotificationJob(tenantId, bookingId, clientId, 'reminder_1h', delay1h);
+    }
+
+    this.logger.log(`Notifications rescheduled for booking ${bookingId} in tenant ${tenantId}`);
+  }
+
   /**
    * Add a notification job to the BullMQ queue.
    * Creates a notification record in DB + enqueues the job.

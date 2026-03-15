@@ -413,13 +413,20 @@ export class AuthService {
         let needsOnboarding = master.tenant.onboardingStatus !== 'setup_complete';
 
         if (needsOnboarding) {
-          const [botCount, servicesCount, hoursCount] = await Promise.all([
+          const [botCount, servicesCount] = await Promise.all([
             this.prisma.bot.count({ where: { tenantId: payload.tenantId, isActive: true } }),
             this.prisma.service.count({ where: { tenantId: payload.tenantId, isActive: true } }),
-            this.prisma.workingHour.count({ where: { tenantId: payload.tenantId } }),
           ]);
 
-          if (botCount > 0 && servicesCount > 0 && hoursCount > 0) {
+          const slotSchedule =
+            ((master.tenant.settings as Record<string, unknown>)?.slot_schedule as
+              | { weekly?: Array<{ slots?: string[] }> }
+              | undefined) || undefined;
+          const hasSchedule =
+            slotSchedule?.weekly?.some((day) => Array.isArray(day.slots) && day.slots.length > 0) ||
+            false;
+
+          if (botCount > 0 && servicesCount > 0 && hasSchedule) {
             // All prerequisites met — auto-complete onboarding
             needsOnboarding = false;
             await this.prisma.tenant

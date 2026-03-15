@@ -1,5 +1,5 @@
 // docs/api/endpoints.md — Schedule endpoints
-// docs/database/schema.md — working_hours, working_hour_overrides tables
+// Slot-based schedule model stored in tenant settings
 
 import {
   IsInt,
@@ -12,115 +12,100 @@ import {
   Max,
   Matches,
   IsDateString,
+  IsUUID,
+  ArrayUnique,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-/**
- * Single working hour entry
- */
-export class WorkingHourEntryDto {
+export class TimeSlotEntryDto {
+  @ApiProperty({ example: '09:00', description: 'Slot time HH:MM' })
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'time must be in HH:MM format',
+  })
+  time!: string;
+}
+
+export class ScheduleDaySlotsDto {
   @ApiProperty({ example: 0, description: '0=Monday, 6=Sunday' })
   @IsInt()
   @Min(0)
   @Max(6)
   dayOfWeek!: number;
 
-  @ApiProperty({ example: '09:00', description: 'Start time HH:MM' })
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'startTime must be in HH:MM format',
-  })
-  startTime!: string;
-
-  @ApiProperty({ example: '18:00', description: 'End time HH:MM' })
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'endTime must be in HH:MM format',
-  })
-  endTime!: string;
-}
-
-/**
- * Update weekly schedule (full replace)
- * docs/api/endpoints.md — PUT /api/v1/schedule/hours
- */
-export class UpdateWorkingHoursDto {
-  @ApiPropertyOptional({ type: [WorkingHourEntryDto] })
-  @IsArray()
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => WorkingHourEntryDto)
-  hours!: WorkingHourEntryDto[];
-
-  @ApiPropertyOptional({ example: 0, description: 'Single day update: 0=Monday, 6=Sunday' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  @Max(6)
-  dayOfWeek?: number;
-
-  @ApiPropertyOptional({
-    example: true,
-    description: 'Single day update: whether the day is working',
-  })
-  @IsOptional()
+  @ApiProperty({ example: false })
   @IsBoolean()
-  isWorking?: boolean;
+  isDayOff!: boolean;
 
-  @ApiPropertyOptional({ example: '09:00', description: 'Single day update: start time HH:MM' })
-  @IsOptional()
-  @IsString()
+  @ApiProperty({ type: [String], example: ['09:00', '11:15', '13:30'] })
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'startTime must be in HH:MM format',
+    each: true,
+    message: 'Each slot must be in HH:MM format',
   })
-  startTime?: string;
-
-  @ApiPropertyOptional({ example: '18:00', description: 'Single day update: end time HH:MM' })
-  @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'endTime must be in HH:MM format',
-  })
-  endTime?: string;
+  slots!: string[];
 }
 
-/**
- * Create schedule override
- * docs/api/endpoints.md — POST /api/v1/schedule/overrides
- */
+export class UpdateWorkingHoursDto {
+  @ApiPropertyOptional({ type: [ScheduleDaySlotsDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ScheduleDaySlotsDto)
+  days!: ScheduleDaySlotsDto[];
+}
+
+export class BookingSlotReassignmentDto {
+  @ApiProperty({ example: 'booking-uuid' })
+  @IsUUID()
+  bookingId!: string;
+
+  @ApiProperty({ example: '10:00' })
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'newTime must be in HH:MM format',
+  })
+  newTime!: string;
+}
+
 export class CreateOverrideDto {
   @ApiProperty({ example: '2026-03-20' })
   @IsDateString()
   date!: string;
 
-  @ApiProperty({ example: true, description: 'Is this a day off?' })
+  @ApiProperty({ example: false, description: 'Is this a full day off?' })
   @IsBoolean()
   isDayOff!: boolean;
 
-  @ApiPropertyOptional({ example: '10:00', description: 'Custom start time (if not day off)' })
-  @IsOptional()
-  @IsString()
+  @ApiProperty({ type: [String], example: ['10:00', '12:00', '16:30'] })
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
   @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'startTime must be in HH:MM format',
+    each: true,
+    message: 'Each slot must be in HH:MM format',
   })
-  startTime?: string;
+  slots!: string[];
 
-  @ApiPropertyOptional({ example: '15:00', description: 'Custom end time (if not day off)' })
+  @ApiPropertyOptional({ type: [BookingSlotReassignmentDto] })
   @IsOptional()
-  @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'endTime must be in HH:MM format',
-  })
-  endTime?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BookingSlotReassignmentDto)
+  reassignments?: BookingSlotReassignmentDto[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  cancelBookingIds?: string[];
 }
 
-/**
- * Schedule response (working hours + overrides)
- */
 export class ScheduleResponseDto {
-  @ApiProperty({ type: [WorkingHourEntryDto] })
-  hours!: WorkingHourEntryDto[];
+  @ApiProperty({ type: [ScheduleDaySlotsDto] })
+  weekly!: ScheduleDaySlotsDto[];
 
   @ApiProperty()
   overrides!: OverrideResponseDto[];
@@ -136,9 +121,48 @@ export class OverrideResponseDto {
   @ApiProperty()
   isDayOff!: boolean;
 
-  @ApiPropertyOptional()
-  startTime?: string;
+  @ApiProperty({ type: [String] })
+  slots!: string[];
+}
 
-  @ApiPropertyOptional()
-  endTime?: string;
+export class DayScheduleBookingDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  clientName!: string;
+
+  @ApiProperty()
+  serviceName!: string;
+
+  @ApiProperty()
+  status!: string;
+}
+
+export class DayScheduleSlotDto {
+  @ApiProperty()
+  time!: string;
+
+  @ApiProperty()
+  isBooked!: boolean;
+
+  @ApiProperty()
+  locked!: boolean;
+
+  @ApiPropertyOptional({ type: DayScheduleBookingDto })
+  booking?: DayScheduleBookingDto;
+}
+
+export class DayScheduleResponseDto {
+  @ApiProperty()
+  date!: string;
+
+  @ApiProperty()
+  isDayOff!: boolean;
+
+  @ApiProperty({ example: 'template' })
+  source!: 'template' | 'override';
+
+  @ApiProperty({ type: [DayScheduleSlotDto] })
+  slots!: DayScheduleSlotDto[];
 }

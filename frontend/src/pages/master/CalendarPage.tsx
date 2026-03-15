@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import {
   Calendar,
@@ -10,6 +10,7 @@ import {
   User,
   Trash2,
   MessageCircle,
+  Settings2,
 } from 'lucide-react';
 import {
   useBookings,
@@ -21,6 +22,8 @@ import {
   useServices,
   useClients,
   useSlots,
+  useDaySchedule,
+  useUpdateDaySchedule,
 } from '@/hooks';
 import {
   Card,
@@ -35,6 +38,7 @@ import {
 } from '@/components/ui';
 import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
 import type { Service, Client, Booking } from '@/types';
+import { normalizeSlotTimes } from '@/lib/schedule';
 import styles from './CalendarPage.module.css';
 
 function formatTime(iso: string): string {
@@ -83,10 +87,17 @@ export function CalendarPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editServiceId, setEditServiceId] = useState('');
   const [editStatus, setEditStatus] = useState<string>('');
+  const [showDayEditor, setShowDayEditor] = useState(false);
+  const [dayDraftSlots, setDayDraftSlots] = useState<string[]>([]);
+  const [dayDraftIsDayOff, setDayDraftIsDayOff] = useState(false);
+  const [showResolutionStep, setShowResolutionStep] = useState(false);
+  const [bookingResolutions, setBookingResolutions] = useState<Record<string, string>>({});
 
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
   const createBooking = useCreateBooking();
+  const { data: dayScheduleData } = useDaySchedule(selectedDate);
+  const updateDaySchedule = useUpdateDaySchedule(selectedDate);
 
   // Slots for add form
   const { data: slotsData } = useSlots(manualBookingDate, selectedServiceId);
@@ -112,6 +123,15 @@ export function CalendarPage() {
   const sorted = [...bookings].sort(
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
   );
+
+  useEffect(() => {
+    if (!showDayEditor || !dayScheduleData) return;
+
+    setDayDraftSlots(dayScheduleData.slots.map((slot) => slot.time));
+    setDayDraftIsDayOff(dayScheduleData.isDayOff && dayScheduleData.slots.length === 0);
+    setShowResolutionStep(false);
+    setBookingResolutions({});
+  }, [dayScheduleData, showDayEditor]);
 
   const handleOpenBookingDetail = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -225,6 +245,81 @@ export function CalendarPage() {
     setShowAddForm(true);
   };
 
+  const handleOpenDayEditor = () => {
+    setShowDayEditor(true);
+  };
+
+  const handleAddDaySlot = () => {
+    setDayDraftIsDayOff(false);
+    setDayDraftSlots((previous) => normalizeSlotTimes([...previous, '09:00']));
+  };
+
+  const handleRemoveDaySlot = (index: number) => {
+    setDayDraftSlots((previous) => {
+      const nextSlots = previous.filter((_, slotIndex) => slotIndex !== index);
+      if (nextSlots.length === 0) {
+        setDayDraftIsDayOff(true);
+      }
+      return nextSlots;
+    });
+  };
+
+  const handleChangeDaySlot = (index: number, value: string) => {
+    setDayDraftSlots((previous) =>
+      previous.map((slot, slotIndex) => (slotIndex === index ? value : slot)),
+    );
+  };
+
+  const bookedDaySlots = dayScheduleData?.slots.filter((slot) => slot.booking) || [];
+  const normalizedDayDraftSlots = dayDraftIsDayOff ? [] : normalizeSlotTimes(dayDraftSlots);
+  const impactedBookings = bookedDaySlots.filter(
+    (slot) => !normalizedDayDraftSlots.includes(slot.time),
+  );
+  const retainedBookedTimes = bookedDaySlots
+    .filter((slot) => normalizedDayDraftSlots.includes(slot.time))
+    .map((slot) => slot.time);
+  const availableResolutionTimes = normalizedDayDraftSlots.filter(
+    (slotTime) => !retainedBookedTimes.includes(slotTime),
+  );
+
+  const handleSaveDaySlots = async () => {
+    if (impactedBookings.length > 0 && !showResolutionStep) {
+      setBookingResolutions(
+        Object.fromEntries(
+          impactedBookings
+            .filter((slot) => slot.booking)
+            .map((slot) => [slot.booking!.id, 'cancel']),
+        ),
+      );
+      setShowResolutionStep(true);
+      return;
+    }
+
+    try {
+      await updateDaySchedule.mutateAsync({
+        date: selectedDate,
+        isDayOff: dayDraftIsDayOff,
+        slots: normalizedDayDraftSlots,
+        reassignments: impactedBookings.flatMap((slot) => {
+          if (!slot.booking) return [];
+          const newTime = bookingResolutions[slot.booking.id];
+          if (!newTime || newTime === 'cancel') return [];
+
+          return [{ bookingId: slot.booking.id, newTime }];
+        }),
+        cancelBookingIds: impactedBookings
+          .filter((slot) => slot.booking && bookingResolutions[slot.booking.id] === 'cancel')
+          .map((slot) => slot.booking!.id),
+      });
+
+      setShowDayEditor(false);
+      setShowResolutionStep(false);
+      setBookingResolutions({});
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
   const handleCreateBooking = () => {
     if (!selectedServiceId || !selectedSlot) return;
     const startTime = `${manualBookingDate}T${selectedSlot}:00`;
@@ -272,6 +367,13 @@ export function CalendarPage() {
 
       <div className={styles.datePickerWrap}>
         <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={60} />
+      </div>
+
+      <div className={styles.dayEditorActionWrap}>
+        <Button variant="secondary" fullWidth onClick={handleOpenDayEditor}>
+          <Settings2 size={16} />
+          {intl.formatMessage({ id: 'schedule.editDaySlots' })}
+        </Button>
       </div>
 
       {isLoading && <SkeletonList count={5} />}
@@ -794,6 +896,143 @@ export function CalendarPage() {
               : intl.formatMessage({ id: 'booking.confirm' })}
           </Button>
         </FormGroup>
+      </BottomSheet>
+
+      <BottomSheet
+        open={showDayEditor}
+        onClose={() => {
+          setShowDayEditor(false);
+          setShowResolutionStep(false);
+        }}
+        title={intl.formatMessage({ id: 'schedule.daySlotsTitle' }, { date: selectedDate })}
+      >
+        {showResolutionStep ? (
+          <div className={styles.dayEditorSheet}>
+            <p className={styles.subTitle}>
+              {intl.formatMessage({ id: 'schedule.resolveAffectedBookings' })}
+            </p>
+            {impactedBookings.map((slot) =>
+              slot.booking ? (
+                <div key={slot.booking.id} className={styles.dayResolutionCard}>
+                  <div className={styles.dayResolutionTitle}>
+                    {slot.booking.clientName} · {slot.time}
+                  </div>
+                  <div className={styles.dayResolutionMeta}>{slot.booking.serviceName}</div>
+                  <select
+                    className={styles.selectField}
+                    value={bookingResolutions[slot.booking.id] || 'cancel'}
+                    onChange={(e) =>
+                      setBookingResolutions((previous) => ({
+                        ...previous,
+                        [slot.booking!.id]: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="cancel">
+                      {intl.formatMessage({ id: 'schedule.cancelAffectedBooking' })}
+                    </option>
+                    {availableResolutionTimes.map((time) => (
+                      <option key={`${slot.booking!.id}-${time}`} value={time}>
+                        {intl.formatMessage({ id: 'schedule.moveToTime' }, { time })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null,
+            )}
+
+            <div className={styles.cancelConfirmActions}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowResolutionStep(false)}
+                style={{ flex: 1 }}
+              >
+                {intl.formatMessage({ id: 'common.back' })}
+              </Button>
+              <Button
+                onClick={handleSaveDaySlots}
+                loading={updateDaySchedule.isPending}
+                style={{ flex: 1 }}
+              >
+                {intl.formatMessage({ id: 'calendar.apply' })}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.dayEditorSheet}>
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={dayDraftIsDayOff}
+                onChange={(e) => {
+                  setDayDraftIsDayOff(e.target.checked);
+                  if (e.target.checked) {
+                    setDayDraftSlots([]);
+                  }
+                }}
+              />
+              <span>{intl.formatMessage({ id: 'schedule.dayOff' })}</span>
+            </label>
+
+            {!dayDraftIsDayOff && (
+              <div className={styles.daySlotList}>
+                {dayDraftSlots.map((slot, index) => {
+                  const booking = dayScheduleData?.slots.find(
+                    (daySlot) => daySlot.time === slot && daySlot.booking,
+                  )?.booking;
+
+                  return (
+                    <div key={`${slot}-${index}`} className={styles.daySlotRow}>
+                      <input
+                        type="time"
+                        className={styles.timeInput}
+                        value={slot}
+                        onChange={(e) => handleChangeDaySlot(index, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className={styles.iconCircleBtn}
+                        onClick={() => handleRemoveDaySlot(index)}
+                        aria-label={intl.formatMessage({ id: 'common.delete' })}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      {booking ? (
+                        <div className={styles.daySlotBookingMeta}>
+                          <strong>{booking.clientName}</strong>
+                          <span>{booking.serviceName}</span>
+                        </div>
+                      ) : (
+                        <div className={styles.daySlotBookingMetaMuted}>
+                          {intl.formatMessage({ id: 'schedule.freeSlot' })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  className={styles.addSlotInlineBtn}
+                  onClick={handleAddDaySlot}
+                >
+                  <Plus size={16} />
+                  {intl.formatMessage({ id: 'schedule.addSlot' })}
+                </button>
+              </div>
+            )}
+
+            {dayDraftIsDayOff && (
+              <p className={styles.noSlots}>
+                {intl.formatMessage({ id: 'schedule.noSlotsForDay' })}
+              </p>
+            )}
+
+            <Button onClick={handleSaveDaySlots} loading={updateDaySchedule.isPending}>
+              {intl.formatMessage({ id: 'common.save' })}
+            </Button>
+          </div>
+        )}
       </BottomSheet>
     </div>
   );
