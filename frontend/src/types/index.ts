@@ -218,6 +218,16 @@ export interface RescheduleBookingDto {
   clientId?: string;
 }
 
+export interface UpdateBookingDto {
+  notes?: string;
+  serviceId?: string;
+}
+
+export interface SendMessageToMasterDto {
+  message: string;
+  bookingId?: string;
+}
+
 // ---- Client (CRM) ----
 export interface Client {
   id: string;

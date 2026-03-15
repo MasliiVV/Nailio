@@ -41,6 +41,7 @@ export class ScheduleService {
     return {
       hours: hours.map((h: WorkingHour) => ({
         dayOfWeek: h.dayOfWeek,
+        isWorking: true,
         startTime: h.startTime,
         endTime: h.endTime,
       })),

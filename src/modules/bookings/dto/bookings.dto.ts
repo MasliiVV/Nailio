@@ -110,6 +110,35 @@ export class BookingListQueryDto {
 }
 
 // ──────────────────────────────────────────────
+// Request: PATCH /api/v1/bookings/:id
+// ──────────────────────────────────────────────
+
+export class UpdateBookingDto {
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  notes?: string;
+
+  @IsUUID()
+  @IsOptional()
+  serviceId?: string;
+}
+
+// ──────────────────────────────────────────────
+// Request: POST /api/v1/bookings/message
+// ──────────────────────────────────────────────
+
+export class SendMessageToMasterDto {
+  @IsString()
+  @MaxLength(1000)
+  message!: string;
+
+  @IsUUID()
+  @IsOptional()
+  bookingId?: string;
+}
+
+// ──────────────────────────────────────────────
 // Response: Booking item
 // ──────────────────────────────────────────────
 

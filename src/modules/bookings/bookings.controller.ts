@@ -6,6 +6,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Param,
   Query,
   Body,
@@ -18,8 +19,10 @@ import {
   CreateBookingDto,
   CancelBookingDto,
   RescheduleBookingDto,
+  UpdateBookingDto,
   BookingListQueryDto,
   SlotsQueryDto,
+  SendMessageToMasterDto,
 } from './dto/bookings.dto';
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
@@ -71,6 +74,19 @@ export class BookingsController {
   }
 
   /**
+   * POST /api/v1/bookings/message — Send message to master 🔑
+   * Client sends a text message that gets forwarded to the master via Telegram
+   */
+  @Post('message')
+  async sendMessageToMaster(
+    @CurrentTenant() tenantId: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: SendMessageToMasterDto,
+  ) {
+    return this.bookingsService.sendMessageToMaster(tenantId, user, dto);
+  }
+
+  /**
    * GET /api/v1/bookings/:id — Booking detail 🔑
    */
   @Get(':id')
@@ -80,6 +96,19 @@ export class BookingsController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.bookingsService.findById(tenantId, id, user);
+  }
+
+  /**
+   * PATCH /api/v1/bookings/:id — Update booking (notes, service) 🔑👑
+   */
+  @Patch(':id')
+  @Roles('master')
+  async update(
+    @CurrentTenant() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookingDto,
+  ) {
+    return this.bookingsService.updateBooking(tenantId, id, dto);
   }
 
   /**

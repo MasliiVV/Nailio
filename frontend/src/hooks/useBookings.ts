@@ -6,8 +6,10 @@ import type {
   CancelBookingDto,
   CreateBookingDto,
   RescheduleBookingDto,
+  UpdateBookingDto,
   PaginatedResponse,
   SlotsResponse,
+  SendMessageToMasterDto,
 } from '@/types';
 import { getTelegram } from '@/lib/telegram';
 
@@ -159,6 +161,46 @@ export function useRescheduleBooking() {
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+    onError: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('error');
+    },
+  });
+}
+
+// ---- Update booking (master) ----
+export function useUpdateBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, dto }: { id: string; dto: UpdateBookingDto }) => {
+      const res = await api.patch<ApiResponse<Booking>>(`/bookings/${id}`, dto);
+      return res.data;
+    },
+    onSuccess: (_data, variables) => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('success');
+      queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+    onError: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('error');
+    },
+  });
+}
+
+// ---- Send message to master (client) ----
+export function useSendMessageToMaster() {
+  return useMutation({
+    mutationFn: async (dto: SendMessageToMasterDto) => {
+      const res = await api.post<ApiResponse<{ success: boolean }>>('/bookings/message', dto);
+      return res.data;
+    },
+    onSuccess: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('success');
     },
     onError: () => {
       const tg = getTelegram();

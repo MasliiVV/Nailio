@@ -8,6 +8,8 @@ export {
   useCompleteBooking,
   useNoShowBooking,
   useRescheduleBooking,
+  useUpdateBooking,
+  useSendMessageToMaster,
   bookingKeys,
 } from './useBookings';
 export {

@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Scissors, MessageCircle } from 'lucide-react';
 import { useServices } from '@/hooks';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, EmptyState, SkeletonList } from '@/components/ui';
+import { MessageSheet } from '@/components/MessageSheet/MessageSheet';
 import { getTelegram } from '@/lib/telegram';
 import styles from './HomePage.module.css';
 
@@ -12,6 +14,7 @@ export function ClientHomePage() {
   const navigate = useNavigate();
   const { tenant } = useAuth();
   const { data: services, isLoading, error } = useServices();
+  const [messageOpen, setMessageOpen] = useState(false);
 
   const handleSelectService = (serviceId: string) => {
     getTelegram()?.HapticFeedback.impactOccurred('light');
@@ -19,9 +22,8 @@ export function ClientHomePage() {
   };
 
   const handleWriteToMaster = () => {
-    if (!tenant?.botUsername) return;
     getTelegram()?.HapticFeedback.impactOccurred('light');
-    getTelegram()?.openTelegramLink(`https://t.me/${tenant.botUsername}`);
+    setMessageOpen(true);
   };
 
   return (
@@ -35,12 +37,10 @@ export function ClientHomePage() {
         {tenant?.branding?.welcomeMessage && (
           <p className={styles.welcome}>{tenant.branding.welcomeMessage}</p>
         )}
-        {tenant?.botUsername && (
-          <button className={styles.writeBtn} onClick={handleWriteToMaster}>
-            <MessageCircle size={18} />
-            {intl.formatMessage({ id: 'client.writeToMaster' })}
-          </button>
-        )}
+        <button className={styles.writeBtn} onClick={handleWriteToMaster}>
+          <MessageCircle size={18} />
+          {intl.formatMessage({ id: 'client.writeToMaster' })}
+        </button>
       </div>
 
       {/* Services list */}
@@ -98,6 +98,8 @@ export function ClientHomePage() {
           </div>
         )}
       </div>
+
+      <MessageSheet open={messageOpen} onClose={() => setMessageOpen(false)} />
     </div>
   );
 }

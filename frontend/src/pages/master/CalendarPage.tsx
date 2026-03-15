@@ -10,6 +10,7 @@ import {
   UserRoundCog,
   Pencil,
   User,
+  Trash2,
 } from 'lucide-react';
 import {
   useBookings,
@@ -18,6 +19,7 @@ import {
   useCreateBooking,
   useCancelBooking,
   useRescheduleBooking,
+  useUpdateBooking,
   useServices,
   useClients,
   useSlots,
@@ -64,6 +66,7 @@ export function CalendarPage() {
   const noShowBooking = useNoShowBooking();
   const cancelBooking = useCancelBooking();
   const rescheduleBooking = useRescheduleBooking();
+  const updateBooking = useUpdateBooking();
 
   // Manual booking state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -74,11 +77,13 @@ export function CalendarPage() {
 
   // Booking detail state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [detailMode, setDetailMode] = useState<'view' | 'reschedule' | 'reassign' | 'cancel'>(
-    'view',
-  );
+  const [detailMode, setDetailMode] = useState<
+    'view' | 'edit' | 'reschedule' | 'reassign' | 'cancel' | 'delete'
+  >('view');
   const [rescheduleSlot, setRescheduleSlot] = useState('');
   const [reassignClientId, setReassignClientId] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editServiceId, setEditServiceId] = useState('');
 
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
@@ -132,6 +137,8 @@ export function CalendarPage() {
     setDetailMode('view');
     setRescheduleSlot('');
     setReassignClientId('');
+    setEditNotes(booking.notes || '');
+    setEditServiceId(booking.service?.id || '');
   };
 
   const handleCloseDetail = () => {
@@ -175,6 +182,37 @@ export function CalendarPage() {
           startTime: selectedBooking.startTime,
           clientId: reassignClientId,
         },
+      });
+      handleCloseDetail();
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  const handleUpdateBooking = async () => {
+    if (!selectedBooking) return;
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+    try {
+      await updateBooking.mutateAsync({
+        id: selectedBooking.id,
+        dto: {
+          notes: editNotes,
+          serviceId: editServiceId !== selectedBooking.service?.id ? editServiceId : undefined,
+        },
+      });
+      handleCloseDetail();
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  const handleDeleteBooking = async () => {
+    if (!selectedBooking) return;
+    getTelegram()?.HapticFeedback.impactOccurred('heavy');
+    try {
+      await cancelBooking.mutateAsync({
+        id: selectedBooking.id,
+        dto: { reason: 'Deleted by master' },
       });
       handleCloseDetail();
     } catch {
@@ -377,13 +415,37 @@ export function CalendarPage() {
                     {intl.formatMessage({ id: 'calendar.price' })}
                   </div>
                   <div className={styles.detailValue}>
-                    {selectedBooking.priceAtBooking} {intl.formatMessage({ id: 'common.uah' })}
+                    {(selectedBooking.priceAtBooking / 100).toFixed(0)}{' '}
+                    {intl.formatMessage({ id: 'common.uah' })}
                   </div>
                 </div>
               </div>
 
+              {selectedBooking.notes && (
+                <div className={styles.detailRow}>
+                  <Pencil size={18} className={styles.detailIcon} />
+                  <div>
+                    <div className={styles.detailLabel}>
+                      {intl.formatMessage({ id: 'calendar.notes' })}
+                    </div>
+                    <div className={styles.detailValue}>{selectedBooking.notes}</div>
+                  </div>
+                </div>
+              )}
+
               {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') && (
                 <div className={styles.detailActions}>
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() => {
+                      setEditNotes(selectedBooking.notes || '');
+                      setEditServiceId(selectedBooking.service?.id || '');
+                      setDetailMode('edit');
+                    }}
+                  >
+                    <Pencil size={16} />
+                    {intl.formatMessage({ id: 'calendar.editBooking' })}
+                  </button>
                   <button
                     className={styles.detailActionBtn}
                     onClick={() => setDetailMode('reschedule')}
@@ -400,10 +462,10 @@ export function CalendarPage() {
                   </button>
                   <button
                     className={styles.detailActionBtnDanger}
-                    onClick={() => setDetailMode('cancel')}
+                    onClick={() => setDetailMode('delete')}
                   >
-                    <Ban size={16} />
-                    {intl.formatMessage({ id: 'calendar.cancelBooking' })}
+                    <Trash2 size={16} />
+                    {intl.formatMessage({ id: 'calendar.deleteBooking' })}
                   </button>
                 </div>
               )}
@@ -499,6 +561,89 @@ export function CalendarPage() {
                 </Button>
               </div>
             </>
+          )}
+
+          {detailMode === 'edit' && (
+            <>
+              <div style={{ marginBottom: 12 }}>
+                <label className={styles.fieldLabel}>
+                  {intl.formatMessage({ id: 'calendar.editService' })}
+                </label>
+                <select
+                  className={styles.selectField}
+                  value={editServiceId}
+                  onChange={(e) => setEditServiceId(e.target.value)}
+                >
+                  {services
+                    .filter((s) => s.isActive)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.durationMinutes} {intl.formatMessage({ id: 'common.min' })}) —{' '}
+                        {(s.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className={styles.fieldLabel}>
+                  {intl.formatMessage({ id: 'calendar.editNotes' })}
+                </label>
+                <textarea
+                  className={styles.textArea}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={3}
+                  placeholder={intl.formatMessage({ id: 'calendar.notesPlaceholder' })}
+                />
+              </div>
+
+              <div className={styles.cancelConfirmActions}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDetailMode('view')}
+                  style={{ flex: 1 }}
+                >
+                  {intl.formatMessage({ id: 'common.cancel' })}
+                </Button>
+                <Button
+                  onClick={handleUpdateBooking}
+                  disabled={updateBooking.isPending}
+                  style={{ flex: 1 }}
+                >
+                  {updateBooking.isPending
+                    ? intl.formatMessage({ id: 'common.loading' })
+                    : intl.formatMessage({ id: 'common.save' })}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {detailMode === 'delete' && (
+            <div className={styles.cancelConfirm}>
+              <p className={styles.cancelConfirmText}>
+                {intl.formatMessage({ id: 'calendar.confirmDelete' })}
+              </p>
+              <div className={styles.cancelConfirmActions}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDetailMode('view')}
+                  style={{ flex: 1 }}
+                >
+                  {intl.formatMessage({ id: 'common.cancel' })}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteBooking}
+                  disabled={cancelBooking.isPending}
+                  style={{ flex: 1 }}
+                >
+                  {cancelBooking.isPending
+                    ? intl.formatMessage({ id: 'common.loading' })
+                    : intl.formatMessage({ id: 'common.delete' })}
+                </Button>
+              </div>
+            </div>
           )}
 
           {detailMode === 'cancel' && (

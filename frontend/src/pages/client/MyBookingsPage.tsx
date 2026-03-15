@@ -12,8 +12,8 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useBookings, useCancelBooking } from '@/hooks';
-import { useAuth } from '@/hooks/useAuth';
 import { Card, Tabs, EmptyState, SkeletonList, BottomSheet, Button } from '@/components/ui';
+import { MessageSheet } from '@/components/MessageSheet/MessageSheet';
 import { getTelegram } from '@/lib/telegram';
 import type { Booking } from '@/types';
 import styles from './MyBookingsPage.module.css';
@@ -40,15 +40,14 @@ export function MyBookingsPage() {
   const intl = useIntl();
   const [tab, setTab] = useState('upcoming');
   const [selected, setSelected] = useState<Booking | null>(null);
+  const [messageOpen, setMessageOpen] = useState(false);
 
-  const { tenant } = useAuth();
   const { data: bookingsData, isLoading } = useBookings();
   const cancelBooking = useCancelBooking();
 
   const handleWriteToMaster = () => {
-    if (!tenant?.botUsername) return;
     getTelegram()?.HapticFeedback.impactOccurred('light');
-    getTelegram()?.openTelegramLink(`https://t.me/${tenant.botUsername}`);
+    setMessageOpen(true);
   };
 
   const bookings = bookingsData?.items || [];
@@ -189,20 +188,24 @@ export function MyBookingsPage() {
               </Button>
             )}
 
-            {tenant?.botUsername && (
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={handleWriteToMaster}
-                icon={<MessageCircle size={18} />}
-                style={{ marginTop: 8 }}
-              >
-                {intl.formatMessage({ id: 'client.writeToMaster' })}
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleWriteToMaster}
+              icon={<MessageCircle size={18} />}
+              style={{ marginTop: 8 }}
+            >
+              {intl.formatMessage({ id: 'client.writeToMaster' })}
+            </Button>
           </div>
         )}
       </BottomSheet>
+
+      <MessageSheet
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        bookingId={selected?.id}
+      />
     </div>
   );
 }

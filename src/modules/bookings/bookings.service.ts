@@ -12,20 +12,24 @@ import {
   UnprocessableEntityException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FinanceService } from '../finance/finance.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
+import { renderTemplate } from '../notifications/templates';
 import { Booking, Prisma } from '@prisma/client';
 import {
   CreateBookingDto,
   CancelBookingDto,
   RescheduleBookingDto,
+  UpdateBookingDto,
   BookingListQueryDto,
   SlotsQueryDto,
   SlotsResponseDto,
   SlotDto,
+  SendMessageToMasterDto,
 } from './dto/bookings.dto';
 
 @Injectable()
@@ -37,6 +41,7 @@ export class BookingsService {
     private readonly scheduleService: ScheduleService,
     private readonly notificationsService: NotificationsService,
     private readonly financeService: FinanceService,
+    private readonly configService: ConfigService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -498,6 +503,81 @@ export class BookingsService {
   }
 
   // ──────────────────────────────────────────────
+  // Update Booking (notes, service)
+  // PATCH /api/v1/bookings/:id
+  // ──────────────────────────────────────────────
+
+  async updateBooking(tenantId: string, bookingId: string, dto: UpdateBookingDto) {
+    const booking = await this.prisma.tenantClient.booking.findFirst({
+      where: { id: bookingId, tenantId },
+      include: { service: true },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    if (['completed', 'no_show', 'cancelled'].includes(booking.status)) {
+      throw new BadRequestException(`Cannot edit booking with status "${booking.status}"`);
+    }
+
+    const updateData: Prisma.BookingUpdateInput = {};
+
+    // Update notes
+    if (dto.notes !== undefined) {
+      updateData.notes = dto.notes || null;
+    }
+
+    // Change service
+    if (dto.serviceId && dto.serviceId !== booking.serviceId) {
+      const service = await this.prisma.tenantClient.service.findFirst({
+        where: { id: dto.serviceId, tenantId, isActive: true },
+      });
+      if (!service) throw new NotFoundException('Service not found');
+
+      // Recalculate end time based on new service duration
+      const totalMinutes = service.durationMinutes + (service.bufferMinutes || 0);
+      const newEndTime = new Date(booking.startTime.getTime() + totalMinutes * 60 * 1000);
+
+      // Check for time conflicts with new duration
+      const conflicting = await this.prisma.tenantClient.booking.findFirst({
+        where: {
+          tenantId,
+          id: { not: bookingId },
+          status: { notIn: ['cancelled'] },
+          startTime: { lt: newEndTime },
+          endTime: { gt: booking.startTime },
+        },
+      });
+
+      if (conflicting) {
+        throw new ConflictException('New service duration conflicts with another booking');
+      }
+
+      updateData.service = { connect: { id: dto.serviceId } };
+      updateData.serviceNameSnapshot = service.name;
+      updateData.priceAtBooking = service.price;
+      updateData.durationAtBooking = service.durationMinutes;
+      updateData.endTime = newEndTime;
+    }
+
+    const updated = await this.prisma.tenantClient.booking.update({
+      where: { id: bookingId },
+      data: updateData,
+      include: {
+        client: {
+          select: { id: true, firstName: true, lastName: true, phone: true },
+        },
+        service: {
+          select: { id: true, name: true, color: true },
+        },
+      },
+    });
+
+    this.logger.log(`Booking updated: ${bookingId} in tenant ${tenantId}`);
+
+    return this.formatBookingResponse(updated);
+  }
+
+  // ──────────────────────────────────────────────
   // Reschedule Booking
   // POST /api/v1/bookings/:id/reschedule
   // Change time and/or reassign to another client
@@ -740,6 +820,118 @@ export class BookingsService {
       .padStart(2, '0');
     const m = (minutes % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
+  }
+
+  // ──────────────────────────────────────────────
+  // Client → Master messaging
+  // ──────────────────────────────────────────────
+
+  /**
+   * Send a message from client to master via Telegram platform bot.
+   * If bookingId is provided, includes booking context in the message.
+   */
+  async sendMessageToMaster(
+    tenantId: string,
+    user: JwtPayload,
+    dto: SendMessageToMasterDto,
+  ): Promise<{ success: boolean }> {
+    // Get client info
+    const client = await this.prisma.client.findFirst({
+      where: { userId: user.sub, tenantId },
+      include: { user: true },
+    });
+    if (!client) {
+      throw new NotFoundException('Client not found');
+    }
+
+    // Get master's Telegram ID
+    const master = await this.prisma.master.findFirst({
+      where: { tenantId },
+      include: { user: true },
+    });
+    if (!master?.user?.telegramId) {
+      throw new NotFoundException('Master not found');
+    }
+
+    const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+    const clientName = `${client.firstName} ${client.lastName || ''}`.trim();
+    const clientTelegramLink = `<a href="tg://user?id=${client.user.telegramId}">Написати в ТГ</a>`;
+
+    let text: string;
+
+    if (dto.bookingId) {
+      // Message with booking context
+      const booking = await this.prisma.booking.findUnique({
+        where: { id: dto.bookingId, tenantId },
+        include: { tenant: true },
+      });
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      const tz = booking.tenant?.timezone || 'Europe/Kyiv';
+      const dateFmt = new Intl.DateTimeFormat('uk-UA', {
+        timeZone: tz,
+        day: 'numeric',
+        month: 'long',
+      });
+      const timeFmt = new Intl.DateTimeFormat('uk-UA', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      text = renderTemplate('client_message', 'uk', {
+        serviceName: booking.serviceNameSnapshot,
+        date: dateFmt.format(booking.startTime),
+        time: timeFmt.format(booking.startTime),
+        duration: booking.durationAtBooking,
+        price: booking.priceAtBooking,
+        clientName,
+        clientPhone: client.phone || undefined,
+        clientTelegramLink,
+        reason: dto.message,
+      });
+    } else {
+      // General message without booking context
+      text =
+        `💬 Повідомлення від клієнта <b>${clientName}</b> (${clientTelegramLink})\n` +
+        `📱 ${client.phone || 'Не вказано'}\n\n` +
+        `📝 ${dto.message}`;
+    }
+
+    // Send to master via platform bot
+    const response = await fetch(`https://api.telegram.org/bot${platformBotToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: master.user.telegramId.toString(),
+        text,
+        parse_mode: 'HTML',
+        reply_markup: dto.bookingId
+          ? {
+              inline_keyboard: [
+                [
+                  {
+                    text: '💬 Відповісти клієнту',
+                    callback_data: `reply:${dto.bookingId}`,
+                  },
+                ],
+              ],
+            }
+          : undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      this.logger.error(`Failed to send message to master: ${response.statusText}`);
+      throw new BadRequestException('Failed to send message');
+    }
+
+    this.logger.log(`Client ${client.firstName} sent message to master (tenant: ${tenantId})`);
+
+    return { success: true };
   }
 
   /**
