@@ -36,20 +36,56 @@ interface CardRowProps {
   subtitle?: string;
   right?: ReactNode;
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
+  onTouchStart?: () => void;
 }
 
-export function CardRow({ icon, title, subtitle, right, onClick }: CardRowProps) {
-  const Component = onClick ? 'button' : 'div';
+export function CardRow({
+  icon,
+  title,
+  subtitle,
+  right,
+  onClick,
+  onMouseEnter,
+  onFocus,
+  onTouchStart,
+}: CardRowProps) {
+  const className = `${styles.row} ${onClick ? styles.clickable : ''}`;
+
+  if (onClick) {
+    return (
+      <button
+        className={className}
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onFocus={onFocus}
+        onTouchStart={onTouchStart}
+      >
+        {icon && <span className={styles.rowIcon}>{icon}</span>}
+        <div className={styles.rowContent}>
+          <span className={styles.rowTitle}>{title}</span>
+          {subtitle && <span className={styles.rowSubtitle}>{subtitle}</span>}
+        </div>
+        {right && <div className={styles.rowRight}>{right}</div>}
+        <span className={styles.chevron}>›</span>
+      </button>
+    );
+  }
 
   return (
-    <Component className={`${styles.row} ${onClick ? styles.clickable : ''}`} onClick={onClick}>
+    <div
+      className={className}
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
+      onTouchStart={onTouchStart}
+    >
       {icon && <span className={styles.rowIcon}>{icon}</span>}
       <div className={styles.rowContent}>
         <span className={styles.rowTitle}>{title}</span>
         {subtitle && <span className={styles.rowSubtitle}>{subtitle}</span>}
       </div>
       {right && <div className={styles.rowRight}>{right}</div>}
-      {onClick && <span className={styles.chevron}>›</span>}
-    </Component>
+    </div>
   );
 }

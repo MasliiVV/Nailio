@@ -4,12 +4,17 @@ import { BarChart3, Wallet, Crown, Clock, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import { Card, CardRow, PageHeader } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
+import { prefetchMasterInsights } from '@/lib/prefetch';
 import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
   const intl = useIntl();
   const navigate = useNavigate();
   const { logout } = useAuth();
+
+  const prefetchInsights = () => {
+    prefetchMasterInsights();
+  };
 
   return (
     <div className="page animate-fade-in">
@@ -19,16 +24,25 @@ export function SettingsPage() {
         <CardRow
           icon={<BarChart3 size={20} />}
           title={intl.formatMessage({ id: 'master.analytics' })}
+          onMouseEnter={prefetchInsights}
+          onFocus={prefetchInsights}
+          onTouchStart={prefetchInsights}
           onClick={() => navigate('/master/analytics')}
         />
         <CardRow
           icon={<Wallet size={20} />}
           title={intl.formatMessage({ id: 'master.finance' })}
+          onMouseEnter={prefetchInsights}
+          onFocus={prefetchInsights}
+          onTouchStart={prefetchInsights}
           onClick={() => navigate('/master/finance')}
         />
         <CardRow
           icon={<Crown size={20} />}
           title={intl.formatMessage({ id: 'master.subscription' })}
+          onMouseEnter={prefetchInsights}
+          onFocus={prefetchInsights}
+          onTouchStart={prefetchInsights}
           onClick={() => navigate('/master/subscription')}
         />
       </Card>

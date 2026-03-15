@@ -4,6 +4,7 @@ import { Calendar, Users, BarChart3, Scissors, Settings } from 'lucide-react';
 import styles from './MasterLayout.module.css';
 import { getTelegram } from '@/lib/telegram';
 import { type ReactNode, useEffect } from 'react';
+import { prefetchMasterInsights } from '@/lib/prefetch';
 
 const ICON_SIZE = 20;
 
@@ -18,6 +19,12 @@ const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
 export function MasterLayout() {
   const intl = useIntl();
   const location = useLocation();
+
+  const handleIntentPrefetch = (path: string) => {
+    if (path === '/master/analytics' || path === '/master/finance' || path === '/master/settings') {
+      prefetchMasterInsights();
+    }
+  };
 
   // Show/hide Telegram BackButton based on route depth
   useEffect(() => {
@@ -46,6 +53,9 @@ export function MasterLayout() {
               to={item.path}
               end={item.path === '/master'}
               className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+              onMouseEnter={() => handleIntentPrefetch(item.path)}
+              onFocus={() => handleIntentPrefetch(item.path)}
+              onTouchStart={() => handleIntentPrefetch(item.path)}
               onClick={() => {
                 getTelegram()?.HapticFeedback.selectionChanged();
               }}

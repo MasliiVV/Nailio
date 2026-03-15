@@ -29,29 +29,10 @@ function preloadMasterPages(): void {
   ]);
 }
 
-export function setQueryClient(qc: QueryClient): void {
-  queryClientRef = qc;
-}
-
-/** Call right after successful auth for master role */
-export function prefetchMasterData(): void {
+export function prefetchMasterInsights(): void {
   if (!queryClientRef) return;
 
   preloadMasterPages();
-
-  // Prefetch all bookings (calendar landing page needs them)
-  queryClientRef.prefetchQuery({
-    queryKey: ['bookings', 'list', undefined],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings').then((r) => r.data),
-    staleTime: 60_000,
-  });
-
-  // Prefetch upcoming bookings
-  queryClientRef.prefetchQuery({
-    queryKey: ['bookings', 'list', { upcoming: 'true' }],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true').then((r) => r.data),
-    staleTime: 60_000,
-  });
 
   queryClientRef.prefetchQuery({
     queryKey: ['analytics', 'dashboard', 'week'],
@@ -96,6 +77,33 @@ export function prefetchMasterData(): void {
     },
     staleTime: 60_000,
   });
+}
+
+export function setQueryClient(qc: QueryClient): void {
+  queryClientRef = qc;
+}
+
+/** Call right after successful auth for master role */
+export function prefetchMasterData(): void {
+  if (!queryClientRef) return;
+
+  preloadMasterPages();
+
+  // Prefetch all bookings (calendar landing page needs them)
+  queryClientRef.prefetchQuery({
+    queryKey: ['bookings', 'list', undefined],
+    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings').then((r) => r.data),
+    staleTime: 60_000,
+  });
+
+  // Prefetch upcoming bookings
+  queryClientRef.prefetchQuery({
+    queryKey: ['bookings', 'list', { upcoming: 'true' }],
+    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true').then((r) => r.data),
+    staleTime: 60_000,
+  });
+
+  prefetchMasterInsights();
 }
 
 /** Call right after successful auth for client role */
