@@ -70,9 +70,13 @@ export class NotificationsProcessor extends WorkerHost {
           return;
         }
 
-        // 2. Check booking status
-        if (booking.status === 'cancelled' && type !== 'cancellation') {
-          this.logger.debug(`Booking ${bookingId} is cancelled, skipping ${type} notification`);
+        // 2. Check booking status — skip reminders for terminal statuses
+        const terminalStatuses = ['cancelled', 'completed', 'no_show'];
+        const cancellationTypes = ['cancellation', 'cancellation_master'];
+        if (terminalStatuses.includes(booking.status) && !cancellationTypes.includes(type)) {
+          this.logger.debug(
+            `Booking ${bookingId} is ${booking.status}, skipping ${type} notification`,
+          );
           await this.markNotification(job, 'cancelled');
           return;
         }
