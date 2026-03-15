@@ -2,8 +2,10 @@
 // docs/api/authentication.md — JWT Bearer auth
 
 const API_BASE = '/api/v1';
+const TOKEN_REFRESH_BUFFER_MS = 30_000;
 
 let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
@@ -56,6 +58,58 @@ export function setTokenRefreshHandler(
   onTokenExpired = handler;
 }
 
+function getTokenExpiry(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const decoded = JSON.parse(atob(padded)) as { exp?: number };
+
+    return typeof decoded.exp === 'number' ? decoded.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldRefreshToken(token: string | null): boolean {
+  if (!token) return true;
+
+  const expiry = getTokenExpiry(token);
+  if (!expiry) return false;
+
+  return expiry - Date.now() <= TOKEN_REFRESH_BUFFER_MS;
+}
+
+function extractAccessToken(refreshResult: string | { accessToken: string } | null): string | null {
+  if (typeof refreshResult === 'string') {
+    return refreshResult;
+  }
+
+  return refreshResult?.accessToken || null;
+}
+
+async function ensureValidAccessToken(): Promise<string | null> {
+  if (!onTokenExpired) return accessToken;
+  if (!shouldRefreshToken(accessToken)) return accessToken;
+
+  if (!refreshPromise) {
+    refreshPromise = onTokenExpired()
+      .then((refreshResult) => {
+        const newToken = extractAccessToken(refreshResult);
+
+        accessToken = newToken;
+        return newToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, headers = {}, skipAuth = false } = options;
 
@@ -63,6 +117,13 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     'Content-Type': 'application/json',
     ...headers,
   };
+
+  if (!skipAuth) {
+    const ensuredToken = await ensureValidAccessToken();
+    if (ensuredToken) {
+      accessToken = ensuredToken;
+    }
+  }
 
   if (!skipAuth && accessToken) {
     reqHeaders['Authorization'] = `Bearer ${accessToken}`;

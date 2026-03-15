@@ -59,6 +59,7 @@ function formatDateDisplay(iso: string): string {
 export function CalendarPage() {
   const intl = useIntl();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
+  const [manualBookingDate, setManualBookingDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings();
   const cancelBooking = useCancelBooking();
   const deleteBooking = useDeleteBooking();
@@ -88,7 +89,7 @@ export function CalendarPage() {
   const createBooking = useCreateBooking();
 
   // Slots for add form
-  const { data: slotsData } = useSlots(selectedDate, selectedServiceId);
+  const { data: slotsData } = useSlots(manualBookingDate, selectedServiceId);
 
   // Slots for reschedule — use the booking's service
   const rescheduleServiceId = selectedBooking?.service?.id || '';
@@ -216,6 +217,7 @@ export function CalendarPage() {
   };
 
   const handleOpenAddForm = () => {
+    setManualBookingDate(selectedDate);
     setSelectedServiceId('');
     setSelectedClientId('');
     setSelectedSlot('');
@@ -225,7 +227,7 @@ export function CalendarPage() {
 
   const handleCreateBooking = () => {
     if (!selectedServiceId || !selectedSlot) return;
-    const startTime = `${selectedDate}T${selectedSlot}:00`;
+    const startTime = `${manualBookingDate}T${selectedSlot}:00`;
     createBooking.mutate(
       {
         serviceId: selectedServiceId,
@@ -697,6 +699,20 @@ export function CalendarPage() {
         title={intl.formatMessage({ id: 'calendar.addBooking' })}
       >
         <FormGroup>
+          <label className={styles.fieldLabel}>
+            {intl.formatMessage({ id: 'booking.selectDate' })}
+          </label>
+          <div className={styles.datePickerWrap}>
+            <DatePicker
+              selectedDate={manualBookingDate}
+              onSelect={(date) => {
+                setManualBookingDate(date);
+                setSelectedSlot('');
+              }}
+              daysAhead={60}
+            />
+          </div>
+
           <label className={styles.fieldLabel}>
             {intl.formatMessage({ id: 'booking.selectService' })}
           </label>
