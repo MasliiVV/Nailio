@@ -205,6 +205,9 @@ export function initTelegramApp(): void {
   // Apply safe area CSS variables
   applySafeArea(wa);
 
+  // Apply viewport height CSS variable
+  applyViewportHeight(wa);
+
   // Listen for theme changes
   wa.onEvent('themeChanged', () => {
     applyThemeColors(wa);
@@ -287,6 +290,17 @@ function applySafeArea(wa: WebApp): void {
     root.style.setProperty('--safe-left', `${s.left}px`);
     root.style.setProperty('--safe-right', `${s.right}px`);
   });
+}
+
+/** Apply Telegram viewport height as a CSS variable */
+function applyViewportHeight(wa: WebApp): void {
+  const root = document.documentElement;
+  const setVh = () => {
+    const h = wa.viewportStableHeight || wa.viewportHeight || window.innerHeight;
+    root.style.setProperty('--tg-viewport-height', `${h}px`);
+  };
+  setVh();
+  wa.onEvent('viewportChanged', setVh);
 }
 
 // ─── CloudStorage helpers (promisified) ───
