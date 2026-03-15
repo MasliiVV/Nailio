@@ -68,7 +68,7 @@
   padding-bottom: calc(var(--safe-bottom) + var(--space-xl));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-height: 0;
   overscroll-behavior: contain;
 }
