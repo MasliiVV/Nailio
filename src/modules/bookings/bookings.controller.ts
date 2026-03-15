@@ -175,10 +175,7 @@ export class BookingsController {
    */
   @Delete(':id')
   @Roles('master')
-  async remove(
-    @CurrentTenant() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  async remove(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.remove(tenantId, id);
   }
 }
