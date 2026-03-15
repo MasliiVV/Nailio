@@ -24,7 +24,7 @@ export interface ValidatedInitData {
 @Injectable()
 export class TelegramAuthService {
   private readonly logger = new Logger(TelegramAuthService.name);
-  private static readonly MAX_AUTH_AGE_SECONDS = 300; // 5 minutes
+  private static readonly MAX_AUTH_AGE_SECONDS = 86400; // 24 hours — Mini App stays open long
 
   /**
    * Validate Telegram initData according to:
