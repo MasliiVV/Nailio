@@ -872,6 +872,22 @@ export class BookingsService {
     });
   }
 
+  private formatBookingDateTimeForTimezone(startTime: Date, timezone: string) {
+    const date = new Intl.DateTimeFormat('uk-UA', {
+      timeZone: timezone,
+      day: 'numeric',
+      month: 'long',
+    }).format(startTime);
+    const time = new Intl.DateTimeFormat('uk-UA', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(startTime);
+
+    return { date, time };
+  }
+
   // ──────────────────────────────────────────────
   // Client → Master messaging
   // ──────────────────────────────────────────────
@@ -921,22 +937,12 @@ export class BookingsService {
       }
 
       const tz = booking.tenant?.timezone || 'Europe/Kyiv';
-      const dateFmt = new Intl.DateTimeFormat('uk-UA', {
-        timeZone: tz,
-        day: 'numeric',
-        month: 'long',
-      });
-      const timeFmt = new Intl.DateTimeFormat('uk-UA', {
-        timeZone: tz,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
+      const { date, time } = this.formatBookingDateTimeForTimezone(booking.startTime, tz);
 
       text = renderTemplate('client_message', 'uk', {
         serviceName: booking.serviceNameSnapshot,
-        date: dateFmt.format(booking.startTime),
-        time: timeFmt.format(booking.startTime),
+        date,
+        time,
         duration: booking.durationAtBooking,
         price: booking.priceAtBooking,
         clientName,
@@ -956,10 +962,33 @@ export class BookingsService {
         ],
       };
     } else {
+      const nearestBooking = await this.prisma.booking.findFirst({
+        where: {
+          tenantId,
+          clientId: client.id,
+          status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
+          startTime: { gte: new Date() },
+        },
+        include: { tenant: true },
+        orderBy: { startTime: 'asc' },
+      });
+
+      const bookingContext = nearestBooking
+        ? (() => {
+            const timezone = nearestBooking.tenant?.timezone || 'Europe/Kyiv';
+            const { date, time } = this.formatBookingDateTimeForTimezone(
+              nearestBooking.startTime,
+              timezone,
+            );
+
+            return `\n\n📋 Найближчий запис: ${nearestBooking.serviceNameSnapshot}\n📅 ${date} о ${time}`;
+          })()
+        : '';
+
       // General message without booking context
       text =
         `💬 Повідомлення від клієнта <b>${clientName}</b> (${clientTelegramLink})\n` +
-        `📱 ${client.phone || 'Не вказано'}\n\n` +
+        `📱 ${client.phone || 'Не вказано'}${bookingContext}\n\n` +
         `📝 ${dto.message}`;
 
       if (client.user.telegramId) {

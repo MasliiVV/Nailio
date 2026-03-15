@@ -17,7 +17,12 @@ import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
-import { createEmptyWeeklySchedule, normalizeSlotTimes, WEEK_DAY_KEYS } from '@/lib/schedule';
+import {
+  createEmptyWeeklySchedule,
+  getNextSlotTime,
+  normalizeSlotTimes,
+  WEEK_DAY_KEYS,
+} from '@/lib/schedule';
 import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
 
@@ -488,7 +493,7 @@ export function OnboardingWizard() {
                             updated[index] = {
                               ...day,
                               isDayOff: false,
-                              slots: normalizeSlotTimes([...day.slots, '09:00']),
+                              slots: [...day.slots, getNextSlotTime(day.slots)],
                             };
                             return updated;
                           });

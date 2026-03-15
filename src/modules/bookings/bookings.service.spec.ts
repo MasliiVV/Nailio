@@ -33,7 +33,7 @@ describe('BookingsService', () => {
     prisma = {
       client: { findFirst: jest.fn() },
       master: { findFirst: jest.fn() },
-      booking: { findUnique: jest.fn() },
+      booking: { findUnique: jest.fn(), findFirst: jest.fn() },
       tenant: { findUnique: jest.fn() },
       tenantClient: {
         service: { findFirst: jest.fn() },
@@ -382,6 +382,54 @@ describe('BookingsService', () => {
           ],
         },
       });
+    });
+
+    it('should include nearest booking date and time in general client messages', async () => {
+      const user: JwtPayload = {
+        sub: 'user-1',
+        telegramId: 123456,
+        role: 'client',
+        tenantId,
+      };
+
+      prisma.client.findFirst.mockResolvedValue({
+        id: 'client-1',
+        tenantId,
+        userId: 'user-1',
+        firstName: 'Іра',
+        lastName: 'К.',
+        phone: '+380501112233',
+        user: {
+          telegramId: BigInt(777000111),
+        },
+      });
+
+      prisma.master.findFirst.mockResolvedValue({
+        id: 'master-1',
+        tenantId,
+        user: {
+          telegramId: BigInt(999888777),
+        },
+      });
+
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        tenantId,
+        clientId: 'client-1',
+        serviceNameSnapshot: 'Манікюр',
+        startTime: new Date('2026-03-18T09:30:00.000Z'),
+        tenant: {
+          timezone: 'UTC',
+        },
+      });
+
+      await service.sendMessageToMaster(tenantId, user, {
+        message: 'Підкажіть, будь ласка, по догляду після процедури',
+      });
+
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(payload.text).toContain('📋 Найближчий запис: Манікюр');
+      expect(payload.text).toContain('📅 18 березня о 09:30');
     });
   });
 });

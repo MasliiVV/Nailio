@@ -38,7 +38,7 @@ import {
 } from '@/components/ui';
 import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
 import type { Service, Client, Booking } from '@/types';
-import { normalizeSlotTimes } from '@/lib/schedule';
+import { getNextSlotTime, normalizeSlotTimes } from '@/lib/schedule';
 import styles from './CalendarPage.module.css';
 
 function formatTime(iso: string): string {
@@ -267,7 +267,7 @@ export function CalendarPage() {
 
   const handleAddDaySlot = () => {
     setDayDraftIsDayOff(false);
-    setDayDraftSlots((previous) => normalizeSlotTimes([...previous, '09:00']));
+    setDayDraftSlots((previous) => [...previous, getNextSlotTime(previous)]);
   };
 
   const handleRemoveDaySlot = (index: number) => {
@@ -1051,7 +1051,7 @@ export function CalendarPage() {
                   )?.booking;
 
                   return (
-                    <div key={`${slot}-${index}`} className={styles.daySlotRow}>
+                    <div key={`day-slot-${index}`} className={styles.daySlotRow}>
                       <input
                         type="time"
                         className={styles.timeInput}

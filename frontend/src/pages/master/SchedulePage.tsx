@@ -5,7 +5,12 @@ import { useSchedule, useUpdateWorkingHours } from '@/hooks';
 import { Card, Button, SkeletonList, Section, PageHeader, Toggle } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import type { ScheduleDay } from '@/types';
-import { createEmptyWeeklySchedule, normalizeSlotTimes, WEEK_DAY_KEYS } from '@/lib/schedule';
+import {
+  createEmptyWeeklySchedule,
+  getNextSlotTime,
+  normalizeSlotTimes,
+  WEEK_DAY_KEYS,
+} from '@/lib/schedule';
 import styles from './SchedulePage.module.css';
 
 export function SchedulePage() {
@@ -45,7 +50,7 @@ export function SchedulePage() {
     updateDay(dayOfWeek, (day) => ({
       ...day,
       isDayOff: false,
-      slots: normalizeSlotTimes([...day.slots, '09:00']),
+      slots: [...day.slots, getNextSlotTime(day.slots)],
     }));
   };
 
