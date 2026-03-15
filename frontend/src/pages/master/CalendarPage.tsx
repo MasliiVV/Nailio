@@ -22,6 +22,7 @@ import {
   useServices,
   useClients,
   useSlots,
+  useSchedule,
   useDaySchedule,
   useUpdateDaySchedule,
 } from '@/hooks';
@@ -110,6 +111,7 @@ export function CalendarPage() {
 
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
+  const { data: scheduleData } = useSchedule();
   const createBooking = useCreateBooking();
   const { data: dayScheduleData } = useDaySchedule(selectedDate);
   const updateDaySchedule = useUpdateDaySchedule(selectedDate);
@@ -323,6 +325,17 @@ export function CalendarPage() {
       ...nextAssignments,
     }));
     getTelegram()?.HapticFeedback.notificationOccurred('success');
+  };
+
+  const handleApplyWeeklyTemplate = () => {
+    const selectedDayOfWeek = (new Date(`${selectedDate}T00:00:00`).getDay() + 6) % 7;
+    const templateDay = scheduleData?.weekly?.find((day) => day.dayOfWeek === selectedDayOfWeek);
+    const templateSlots = templateDay?.slots || [];
+
+    setDayDraftIsDayOff(templateDay?.isDayOff || templateSlots.length === 0);
+    setDayDraftSlots([...templateSlots]);
+    setShowResolutionStep(false);
+    getTelegram()?.HapticFeedback.selectionChanged();
   };
 
   const handleSaveDaySlots = async () => {
@@ -1045,6 +1058,14 @@ export function CalendarPage() {
 
             {!dayDraftIsDayOff && (
               <div className={styles.daySlotList}>
+                <button
+                  type="button"
+                  className={styles.secondaryInlineBtn}
+                  onClick={handleApplyWeeklyTemplate}
+                >
+                  {intl.formatMessage({ id: 'schedule.applyWeeklyTemplate' })}
+                </button>
+
                 {dayDraftSlots.map((slot, index) => {
                   const booking = dayScheduleData?.slots.find(
                     (daySlot) => daySlot.time === slot && daySlot.booking,

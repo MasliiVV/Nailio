@@ -54,6 +54,29 @@ export function SchedulePage() {
     }));
   };
 
+  const handleCopyPreviousDay = (dayOfWeek: number) => {
+    if (dayOfWeek === 0) return;
+
+    setDraft((previous) => {
+      const sourceDay = previous.find((day) => day.dayOfWeek === dayOfWeek - 1);
+      if (!sourceDay || sourceDay.isDayOff || sourceDay.slots.length === 0) {
+        return previous;
+      }
+
+      return previous.map((day) =>
+        day.dayOfWeek === dayOfWeek
+          ? {
+              ...day,
+              isDayOff: false,
+              slots: [...sourceDay.slots],
+            }
+          : day,
+      );
+    });
+
+    getTelegram()?.HapticFeedback.selectionChanged();
+  };
+
   const handleSlotChange = (dayOfWeek: number, index: number, value: string) => {
     updateDay(dayOfWeek, (day) => ({
       ...day,
@@ -133,14 +156,25 @@ export function SchedulePage() {
                         </button>
                       </div>
                     ))}
-                    <button
-                      type="button"
-                      className={styles.addSlotButton}
-                      onClick={() => handleAddSlot(day.dayOfWeek)}
-                    >
-                      <Plus size={16} />
-                      {intl.formatMessage({ id: 'schedule.addSlot' })}
-                    </button>
+                    <div className={styles.slotActions}>
+                      {day.dayOfWeek > 0 && (
+                        <button
+                          type="button"
+                          className={styles.secondarySlotButton}
+                          onClick={() => handleCopyPreviousDay(day.dayOfWeek)}
+                        >
+                          {intl.formatMessage({ id: 'schedule.copyPreviousDay' })}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.addSlotButton}
+                        onClick={() => handleAddSlot(day.dayOfWeek)}
+                      >
+                        <Plus size={16} />
+                        {intl.formatMessage({ id: 'schedule.addSlot' })}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

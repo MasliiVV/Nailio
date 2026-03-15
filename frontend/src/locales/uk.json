@@ -132,6 +132,8 @@
   "schedule.dayOverrides": "Слоти на конкретну дату",
   "schedule.overrideHint": "Перевизначення слотів для конкретної дати редагується зі сторінки календаря на вибраному дні.",
   "schedule.addSlot": "Додати слот",
+  "schedule.copyPreviousDay": "Копіювати попередній день",
+  "schedule.applyWeeklyTemplate": "Заповнити з шаблону тижня",
   "schedule.editDaySlots": "Редагувати слоти цього дня",
   "schedule.daySlotsTitle": "Слоти на {date}",
   "schedule.resolveAffectedBookings": "Оберіть, що робити з клієнтами зі слотів, які прибираються або змінюються.",

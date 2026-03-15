@@ -177,6 +177,11 @@
   gap: 6px;
 }
 
+.scheduleActions {
+  display: flex;
+  gap: 6px;
+}
+
 .removeSlotBtn {
   width: 28px;
   height: 28px;
@@ -192,6 +197,16 @@
   border: 1px dashed var(--color-primary);
   background: transparent;
   color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.secondarySlotBtn {
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-separator);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 600;
 }

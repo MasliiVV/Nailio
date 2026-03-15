@@ -484,23 +484,49 @@ export function OnboardingWizard() {
                           </button>
                         </div>
                       ))}
-                      <button
-                        type="button"
-                        className={styles.addSlotBtn}
-                        onClick={() => {
-                          setSchedule((prev) => {
-                            const updated = [...prev];
-                            updated[index] = {
-                              ...day,
-                              isDayOff: false,
-                              slots: [...day.slots, getNextSlotTime(day.slots)],
-                            };
-                            return updated;
-                          });
-                        }}
-                      >
-                        + {intl.formatMessage({ id: 'schedule.addSlot' })}
-                      </button>
+                      <div className={styles.scheduleActions}>
+                        {index > 0 && (
+                          <button
+                            type="button"
+                            className={styles.secondarySlotBtn}
+                            onClick={() => {
+                              setSchedule((prev) => {
+                                const updated = [...prev];
+                                const sourceDay = prev[index - 1];
+                                if (!sourceDay || sourceDay.isDayOff || sourceDay.slots.length === 0) {
+                                  return prev;
+                                }
+
+                                updated[index] = {
+                                  ...day,
+                                  isDayOff: false,
+                                  slots: [...sourceDay.slots],
+                                };
+                                return updated;
+                              });
+                            }}
+                          >
+                            {intl.formatMessage({ id: 'schedule.copyPreviousDay' })}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className={styles.addSlotBtn}
+                          onClick={() => {
+                            setSchedule((prev) => {
+                              const updated = [...prev];
+                              updated[index] = {
+                                ...day,
+                                isDayOff: false,
+                                slots: [...day.slots, getNextSlotTime(day.slots)],
+                              };
+                              return updated;
+                            });
+                          }}
+                        >
+                          + {intl.formatMessage({ id: 'schedule.addSlot' })}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

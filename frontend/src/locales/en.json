@@ -132,6 +132,8 @@
   "schedule.dayOverrides": "Date-specific slots",
   "schedule.overrideHint": "Edit slots for a specific date directly from the calendar page for that day.",
   "schedule.addSlot": "Add slot",
+  "schedule.copyPreviousDay": "Copy previous day",
+  "schedule.applyWeeklyTemplate": "Fill from weekly template",
   "schedule.editDaySlots": "Edit slots for this day",
   "schedule.daySlotsTitle": "Slots for {date}",
   "schedule.resolveAffectedBookings": "Choose what to do with bookings from slots you are removing or changing.",
