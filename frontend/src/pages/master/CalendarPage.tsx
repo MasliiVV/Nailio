@@ -5,6 +5,7 @@ import {
   useBookings,
   useCreateBooking,
   useCancelBooking,
+  useDeleteBooking,
   useRescheduleBooking,
   useUpdateBooking,
   useServices,
@@ -50,6 +51,7 @@ export function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings();
   const cancelBooking = useCancelBooking();
+  const deleteBooking = useDeleteBooking();
   const rescheduleBooking = useRescheduleBooking();
   const updateBooking = useUpdateBooking();
 
@@ -196,10 +198,7 @@ export function CalendarPage() {
     if (!selectedBooking) return;
     getTelegram()?.HapticFeedback.impactOccurred('heavy');
     try {
-      await cancelBooking.mutateAsync({
-        id: selectedBooking.id,
-        dto: { reason: 'Deleted by master' },
-      });
+      await deleteBooking.mutateAsync(selectedBooking.id);
       handleCloseDetail();
     } catch {
       getTelegram()?.HapticFeedback.notificationOccurred('error');
@@ -618,10 +617,10 @@ export function CalendarPage() {
                 <Button
                   variant="destructive"
                   onClick={handleDeleteBooking}
-                  disabled={cancelBooking.isPending}
+                  disabled={deleteBooking.isPending}
                   style={{ flex: 1 }}
                 >
-                  {cancelBooking.isPending
+                  {deleteBooking.isPending
                     ? intl.formatMessage({ id: 'common.loading' })
                     : intl.formatMessage({ id: 'common.delete' })}
                 </Button>

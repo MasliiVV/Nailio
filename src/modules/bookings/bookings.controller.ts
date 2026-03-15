@@ -7,6 +7,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
@@ -167,5 +168,17 @@ export class BookingsController {
   @Roles('master')
   async noShow(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.noShow(tenantId, id);
+  }
+
+  /**
+   * DELETE /api/v1/bookings/:id — Hard-delete booking 🔑👑
+   */
+  @Delete(':id')
+  @Roles('master')
+  async remove(
+    @CurrentTenant() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.bookingsService.remove(tenantId, id);
   }
 }

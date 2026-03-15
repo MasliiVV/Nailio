@@ -5,6 +5,7 @@ export {
   useBooking,
   useCreateBooking,
   useCancelBooking,
+  useDeleteBooking,
   useCompleteBooking,
   useNoShowBooking,
   useRescheduleBooking,

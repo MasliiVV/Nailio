@@ -147,6 +147,27 @@ export function useNoShowBooking() {
   });
 }
 
+// ---- Delete booking (master, hard-delete) ----
+export function useDeleteBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete<ApiResponse<{ success: boolean }>>(`/bookings/${id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('success');
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+    onError: () => {
+      const tg = getTelegram();
+      tg?.HapticFeedback.notificationOccurred('error');
+    },
+  });
+}
+
 // ---- Reschedule booking (master) ----
 export function useRescheduleBooking() {
   const queryClient = useQueryClient();

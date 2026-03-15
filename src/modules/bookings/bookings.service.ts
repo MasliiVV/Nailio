@@ -503,6 +503,35 @@ export class BookingsService {
   }
 
   // ──────────────────────────────────────────────
+  // Hard-delete Booking (master only)
+  // DELETE /api/v1/bookings/:id
+  // ──────────────────────────────────────────────
+
+  async remove(tenantId: string, bookingId: string) {
+    const booking = await this.prisma.tenantClient.booking.findFirst({
+      where: { id: bookingId, tenantId },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    // Cancel any scheduled notifications
+    await this.notificationsService.cancelBookingNotifications(
+      tenantId,
+      bookingId,
+      booking.clientId,
+      'master',
+    );
+
+    await this.prisma.tenantClient.booking.delete({
+      where: { id: bookingId },
+    });
+
+    this.logger.log(`Booking hard-deleted: ${bookingId} in tenant ${tenantId}`);
+
+    return { success: true };
+  }
+
+  // ──────────────────────────────────────────────
   // Update Booking (notes, service)
   // PATCH /api/v1/bookings/:id
   // ──────────────────────────────────────────────
