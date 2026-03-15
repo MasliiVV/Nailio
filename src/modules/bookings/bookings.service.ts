@@ -19,7 +19,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { FinanceService } from '../finance/finance.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { renderTemplate } from '../notifications/templates';
-import { Booking, Prisma } from '@prisma/client';
+import { Booking, BookingStatus, Prisma } from '@prisma/client';
 import {
   CreateBookingDto,
   CancelBookingDto,
@@ -327,6 +327,7 @@ export class BookingsService {
   async findAll(tenantId: string, user: JwtPayload, query: BookingListQueryDto) {
     const limit = Math.min(parseInt(query.limit || '20'), 100);
     const where: Prisma.BookingWhereInput = { tenantId };
+    const andConditions: Prisma.BookingWhereInput[] = [];
 
     // Client can only see their own bookings
     if (user.role === 'client' && user.clientId) {
@@ -339,22 +340,45 @@ export class BookingsService {
     }
 
     // Date range filter
+    const startTimeFilter: Prisma.DateTimeFilter = {};
+
     if (query.dateFrom) {
-      where.startTime = {
-        ...((where.startTime as Prisma.DateTimeFilter) || {}),
-        gte: new Date(query.dateFrom),
-      };
+      startTimeFilter.gte = new Date(query.dateFrom);
     }
     if (query.dateTo) {
-      where.startTime = {
-        ...((where.startTime as Prisma.DateTimeFilter) || {}),
-        lte: new Date(query.dateTo + 'T23:59:59.999Z'),
-      };
+      startTimeFilter.lte = new Date(query.dateTo + 'T23:59:59.999Z');
+    }
+    if (Object.keys(startTimeFilter).length > 0) {
+      andConditions.push({ startTime: startTimeFilter });
     }
 
     // Status filter
     if (query.status) {
-      where.status = query.status;
+      andConditions.push({ status: query.status });
+    }
+
+    if (query.upcoming === true) {
+      andConditions.push({
+        startTime: { gte: new Date() },
+        status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
+      });
+    }
+
+    if (query.upcoming === false) {
+      andConditions.push({
+        OR: [
+          { startTime: { lt: new Date() } },
+          {
+            status: {
+              in: [BookingStatus.completed, BookingStatus.cancelled, BookingStatus.no_show],
+            },
+          },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     // Cursor pagination

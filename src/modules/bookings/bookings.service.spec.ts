@@ -7,9 +7,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FinanceService } from '../finance/finance.service';
+import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SlotsQueryDto } from './dto/bookings.dto';
+import { BookingStatus } from '@prisma/client';
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -213,6 +215,33 @@ describe('BookingsService', () => {
   // ──────────────────────────────────────────────
 
   describe('complete()', () => {
+    it('should request only upcoming active bookings when upcoming=true', async () => {
+      const user: JwtPayload = {
+        sub: 'user-1',
+        telegramId: 123456,
+        role: 'master',
+        tenantId,
+      };
+
+      prisma.tenantClient.booking.findMany.mockResolvedValue([]);
+
+      await service.findAll(tenantId, user, { upcoming: true, limit: '10' });
+
+      expect(prisma.tenantClient.booking.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            tenantId,
+            AND: expect.arrayContaining([
+              expect.objectContaining({
+                startTime: expect.objectContaining({ gte: expect.any(Date) }),
+                status: { in: [BookingStatus.pending, BookingStatus.confirmed] },
+              }),
+            ]),
+          }),
+        }),
+      );
+    });
+
     it('should complete a confirmed booking', async () => {
       const booking = {
         id: 'booking-1',

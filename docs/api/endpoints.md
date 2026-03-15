@@ -220,6 +220,17 @@
 }
 ```
 
+### GET `/api/v1/bookings`
+
+**Query params:**
+- `dateFrom` (optional): `2026-03-15`
+- `dateTo` (optional): `2026-03-31`
+- `status` (optional): `pending | confirmed | completed | cancelled | no_show`
+- `clientId` (optional, master only): UUID
+- `upcoming` (optional): `true` для майбутніх активних записів, `false` для архівних/минулих
+- `cursor` (optional): UUID для пагінації
+- `limit` (optional): default 20, max 100
+
 ### POST `/api/v1/bookings`
 
 **Request (client створює запис):**

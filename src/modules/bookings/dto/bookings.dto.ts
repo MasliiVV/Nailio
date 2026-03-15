@@ -2,7 +2,16 @@
 // docs/database/schema.md — bookings table
 // docs/backlog.md #44-#50 — Booking system DTOs
 
-import { IsString, IsUUID, IsOptional, IsDateString, MaxLength, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  MaxLength,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 import { BookingStatus } from '@prisma/client';
 
 // ──────────────────────────────────────────────
@@ -95,6 +104,15 @@ export class BookingListQueryDto {
   @IsOptional()
   @IsEnum(BookingStatus)
   status?: BookingStatus;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value;
+  })
+  @IsBoolean()
+  upcoming?: boolean;
 
   @IsOptional()
   @IsUUID()
