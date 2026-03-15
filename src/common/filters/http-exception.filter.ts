@@ -52,6 +52,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
+    // Log request body for 400 errors to aid debugging
+    if (status === 400) {
+      this.logger.warn(
+        `400 error on ${request.method} ${request.url}: ${message} | body: ${JSON.stringify(request.body)}`,
+      );
+    }
+
     // docs/api/overview.md — Error response format
     response.status(status).json({
       success: false,

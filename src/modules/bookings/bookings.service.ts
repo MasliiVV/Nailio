@@ -450,8 +450,8 @@ export class BookingsService {
 
     if (!booking) throw new NotFoundException('Booking not found');
 
-    // Validate transition: only pending/confirmed can be cancelled
-    if (!['pending', 'confirmed'].includes(booking.status)) {
+    // Validate transition: clients can only cancel pending/confirmed bookings
+    if (user.role !== 'master' && !['pending', 'confirmed'].includes(booking.status)) {
       throw new BadRequestException(`Cannot cancel booking with status "${booking.status}"`);
     }
 
