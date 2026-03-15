@@ -515,11 +515,36 @@ export class BookingsService {
 
     if (!booking) throw new NotFoundException('Booking not found');
 
-    if (['completed', 'no_show', 'cancelled'].includes(booking.status)) {
-      throw new BadRequestException(`Cannot edit booking with status "${booking.status}"`);
-    }
-
     const updateData: Prisma.BookingUpdateInput = {};
+
+    // Update status
+    if (dto.status && dto.status !== booking.status) {
+      const allowedStatuses = ['completed', 'cancelled'];
+      if (!allowedStatuses.includes(dto.status)) {
+        throw new BadRequestException(`Status can only be set to: ${allowedStatuses.join(', ')}`);
+      }
+      updateData.status = dto.status;
+
+      if (dto.status === 'cancelled') {
+        updateData.cancelledAt = new Date();
+        updateData.cancelReason = 'Changed by master';
+      }
+
+      if (dto.status === 'completed' && booking.status !== 'completed') {
+        // Auto-create income transaction
+        try {
+          await this.financeService.createBookingTransaction(
+            tenantId,
+            bookingId,
+            booking.clientId,
+            booking.priceAtBooking,
+            booking.serviceNameSnapshot,
+          );
+        } catch (err) {
+          this.logger.error(`Failed to create transaction for booking ${bookingId}: ${err}`);
+        }
+      }
+    }
 
     // Update notes
     if (dto.notes !== undefined) {

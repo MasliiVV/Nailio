@@ -122,6 +122,10 @@ export class UpdateBookingDto {
   @IsUUID()
   @IsOptional()
   serviceId?: string;
+
+  @IsOptional()
+  @IsEnum(BookingStatus)
+  status?: BookingStatus;
 }
 
 // ──────────────────────────────────────────────

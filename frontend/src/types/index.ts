@@ -221,6 +221,7 @@ export interface RescheduleBookingDto {
 export interface UpdateBookingDto {
   notes?: string;
   serviceId?: string;
+  status?: 'completed' | 'cancelled';
 }
 
 export interface SendMessageToMasterDto {

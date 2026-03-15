@@ -1,21 +1,8 @@
 import { useState } from 'react';
 import { useIntl } from 'react-intl';
-import {
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Plus,
-  Clock,
-  Ban,
-  UserRoundCog,
-  Pencil,
-  User,
-  Trash2,
-} from 'lucide-react';
+import { Calendar, Plus, Clock, Ban, UserRoundCog, Pencil, User, Trash2 } from 'lucide-react';
 import {
   useBookings,
-  useCompleteBooking,
-  useNoShowBooking,
   useCreateBooking,
   useCancelBooking,
   useRescheduleBooking,
@@ -62,8 +49,6 @@ export function CalendarPage() {
   const intl = useIntl();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings();
-  const completeBooking = useCompleteBooking();
-  const noShowBooking = useNoShowBooking();
   const cancelBooking = useCancelBooking();
   const rescheduleBooking = useRescheduleBooking();
   const updateBooking = useUpdateBooking();
@@ -84,6 +69,7 @@ export function CalendarPage() {
   const [reassignClientId, setReassignClientId] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editServiceId, setEditServiceId] = useState('');
+  const [editStatus, setEditStatus] = useState<string>('');
 
   const { data: servicesData } = useServices();
   const { data: clientsData } = useClients();
@@ -114,24 +100,6 @@ export function CalendarPage() {
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
   );
 
-  const handleComplete = async (id: string) => {
-    getTelegram()?.HapticFeedback.impactOccurred('medium');
-    try {
-      await completeBooking.mutateAsync(id);
-    } catch {
-      getTelegram()?.HapticFeedback.notificationOccurred('error');
-    }
-  };
-
-  const handleNoShow = async (id: string) => {
-    getTelegram()?.HapticFeedback.impactOccurred('medium');
-    try {
-      await noShowBooking.mutateAsync(id);
-    } catch {
-      getTelegram()?.HapticFeedback.notificationOccurred('error');
-    }
-  };
-
   const handleOpenBookingDetail = (booking: Booking) => {
     setSelectedBooking(booking);
     setDetailMode('view');
@@ -139,6 +107,7 @@ export function CalendarPage() {
     setReassignClientId('');
     setEditNotes(booking.notes || '');
     setEditServiceId(booking.service?.id || '');
+    setEditStatus(booking.status);
   };
 
   const handleCloseDetail = () => {
@@ -198,6 +167,11 @@ export function CalendarPage() {
         dto: {
           notes: editNotes,
           serviceId: editServiceId !== selectedBooking.service?.id ? editServiceId : undefined,
+          status:
+            editStatus !== selectedBooking.status &&
+            (editStatus === 'completed' || editStatus === 'cancelled')
+              ? editStatus
+              : undefined,
         },
       });
       handleCloseDetail();
@@ -303,35 +277,9 @@ export function CalendarPage() {
               </div>
             )}
           </div>
-          {(booking.status === 'confirmed' || booking.status === 'pending') && (
-            <div className={styles.bookingActions}>
-              <button
-                className="touchable"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleComplete(booking.id);
-                }}
-                aria-label={intl.formatMessage({ id: 'booking.status.completed' })}
-              >
-                <CheckCircle size={20} color="var(--color-success)" />
-              </button>
-              <button
-                className="touchable"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNoShow(booking.id);
-                }}
-                aria-label={intl.formatMessage({ id: 'booking.status.no_show' })}
-              >
-                <XCircle size={20} color="var(--color-destructive)" />
-              </button>
-            </div>
-          )}
-          {booking.status !== 'confirmed' && booking.status !== 'pending' && (
-            <Badge variant={statusVariant(booking.status)}>
-              {intl.formatMessage({ id: `booking.status.${booking.status}` })}
-            </Badge>
-          )}
+          <Badge variant={statusVariant(booking.status)}>
+            {intl.formatMessage({ id: `booking.status.${booking.status}` })}
+          </Badge>
         </Card>
       ))}
 
@@ -433,42 +381,41 @@ export function CalendarPage() {
                 </div>
               )}
 
-              {(selectedBooking.status === 'confirmed' || selectedBooking.status === 'pending') && (
-                <div className={styles.detailActions}>
-                  <button
-                    className={styles.detailActionBtn}
-                    onClick={() => {
-                      setEditNotes(selectedBooking.notes || '');
-                      setEditServiceId(selectedBooking.service?.id || '');
-                      setDetailMode('edit');
-                    }}
-                  >
-                    <Pencil size={16} />
-                    {intl.formatMessage({ id: 'calendar.editBooking' })}
-                  </button>
-                  <button
-                    className={styles.detailActionBtn}
-                    onClick={() => setDetailMode('reschedule')}
-                  >
-                    <Clock size={16} />
-                    {intl.formatMessage({ id: 'calendar.reschedule' })}
-                  </button>
-                  <button
-                    className={styles.detailActionBtn}
-                    onClick={() => setDetailMode('reassign')}
-                  >
-                    <UserRoundCog size={16} />
-                    {intl.formatMessage({ id: 'calendar.reassign' })}
-                  </button>
-                  <button
-                    className={styles.detailActionBtnDanger}
-                    onClick={() => setDetailMode('delete')}
-                  >
-                    <Trash2 size={16} />
-                    {intl.formatMessage({ id: 'calendar.deleteBooking' })}
-                  </button>
-                </div>
-              )}
+              <div className={styles.detailActions}>
+                <button
+                  className={styles.detailActionBtn}
+                  onClick={() => {
+                    setEditNotes(selectedBooking.notes || '');
+                    setEditServiceId(selectedBooking.service?.id || '');
+                    setEditStatus(selectedBooking.status);
+                    setDetailMode('edit');
+                  }}
+                >
+                  <Pencil size={16} />
+                  {intl.formatMessage({ id: 'calendar.editBooking' })}
+                </button>
+                <button
+                  className={styles.detailActionBtn}
+                  onClick={() => setDetailMode('reschedule')}
+                >
+                  <Clock size={16} />
+                  {intl.formatMessage({ id: 'calendar.reschedule' })}
+                </button>
+                <button
+                  className={styles.detailActionBtn}
+                  onClick={() => setDetailMode('reassign')}
+                >
+                  <UserRoundCog size={16} />
+                  {intl.formatMessage({ id: 'calendar.reassign' })}
+                </button>
+                <button
+                  className={styles.detailActionBtnDanger}
+                  onClick={() => setDetailMode('delete')}
+                >
+                  <Trash2 size={16} />
+                  {intl.formatMessage({ id: 'calendar.deleteBooking' })}
+                </button>
+              </div>
             </>
           )}
 
@@ -582,6 +529,30 @@ export function CalendarPage() {
                         {(s.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
                       </option>
                     ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label className={styles.fieldLabel}>
+                  {intl.formatMessage({ id: 'calendar.editStatus' })}
+                </label>
+                <select
+                  className={styles.selectField}
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                >
+                  <option value="pending">
+                    {intl.formatMessage({ id: 'booking.status.pending' })}
+                  </option>
+                  <option value="confirmed">
+                    {intl.formatMessage({ id: 'booking.status.confirmed' })}
+                  </option>
+                  <option value="completed">
+                    {intl.formatMessage({ id: 'calendar.statusCompleted' })}
+                  </option>
+                  <option value="cancelled">
+                    {intl.formatMessage({ id: 'calendar.statusCancelled' })}
+                  </option>
                 </select>
               </div>
 
