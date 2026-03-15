@@ -21,12 +21,19 @@ describe('BookingsService', () => {
   let notificationsService: any;
   let financeService: any;
   let configService: any;
+  let fetchMock: jest.Mock;
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const tenantId = 'tenant-uuid-1';
 
   beforeEach(async () => {
+    fetchMock = jest.fn().mockResolvedValue({ ok: true, statusText: 'OK' });
+    global.fetch = fetchMock as typeof fetch;
+
     prisma = {
+      client: { findFirst: jest.fn() },
+      master: { findFirst: jest.fn() },
+      booking: { findUnique: jest.fn() },
       tenant: { findUnique: jest.fn() },
       tenantClient: {
         service: { findFirst: jest.fn() },
@@ -329,6 +336,65 @@ describe('BookingsService', () => {
       });
 
       await expect(service.confirm(tenantId, 'booking-1')).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('sendMessageToMaster()', () => {
+    it('should include a reply button for general client messages', async () => {
+      const user: JwtPayload = {
+        sub: 'user-1',
+        telegramId: 123456,
+        role: 'client',
+        tenantId,
+      };
+
+      prisma.client.findFirst.mockResolvedValue({
+        id: 'client-1',
+        tenantId,
+        userId: 'user-1',
+        firstName: 'Іра',
+        lastName: 'К.',
+        phone: '+380501112233',
+        user: {
+          telegramId: BigInt(777000111),
+        },
+      });
+
+      prisma.master.findFirst.mockResolvedValue({
+        id: 'master-1',
+        tenantId,
+        user: {
+          telegramId: BigInt(999888777),
+        },
+      });
+
+      await service.sendMessageToMaster(tenantId, user, {
+        message: 'Підкажіть, будь ласка, по догляду після процедури',
+      });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.telegram.org/bottest-token/sendMessage',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      const payload = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+      expect(payload).toMatchObject({
+        chat_id: '999888777',
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '💬 Відповісти клієнту',
+                url: 'tg://user?id=777000111',
+              },
+            ],
+          ],
+        },
+      });
     });
   });
 });

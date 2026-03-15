@@ -950,6 +950,7 @@ export class BookingsService {
     const clientTelegramLink = `<a href="tg://user?id=${client.user.telegramId}">Написати в ТГ</a>`;
 
     let text: string;
+    let replyMarkup: Record<string, unknown> | undefined;
 
     if (dto.bookingId) {
       // Message with booking context
@@ -985,12 +986,36 @@ export class BookingsService {
         clientTelegramLink,
         reason: dto.message,
       });
+
+      replyMarkup = {
+        inline_keyboard: [
+          [
+            {
+              text: '💬 Відповісти клієнту',
+              callback_data: `reply:${dto.bookingId}`,
+            },
+          ],
+        ],
+      };
     } else {
       // General message without booking context
       text =
         `💬 Повідомлення від клієнта <b>${clientName}</b> (${clientTelegramLink})\n` +
         `📱 ${client.phone || 'Не вказано'}\n\n` +
         `📝 ${dto.message}`;
+
+      if (client.user.telegramId) {
+        replyMarkup = {
+          inline_keyboard: [
+            [
+              {
+                text: '💬 Відповісти клієнту',
+                url: `tg://user?id=${client.user.telegramId.toString()}`,
+              },
+            ],
+          ],
+        };
+      }
     }
 
     // Send to master via platform bot
@@ -1001,18 +1026,7 @@ export class BookingsService {
         chat_id: master.user.telegramId.toString(),
         text,
         parse_mode: 'HTML',
-        reply_markup: dto.bookingId
-          ? {
-              inline_keyboard: [
-                [
-                  {
-                    text: '💬 Відповісти клієнту',
-                    callback_data: `reply:${dto.bookingId}`,
-                  },
-                ],
-              ],
-            }
-          : undefined,
+        reply_markup: replyMarkup,
       }),
     });
 
