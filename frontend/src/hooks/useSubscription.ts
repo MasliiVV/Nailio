@@ -81,7 +81,7 @@ export function useCancelSubscription() {
 
   return useMutation({
     mutationFn: async () => {
-      await api.post('/subscription/cancel');
+      await api.post('/subscription/cancel', {});
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('warning');

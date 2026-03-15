@@ -68,6 +68,8 @@ export class SubscriptionService {
    * docs/api/endpoints.md — GET /api/v1/subscription
    */
   async getStatus(tenantId: string) {
+    const tenant = await this.ensureSubscription(tenantId);
+
     const subscription = await this.prisma.subscription.findUnique({
       where: { tenantId },
       include: {
@@ -82,13 +84,8 @@ export class SubscriptionService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { trialEndsAt: true },
-    });
-
     // Compute daysLeft for frontend
-    const periodEnd = subscription.currentPeriodEnd || tenant?.trialEndsAt;
+    const periodEnd = subscription.currentPeriodEnd || tenant.trialEndsAt;
     const daysLeft = periodEnd
       ? Math.max(0, Math.ceil((periodEnd.getTime() - Date.now()) / 86400000))
       : 0;
@@ -104,8 +101,8 @@ export class SubscriptionService {
       provider: subscription.paymentProvider,
       cardLastFour: subscription.cardLastFour,
       currentPeriodStart: subscription.currentPeriodStart,
-      currentPeriodEnd: subscription.currentPeriodEnd || tenant?.trialEndsAt,
-      trialEndsAt: tenant?.trialEndsAt,
+      currentPeriodEnd: subscription.currentPeriodEnd || tenant.trialEndsAt,
+      trialEndsAt: tenant.trialEndsAt,
       cancelledAt: subscription.cancelReason ? subscription.createdAt : null,
       daysLeft,
       priceUsd: this.platformSubscriptionPrice,
@@ -119,6 +116,8 @@ export class SubscriptionService {
    * docs/api/endpoints.md — POST /api/v1/subscription/checkout
    */
   async checkout(tenantId: string, provider: 'monobank' | 'liqpay') {
+    await this.ensureSubscription(tenantId);
+
     const subscription = await this.prisma.subscription.findUnique({
       where: { tenantId },
     });
@@ -546,6 +545,8 @@ export class SubscriptionService {
    * docs/api/endpoints.md — POST /api/v1/subscription/cancel
    */
   async cancel(tenantId: string, reason?: string) {
+    await this.ensureSubscription(tenantId);
+
     const subscription = await this.prisma.subscription.findUnique({
       where: { tenantId },
     });
@@ -603,6 +604,8 @@ export class SubscriptionService {
    * docs/api/endpoints.md — GET /api/v1/subscription/payments
    */
   async getPaymentHistory(tenantId: string) {
+    await this.ensureSubscription(tenantId);
+
     const subscription = await this.prisma.subscription.findUnique({
       where: { tenantId },
     });
@@ -625,6 +628,33 @@ export class SubscriptionService {
    */
   async updateCard(tenantId: string, provider: 'monobank' | 'liqpay') {
     return this.checkout(tenantId, provider);
+  }
+
+  private async ensureSubscription(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { trialEndsAt: true },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+
+    const now = new Date();
+    const subscriptionStatus = tenant.trialEndsAt && tenant.trialEndsAt > now ? 'trial' : 'expired';
+
+    await this.prisma.subscription.upsert({
+      where: { tenantId },
+      update: {},
+      create: {
+        tenantId,
+        status: subscriptionStatus,
+        currentPeriodStart: subscriptionStatus === 'trial' ? now : null,
+        currentPeriodEnd: tenant.trialEndsAt,
+      },
+    });
+
+    return tenant;
   }
 
   /**
