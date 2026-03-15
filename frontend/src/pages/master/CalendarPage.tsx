@@ -162,17 +162,29 @@ export function CalendarPage() {
     if (!selectedBooking) return;
     getTelegram()?.HapticFeedback.impactOccurred('medium');
     try {
+      const dto: Record<string, unknown> = {};
+
+      // Only send notes if changed
+      if (editNotes !== (selectedBooking.notes || '')) {
+        dto.notes = editNotes;
+      }
+
+      // Only send serviceId if actually changed and valid
+      if (editServiceId && editServiceId !== selectedBooking.service?.id) {
+        dto.serviceId = editServiceId;
+      }
+
+      // Only send status if changed to completed/cancelled
+      if (
+        editStatus !== selectedBooking.status &&
+        (editStatus === 'completed' || editStatus === 'cancelled')
+      ) {
+        dto.status = editStatus;
+      }
+
       await updateBooking.mutateAsync({
         id: selectedBooking.id,
-        dto: {
-          notes: editNotes,
-          serviceId: editServiceId !== selectedBooking.service?.id ? editServiceId : undefined,
-          status:
-            editStatus !== selectedBooking.status &&
-            (editStatus === 'completed' || editStatus === 'cancelled')
-              ? editStatus
-              : undefined,
-        },
+        dto,
       });
       handleCloseDetail();
     } catch {
