@@ -33,6 +33,9 @@ const ClientDetailPage = lazy(() =>
 const ServicesPage = lazy(() =>
   import('@/pages/master/ServicesPage').then((m) => ({ default: m.ServicesPage })),
 );
+const SmartRebookingPage = lazy(() =>
+  import('./pages/master/SmartRebookingPage').then((m) => ({ default: m.SmartRebookingPage })),
+);
 const SchedulePage = lazy(() =>
   import('@/pages/master/SchedulePage').then((m) => ({ default: m.SchedulePage })),
 );
@@ -73,8 +76,10 @@ function PageLoader() {
 function LoadingScreen() {
   return (
     <div className="loading-screen">
-      <div className="spinner spinner-lg" />
-      <p className="loading-screen__text">Завантаження...</p>
+      <>
+        <div className="spinner spinner-lg" />
+        <p className="loading-screen__text">Завантаження...</p>
+      </>
     </div>
   );
 }
@@ -88,24 +93,26 @@ function AuthErrorScreen({ error, onRetry }: { error: string; onRetry: () => voi
 
   return (
     <div className="loading-screen">
-      <ShieldAlert size={48} color="var(--color-destructive)" />
-      <h2 style={{ fontSize: 20, fontWeight: 600 }}>Помилка авторизації</h2>
-      <p className="text-secondary">{error}</p>
-      {helpText ? <p className="text-secondary">{helpText}</p> : null}
-      <button
-        className="touchable"
-        style={{
-          padding: '12px 24px',
-          background: 'var(--color-primary)',
-          color: 'var(--color-primary-text)',
-          borderRadius: 'var(--radius-md)',
-          fontWeight: 600,
-          fontSize: 15,
-        }}
-        onClick={onRetry}
-      >
-        Спробувати ще
-      </button>
+      <>
+        <ShieldAlert size={48} color="var(--color-destructive)" />
+        <h2 style={{ fontSize: 20, fontWeight: 600 }}>Помилка авторизації</h2>
+        <p className="text-secondary">{error}</p>
+        {helpText ? <p className="text-secondary">{helpText}</p> : null}
+        <button
+          className="touchable"
+          style={{
+            padding: '12px 24px',
+            background: 'var(--color-primary)',
+            color: 'var(--color-primary-text)',
+            borderRadius: 'var(--radius-md)',
+            fontWeight: 600,
+            fontSize: 15,
+          }}
+          onClick={onRetry}
+        >
+          Спробувати ще
+        </button>
+      </>
     </div>
   );
 }
@@ -127,8 +134,10 @@ export function App() {
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/onboarding/*" element={<OnboardingWizard />} />
-            <Route path="*" element={<Navigate to="/onboarding" replace />} />
+            <>
+              <Route path="/onboarding/*" element={<OnboardingWizard />} />
+              <Route path="*" element={<Navigate to="/onboarding" replace />} />
+            </>
           </Routes>
         </Suspense>
       </BrowserRouter>
@@ -141,8 +150,10 @@ export function App() {
       <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/client/onboarding" element={<ClientOnboardingPage />} />
-            <Route path="*" element={<Navigate to="/client/onboarding" replace />} />
+            <>
+              <Route path="/client/onboarding" element={<ClientOnboardingPage />} />
+              <Route path="*" element={<Navigate to="/client/onboarding" replace />} />
+            </>
           </Routes>
         </Suspense>
       </BrowserRouter>
@@ -153,38 +164,45 @@ export function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {role === 'master' ? (
-            <>
-              <Route path="/master" element={<MasterLayout />}>
-                <Route index element={<CalendarPage />} />
-                <Route path="clients" element={<ClientsPage />} />
-                <Route path="clients/:id" element={<ClientDetailPage />} />
-                <Route path="services" element={<ServicesPage />} />
-                <Route path="schedule" element={<SchedulePage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="finance" element={<FinancePage />} />
-                <Route path="subscription" element={<SubscriptionPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/master" replace />} />
-            </>
-          ) : role === 'platform_admin' ? (
-            <>
-              <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/admin/tenants/:id" element={<AdminTenantPage />} />
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </>
-          ) : (
-            <>
-              <Route path="/client" element={<ClientLayout />}>
-                <Route index element={<ClientHomePage />} />
-                <Route path="book/:serviceId" element={<BookingPage />} />
-                <Route path="bookings" element={<MyBookingsPage />} />
-                <Route path="profile" element={<ClientProfilePage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/client" replace />} />
-            </>
-          )}
+          <>
+            {role === 'master' ? (
+              <>
+                <Route path="/master" element={<MasterLayout />}>
+                  <>
+                    <Route index element={<CalendarPage />} />
+                    <Route path="clients" element={<ClientsPage />} />
+                    <Route path="clients/:id" element={<ClientDetailPage />} />
+                    <Route path="rebooking" element={<SmartRebookingPage />} />
+                    <Route path="services" element={<ServicesPage />} />
+                    <Route path="schedule" element={<SchedulePage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                    <Route path="analytics" element={<AnalyticsPage />} />
+                    <Route path="finance" element={<FinancePage />} />
+                    <Route path="subscription" element={<SubscriptionPage />} />
+                  </>
+                </Route>
+                <Route path="*" element={<Navigate to="/master" replace />} />
+              </>
+            ) : role === 'platform_admin' ? (
+              <>
+                <Route path="/admin" element={<AdminDashboardPage />} />
+                <Route path="/admin/tenants/:id" element={<AdminTenantPage />} />
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </>
+            ) : (
+              <>
+                <Route path="/client" element={<ClientLayout />}>
+                  <>
+                    <Route index element={<ClientHomePage />} />
+                    <Route path="book/:serviceId" element={<BookingPage />} />
+                    <Route path="bookings" element={<MyBookingsPage />} />
+                    <Route path="profile" element={<ClientProfilePage />} />
+                  </>
+                </Route>
+                <Route path="*" element={<Navigate to="/client" replace />} />
+              </>
+            )}
+          </>
         </Routes>
       </Suspense>
     </BrowserRouter>

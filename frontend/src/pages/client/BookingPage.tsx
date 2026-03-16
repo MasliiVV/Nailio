@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntl } from 'react-intl';
 import { CheckCircle, CalendarOff } from 'lucide-react';
 import { useService, useSlots, useCreateBooking } from '@/hooks';
@@ -21,8 +21,13 @@ export function BookingPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const intl = useIntl();
+  const [searchParams] = useSearchParams();
 
-  const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
+  const initialDate = searchParams.get('date');
+  const initialSlot = searchParams.get('slot');
+  const promoCampaignId = searchParams.get('campaignId');
+
+  const [selectedDate, setSelectedDate] = useState(initialDate || formatDateKey(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
@@ -88,6 +93,14 @@ export function BookingPage() {
   }, [selectedDate]);
 
   useEffect(() => {
+    if (!initialSlot) return;
+    const matchingSlot = availableSlots.find((slot) => slot.startTime === initialSlot);
+    if (matchingSlot) {
+      setSelectedSlot(initialSlot);
+    }
+  }, [availableSlots, initialSlot]);
+
+  useEffect(() => {
     if (!firstAvailableDate) return;
     if (availabilityByDate[selectedDate] === 'available') return;
     setSelectedDate(firstAvailableDate);
@@ -104,6 +117,7 @@ export function BookingPage() {
       await createBooking.mutateAsync({
         serviceId,
         startTime: `${selectedDate}T${selectedSlot}:00`,
+        promoCampaignId: promoCampaignId || undefined,
       });
 
       setConfirmed(true);

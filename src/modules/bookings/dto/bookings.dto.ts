@@ -62,6 +62,10 @@ export class CreateBookingDto {
   @IsUUID()
   @IsOptional()
   clientId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  promoCampaignId?: string;
 }
 
 // ──────────────────────────────────────────────

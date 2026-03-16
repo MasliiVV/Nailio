@@ -19,28 +19,15 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
       setVisible(true);
       document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => setAnimating(true));
-
-      // Disable Telegram swipe-to-close while sheet is open
-      try {
-        window.Telegram?.WebApp?.disableVerticalSwipes();
-      } catch { /* ignore */ }
     } else {
       setAnimating(false);
       document.body.style.overflow = '';
       const timer = setTimeout(() => setVisible(false), 300);
 
-      // Re-enable Telegram swipe-to-close
-      try {
-        window.Telegram?.WebApp?.enableVerticalSwipes();
-      } catch { /* ignore */ }
-
       return () => clearTimeout(timer);
     }
     return () => {
       document.body.style.overflow = '';
-      try {
-        window.Telegram?.WebApp?.enableVerticalSwipes();
-      } catch { /* ignore */ }
     };
   }, [open]);
 

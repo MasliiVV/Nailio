@@ -85,6 +85,14 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   ADMIN_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  OPENAI_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  AI_MODEL?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

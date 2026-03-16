@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useIntl } from 'react-intl';
-import { Calendar, Users, BarChart3, Scissors, Settings } from 'lucide-react';
+import { Calendar, Users, BarChart3, Sparkles, Settings } from 'lucide-react';
 import styles from './MasterLayout.module.css';
 import { getTelegram } from '@/lib/telegram';
 import { type ReactNode, useEffect } from 'react';
@@ -12,7 +12,7 @@ const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
   { path: '/master', icon: <Calendar size={ICON_SIZE} />, labelKey: 'master.calendar' },
   { path: '/master/clients', icon: <Users size={ICON_SIZE} />, labelKey: 'master.clients' },
   { path: '/master/analytics', icon: <BarChart3 size={ICON_SIZE} />, labelKey: 'master.analytics' },
-  { path: '/master/services', icon: <Scissors size={ICON_SIZE} />, labelKey: 'master.services' },
+  { path: '/master/rebooking', icon: <Sparkles size={ICON_SIZE} />, labelKey: 'master.rebooking' },
   { path: '/master/settings', icon: <Settings size={ICON_SIZE} />, labelKey: 'master.settings' },
 ];
 
@@ -41,31 +41,39 @@ export function MasterLayout() {
 
   return (
     <div className={styles.layout}>
-      <main className={styles.content}>
-        <Outlet />
-      </main>
+      <>
+        <main className={styles.content}>
+          <Outlet />
+        </main>
 
-      <div className={styles.navWrap}>
-        <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/master'}
-              className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              onMouseEnter={() => handleIntentPrefetch(item.path)}
-              onFocus={() => handleIntentPrefetch(item.path)}
-              onTouchStart={() => handleIntentPrefetch(item.path)}
-              onClick={() => {
-                getTelegram()?.HapticFeedback.selectionChanged();
-              }}
-            >
-              <div className={styles.navIcon}>{item.icon}</div>
-              <span className={styles.navLabel}>{intl.formatMessage({ id: item.labelKey })}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </div>
+        <div className={styles.navWrap}>
+          <nav className={styles.nav}>
+            <>
+              {NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/master'}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                  onMouseEnter={() => handleIntentPrefetch(item.path)}
+                  onFocus={() => handleIntentPrefetch(item.path)}
+                  onTouchStart={() => handleIntentPrefetch(item.path)}
+                  onClick={() => {
+                    getTelegram()?.HapticFeedback.selectionChanged();
+                  }}
+                >
+                  <>
+                    <div className={styles.navIcon}>{item.icon}</div>
+                    <span className={styles.navLabel}>
+                      {intl.formatMessage({ id: item.labelKey })}
+                    </span>
+                  </>
+                </NavLink>
+              ))}
+            </>
+          </nav>
+        </div>
+      </>
     </div>
   );
 }

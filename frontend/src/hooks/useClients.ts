@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { ApiResponse, Client, ClientDetail, PaginatedResponse } from '@/types';
+import type {
+  ApiResponse,
+  Client,
+  ClientDetail,
+  PaginatedResponse,
+  SendClientMessageDto,
+} from '@/types';
 import { getTelegram } from '@/lib/telegram';
 
 export const clientKeys = {
@@ -61,6 +67,21 @@ export function useUnblockClient() {
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: clientKeys.all });
+    },
+  });
+}
+
+export function useSendClientMessage(id: string) {
+  return useMutation({
+    mutationFn: async (dto: SendClientMessageDto) => {
+      const res = await api.post<ApiResponse<{ success: boolean }>>(`/clients/${id}/message`, dto);
+      return res.data;
+    },
+    onSuccess: () => {
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+    },
+    onError: () => {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
     },
   });
 }

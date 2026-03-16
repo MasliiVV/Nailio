@@ -17,11 +17,14 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { RebookingModule } from './modules/rebooking/rebooking.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { PaymentSettingsModule } from './modules/payment-settings/payment-settings.module';
 import configuration from './config/configuration';
 import { validate } from './config/env.validation';
+
+const nodeEnv = (process.env as Record<string, string | undefined>).NODE_ENV;
 
 @Module({
   imports: [
@@ -36,10 +39,10 @@ import { validate } from './config/env.validation';
     LoggerModule.forRoot({
       pinoHttp: {
         transport:
-          process.env.NODE_ENV !== 'production'
+          nodeEnv !== 'production'
             ? { target: 'pino-pretty', options: { singleLine: true } }
             : undefined,
-        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        level: nodeEnv !== 'production' ? 'debug' : 'info',
         autoLogging: true,
         serializers: {
           req: (req) => ({
@@ -99,6 +102,7 @@ import { validate } from './config/env.validation';
     ClientsModule,
     NotificationsModule,
     AnalyticsModule,
+    RebookingModule,
     FinanceModule,
     SubscriptionModule,
     PaymentSettingsModule,

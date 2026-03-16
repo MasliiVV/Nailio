@@ -5,14 +5,23 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Client } from '@prisma/client';
-import { UpdateClientDto, ClientListQueryDto, ClientOnboardingDto } from './dto/clients.dto';
+import {
+  UpdateClientDto,
+  ClientListQueryDto,
+  ClientOnboardingDto,
+  SendClientMessageDto,
+} from './dto/clients.dto';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
+import { BotService } from '../telegram/bot.service';
 
 @Injectable()
 export class ClientsService {
   private readonly logger = new Logger(ClientsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly botService: BotService,
+  ) {}
 
   // ──────────────────────────────────────────────
   // Client list (#53)
@@ -212,6 +221,60 @@ export class ClientsService {
     return { id: clientId, isBlocked: false };
   }
 
+  async sendMessage(tenantId: string, clientId: string, dto: SendClientMessageDto) {
+    const [client, tenant, bot] = await Promise.all([
+      this.prisma.tenantClient.client.findFirst({
+        where: { id: clientId, tenantId },
+        include: {
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
+      }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { displayName: true },
+      }),
+      this.botService.findByTenantId(tenantId),
+    ]);
+
+    if (!client) throw new NotFoundException('Client not found');
+    if (!client.user?.telegramId) {
+      throw new BadRequestException('Client Telegram is not connected');
+    }
+    if (!bot?.isActive) {
+      throw new BadRequestException('Tenant bot is not connected');
+    }
+
+    const senderName = tenant?.displayName || 'Ваш майстер';
+    const messageText = `💌 ${this.escapeHtml(senderName)}\n\n${this.escapeHtml(dto.message).replace(/\n/g, '\n')}`;
+
+    const sent = await this.botService.sendMessage(bot.id, client.user.telegramId, messageText, {
+      parseMode: 'HTML',
+    });
+
+    if (!sent) {
+      await this.prisma.tenantClient.client.update({
+        where: { id: clientId },
+        data: { botBlocked: true },
+      });
+      throw new BadRequestException('Client blocked bot');
+    }
+
+    if (client.botBlocked) {
+      await this.prisma.tenantClient.client.update({
+        where: { id: clientId },
+        data: { botBlocked: false },
+      });
+    }
+
+    this.logger.log(`Manual client message sent: ${clientId} in tenant ${tenantId}`);
+
+    return { success: true };
+  }
+
   // ──────────────────────────────────────────────
   // Client onboarding (#52)
   // docs/api/endpoints.md — POST /api/v1/clients/onboarding
@@ -268,5 +331,9 @@ export class ClientsService {
       lastVisitAt: client.lastVisitAt?.toISOString(),
       createdAt: client.createdAt.toISOString(),
     };
+  }
+
+  private escapeHtml(value: string) {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }

@@ -212,6 +212,7 @@ export function initTelegramApp(): void {
 
   wa.ready();
   wa.expand();
+  wa.disableVerticalSwipes();
 
   // Apply safe area CSS variables
   applySafeArea(wa);
@@ -307,6 +308,7 @@ function applySafeArea(wa: WebApp): void {
 function applyViewportHeight(wa: WebApp): void {
   const root = document.documentElement;
   const setVh = () => {
+    wa.expand();
     const h = wa.viewportStableHeight || wa.viewportHeight || window.innerHeight;
     root.style.setProperty('--tg-viewport-height', `${h}px`);
   };

@@ -74,6 +74,8 @@ services:
       - API_BASE_URL=${API_BASE_URL}
       - MINI_APP_URL=${MINI_APP_URL}
       - ADMIN_URL=${ADMIN_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_MODEL=${AI_MODEL:-gpt-4.1-mini}
     depends_on:
       pgbouncer:
         condition: service_started
@@ -106,6 +108,8 @@ services:
       - MONOBANK_MERCHANT_TOKEN=${MONOBANK_MERCHANT_TOKEN}
       - LIQPAY_PUBLIC_KEY=${LIQPAY_PUBLIC_KEY}
       - LIQPAY_PRIVATE_KEY=${LIQPAY_PRIVATE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_MODEL=${AI_MODEL:-gpt-4.1-mini}
     depends_on:
       - api
     networks:
@@ -395,6 +399,8 @@ PAYMENT_ENCRYPTION_KEY=64-char-hex-for-aes-256-separate
 
 # ─── Platform Bot ───
 PLATFORM_BOT_TOKEN=123456:ABC-DEF...
+OPENAI_API_KEY=
+AI_MODEL=gpt-4.1-mini
 
 # ─── Payment: Monobank ───
 MONOBANK_MERCHANT_TOKEN=uXxxxx...
@@ -410,6 +416,13 @@ MINIO_SECRET_KEY=strong-random-password-here
 # ─── URLs ───
 API_BASE_URL=https://api.nailio.example.com
 MINI_APP_URL=https://app.nailio.example.com
+
+### Optional AI Copywriter
+
+- `OPENAI_API_KEY` — API key for AI-generated promo text.
+- `AI_MODEL` — model name for copywriting, default `gpt-4.1-mini`.
+- If `OPENAI_API_KEY` is empty, the app falls back to built-in template generation.
+- Never commit a real API key to the repository; store it only in local `.env`, Docker secrets, or your hosting provider's secret manager.
 ADMIN_URL=https://admin.nailio.example.com
 ```
 

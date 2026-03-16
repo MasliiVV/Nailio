@@ -17,6 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FinanceService } from '../finance/finance.service';
+import { RebookingService } from '../rebooking/rebooking.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { renderTemplate } from '../notifications/templates';
 import { Booking, BookingStatus, Prisma } from '@prisma/client';
@@ -47,6 +48,7 @@ export class BookingsService {
     private readonly notificationsService: NotificationsService,
     private readonly financeService: FinanceService,
     private readonly configService: ConfigService,
+    private readonly rebookingService: RebookingService,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -253,6 +255,15 @@ export class BookingsService {
         startTime,
         user.role === 'master' ? 'master' : 'client',
       );
+
+      if (user.role === 'client' && dto.promoCampaignId) {
+        await this.rebookingService.handleCampaignBooking(
+          tenantId,
+          clientId,
+          dto.promoCampaignId,
+          service.id,
+        );
+      }
 
       return this.formatBookingResponse(booking);
     } catch (error: unknown) {

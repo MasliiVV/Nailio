@@ -30,7 +30,14 @@ export {
   useUpdateDaySchedule,
   scheduleKeys,
 } from './useSchedule';
-export { useClients, useClient, useBlockClient, useUnblockClient, clientKeys } from './useClients';
+export {
+  useClients,
+  useClient,
+  useBlockClient,
+  useUnblockClient,
+  useSendClientMessage,
+  clientKeys,
+} from './useClients';
 export { useDashboard, analyticsKeys } from './useAnalytics';
 export {
   useTransactions,
@@ -47,3 +54,9 @@ export {
 } from './useSubscription';
 export { useAdminTenants, useAdminTenant, adminTenantKeys } from './useAdminTenants';
 export { useWeeklyScheduleDraft } from './useWeeklyScheduleDraft';
+export {
+  useRebookingOverview,
+  useGenerateRebookingMessage,
+  useSendRebookingCampaign,
+  rebookingKeys,
+} from './useRebooking';

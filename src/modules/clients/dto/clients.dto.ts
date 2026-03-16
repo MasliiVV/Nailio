@@ -81,6 +81,16 @@ export class UpdateClientDto {
 }
 
 // ──────────────────────────────────────────────
+// Request: POST /api/v1/clients/:id/message
+// ──────────────────────────────────────────────
+
+export class SendClientMessageDto {
+  @IsString()
+  @MaxLength(1000)
+  message!: string;
+}
+
+// ──────────────────────────────────────────────
 // Request: POST /api/v1/clients/onboarding
 // docs/api/endpoints.md — Client Onboarding
 // ──────────────────────────────────────────────

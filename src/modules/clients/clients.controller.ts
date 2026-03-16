@@ -14,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ClientsService } from './clients.service';
-import { ClientListQueryDto, UpdateClientDto, ClientOnboardingDto } from './dto/clients.dto';
+import {
+  ClientListQueryDto,
+  UpdateClientDto,
+  ClientOnboardingDto,
+  SendClientMessageDto,
+} from './dto/clients.dto';
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../../common/decorators/current-tenant.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -80,6 +85,20 @@ export class ClientsController {
   @RequiresActiveSubscription()
   async unblock(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.clientsService.unblock(tenantId, id);
+  }
+
+  /**
+   * POST /api/v1/clients/:id/message — Send reminder / promo to client 🔑👑⚡
+   */
+  @Post(':id/message')
+  @Roles('master')
+  @RequiresActiveSubscription()
+  async sendMessage(
+    @CurrentTenant() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SendClientMessageDto,
+  ) {
+    return this.clientsService.sendMessage(tenantId, id, dto);
   }
 
   /**

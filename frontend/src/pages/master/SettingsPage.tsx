@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Wallet, Crown, Clock, LogOut } from 'lucide-react';
+import { BarChart3, Wallet, Crown, Clock, LogOut, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import { Card, CardRow, PageHeader } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
@@ -18,53 +18,64 @@ export function SettingsPage() {
 
   return (
     <div className="page animate-fade-in">
-      <PageHeader title={intl.formatMessage({ id: 'master.settings' })} />
+      <>
+        <PageHeader title={intl.formatMessage({ id: 'master.settings' })} />
 
-      <Card padding="none" className={styles.cardGroup}>
-        <CardRow
-          icon={<BarChart3 size={20} />}
-          title={intl.formatMessage({ id: 'master.analytics' })}
-          onMouseEnter={prefetchInsights}
-          onFocus={prefetchInsights}
-          onTouchStart={prefetchInsights}
-          onClick={() => navigate('/master/analytics')}
-        />
-        <CardRow
-          icon={<Wallet size={20} />}
-          title={intl.formatMessage({ id: 'master.finance' })}
-          onMouseEnter={prefetchInsights}
-          onFocus={prefetchInsights}
-          onTouchStart={prefetchInsights}
-          onClick={() => navigate('/master/finance')}
-        />
-        <CardRow
-          icon={<Crown size={20} />}
-          title={intl.formatMessage({ id: 'master.subscription' })}
-          onMouseEnter={prefetchInsights}
-          onFocus={prefetchInsights}
-          onTouchStart={prefetchInsights}
-          onClick={() => navigate('/master/subscription')}
-        />
-      </Card>
+        <Card padding="none" className={styles.cardGroup}>
+          <>
+            <CardRow
+              icon={<BarChart3 size={20} />}
+              title={intl.formatMessage({ id: 'master.analytics' })}
+              onMouseEnter={prefetchInsights}
+              onFocus={prefetchInsights}
+              onTouchStart={prefetchInsights}
+              onClick={() => navigate('/master/analytics')}
+            />
+            <CardRow
+              icon={<Wallet size={20} />}
+              title={intl.formatMessage({ id: 'master.finance' })}
+              onMouseEnter={prefetchInsights}
+              onFocus={prefetchInsights}
+              onTouchStart={prefetchInsights}
+              onClick={() => navigate('/master/finance')}
+            />
+            <CardRow
+              icon={<Crown size={20} />}
+              title={intl.formatMessage({ id: 'master.subscription' })}
+              onMouseEnter={prefetchInsights}
+              onFocus={prefetchInsights}
+              onTouchStart={prefetchInsights}
+              onClick={() => navigate('/master/subscription')}
+            />
+          </>
+        </Card>
 
-      <Card padding="none" className={styles.cardGroup}>
-        <CardRow
-          icon={<Clock size={20} />}
-          title={intl.formatMessage({ id: 'schedule.title' })}
-          onClick={() => navigate('/master/schedule')}
-        />
-      </Card>
+        <Card padding="none" className={styles.cardGroup}>
+          <>
+            <CardRow
+              icon={<Clock size={20} />}
+              title={intl.formatMessage({ id: 'schedule.title' })}
+              onClick={() => navigate('/master/schedule')}
+            />
+            <CardRow
+              icon={<Scissors size={20} />}
+              title={intl.formatMessage({ id: 'services.title' })}
+              onClick={() => navigate('/master/services')}
+            />
+          </>
+        </Card>
 
-      <Card padding="none" className={styles.cardGroup}>
-        <CardRow
-          icon={<LogOut size={20} />}
-          title={intl.formatMessage({ id: 'common.logout' })}
-          onClick={() => {
-            getTelegram()?.HapticFeedback.impactOccurred('medium');
-            logout();
-          }}
-        />
-      </Card>
+        <Card padding="none" className={styles.cardGroup}>
+          <CardRow
+            icon={<LogOut size={20} />}
+            title={intl.formatMessage({ id: 'common.logout' })}
+            onClick={() => {
+              getTelegram()?.HapticFeedback.impactOccurred('medium');
+              logout();
+            }}
+          />
+        </Card>
+      </>
     </div>
   );
 }

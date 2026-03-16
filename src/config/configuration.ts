@@ -55,4 +55,9 @@ export default () => ({
     miniApp: process.env.MINI_APP_URL || 'http://localhost:5173',
     admin: process.env.ADMIN_URL || 'http://localhost:5174',
   },
+
+  ai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.AI_MODEL || 'gpt-4.1-mini',
+  },
 });

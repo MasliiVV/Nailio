@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
+import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Plus,
@@ -38,7 +39,7 @@ import {
   FormGroup,
 } from '@/components/ui';
 import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
-import type { Service, Client, Booking } from '@/types';
+import type { Service, Client, Booking, DayScheduleSlotBooking } from '@/types';
 import { getNextSlotTime, normalizeSlotTimes } from '@/lib/schedule';
 import styles from './CalendarPage.module.css';
 
@@ -77,6 +78,7 @@ function minutesToTime(totalMinutes: number): string {
 
 export function CalendarPage() {
   const intl = useIntl();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const [manualBookingDate, setManualBookingDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings({
@@ -115,7 +117,6 @@ export function CalendarPage() {
   const needsServices = showAddForm || detailMode === 'edit';
   const needsClients = showAddForm || detailMode === 'reassign';
   const needsWeeklySchedule = showDayEditor;
-  const needsDaySchedule = showDayEditor;
   const needsManualSlots = showAddForm && !!selectedServiceId;
   const needsRescheduleSlots = detailMode === 'reschedule' && !!selectedBooking?.service?.id;
 
@@ -123,7 +124,7 @@ export function CalendarPage() {
   const { data: clientsData } = useClients(undefined, { enabled: needsClients });
   const { data: scheduleData } = useSchedule({ enabled: needsWeeklySchedule });
   const createBooking = useCreateBooking();
-  const { data: dayScheduleData } = useDaySchedule(selectedDate, { enabled: needsDaySchedule });
+  const { data: dayScheduleData } = useDaySchedule(selectedDate, { enabled: true });
   const updateDaySchedule = useUpdateDaySchedule(selectedDate);
 
   // Slots for add form
@@ -295,12 +296,20 @@ export function CalendarPage() {
   };
 
   const bookingBySlotTime = useMemo(
-    () => new Map((dayScheduleData?.slots || []).map((slot) => [slot.time, slot.booking])),
+    () =>
+      new Map<string, DayScheduleSlotBooking | undefined>(
+        (dayScheduleData?.slots || []).map((slot) => [slot.time, slot.booking] as const),
+      ),
     [dayScheduleData?.slots],
   );
 
   const bookedDaySlots = useMemo(
     () => (dayScheduleData?.slots || []).filter((slot) => slot.booking),
+    [dayScheduleData?.slots],
+  );
+  const freeDaySlots = useMemo(
+    () =>
+      (dayScheduleData?.slots || []).filter((slot) => !slot.booking && !slot.locked).slice(0, 8),
     [dayScheduleData?.slots],
   );
   const normalizedDayDraftSlots = dayDraftIsDayOff ? [] : normalizeSlotTimes(dayDraftSlots);
@@ -355,11 +364,12 @@ export function CalendarPage() {
   const handleSaveDaySlots = async () => {
     if (impactedBookings.length > 0 && !showResolutionStep) {
       setBookingResolutions((previous) => ({
-        ...Object.fromEntries(
-          impactedBookings
-            .filter((slot) => slot.booking)
-            .map((slot) => [slot.booking!.id, previous[slot.booking!.id] || 'cancel']),
-        ),
+        ...impactedBookings
+          .filter((slot) => slot.booking)
+          .reduce<Record<string, string>>((next, slot) => {
+            next[slot.booking!.id] = previous[slot.booking!.id] || 'cancel';
+            return next;
+          }, {}),
       }));
       setShowResolutionStep(true);
       return;
@@ -441,8 +451,16 @@ export function CalendarPage() {
 
       <div className={styles.dayEditorActionWrap}>
         <Button variant="secondary" fullWidth onClick={handleOpenDayEditor}>
-          <Settings2 size={16} />
-          {intl.formatMessage({ id: 'schedule.editDaySlots' })}
+          <>
+            <Settings2 size={16} />
+            {intl.formatMessage({ id: 'schedule.editDaySlots' })}
+          </>
+        </Button>
+      </div>
+
+      <div className={styles.dayEditorActionWrap}>
+        <Button fullWidth onClick={() => navigate(`/master/rebooking?date=${selectedDate}`)}>
+          {intl.formatMessage({ id: 'rebooking.runForDate' })}
         </Button>
       </div>
 
@@ -456,6 +474,36 @@ export function CalendarPage() {
         />
       )}
 
+      {!isLoading && freeDaySlots.length > 0 && (
+        <div className={styles.freeSlotSection}>
+          <>
+            <div className={styles.freeSlotHeader}>
+              <h3>{intl.formatMessage({ id: 'rebooking.calendarQuickPromo' })}</h3>
+            </div>
+            <div className={styles.freeSlotGrid}>
+              <>
+                {freeDaySlots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    className={styles.freeSlotCard}
+                    onClick={() =>
+                      navigate(`/master/rebooking?date=${selectedDate}&slot=${slot.time}`)
+                    }
+                  >
+                    <>
+                      <span className={styles.freeSlotTime}>{slot.time}</span>
+                      <span className={styles.freeSlotLabel}>
+                        {intl.formatMessage({ id: 'rebooking.runSlotPromo' })}
+                      </span>
+                    </>
+                  </button>
+                ))}
+              </>
+            </div>
+          </>
+        </div>
+      )}
+
       {sorted.map((booking) => (
         <Card
           key={booking.id}
@@ -463,18 +511,22 @@ export function CalendarPage() {
           onClick={() => handleOpenBookingDetail(booking)}
           style={{ cursor: 'pointer' }}
         >
-          <span className={styles.bookingTime}>{formatTime(booking.startTime)}</span>
-          <div className={styles.bookingBody}>
-            <div className={styles.bookingService}>{booking.serviceNameSnapshot}</div>
-            {booking.client && (
-              <div className={styles.bookingClient}>
-                {booking.client.firstName} {booking.client.lastName || ''}
-              </div>
-            )}
-          </div>
-          <Badge variant={statusVariant(booking.status)}>
-            {intl.formatMessage({ id: `booking.status.${booking.status}` })}
-          </Badge>
+          <>
+            <span className={styles.bookingTime}>{formatTime(booking.startTime)}</span>
+            <div className={styles.bookingBody}>
+              <>
+                <div className={styles.bookingService}>{booking.serviceNameSnapshot}</div>
+                {booking.client && (
+                  <div className={styles.bookingClient}>
+                    {`${booking.client.firstName} ${booking.client.lastName || ''}`}
+                  </div>
+                )}
+              </>
+            </div>
+            <Badge variant={statusVariant(booking.status)}>
+              {intl.formatMessage({ id: `booking.status.${booking.status}` })}
+            </Badge>
+          </>
         </Card>
       ))}
 
@@ -489,150 +541,197 @@ export function CalendarPage() {
             <>
               {selectedBooking.client && (
                 <div className={styles.detailRow}>
-                  <User size={18} className={styles.detailIcon} />
-                  <div>
-                    <div className={styles.detailLabel}>
-                      {intl.formatMessage({ id: 'clients.title' })}
+                  <>
+                    <User size={18} className={styles.detailIcon} />
+                    <div>
+                      <>
+                        <div className={styles.detailLabel}>
+                          {intl.formatMessage({ id: 'clients.title' })}
+                        </div>
+                        <div className={styles.detailValue}>
+                          {`${selectedBooking.client.firstName} ${selectedBooking.client.lastName || ''}`}
+                        </div>
+                      </>
                     </div>
-                    <div className={styles.detailValue}>
-                      {selectedBooking.client.firstName} {selectedBooking.client.lastName || ''}
-                    </div>
-                  </div>
+                  </>
                 </div>
               )}
 
               {selectedBooking.client?.phone && (
                 <div className={styles.detailRow}>
-                  <Clock size={18} className={styles.detailIcon} />
-                  <div>
-                    <div className={styles.detailLabel}>
-                      {intl.formatMessage({ id: 'calendar.phone' })}
+                  <>
+                    <Clock size={18} className={styles.detailIcon} />
+                    <div>
+                      <>
+                        <div className={styles.detailLabel}>
+                          {intl.formatMessage({ id: 'calendar.phone' })}
+                        </div>
+                        <div className={styles.detailValue}>{selectedBooking.client.phone}</div>
+                      </>
                     </div>
-                    <div className={styles.detailValue}>{selectedBooking.client.phone}</div>
-                  </div>
+                  </>
                 </div>
               )}
 
               {selectedBooking.client?.telegramId && (
                 <div className={styles.detailRow}>
-                  <MessageCircle size={18} className={styles.detailIcon} />
-                  <div>
-                    <div className={styles.detailLabel}>
-                      {intl.formatMessage({ id: 'clients.telegramId' })}
+                  <>
+                    <MessageCircle size={18} className={styles.detailIcon} />
+                    <div>
+                      <>
+                        <div className={styles.detailLabel}>
+                          {intl.formatMessage({ id: 'clients.telegramId' })}
+                        </div>
+                        <div className={styles.detailValue}>
+                          {selectedBooking.client.telegramId}
+                        </div>
+                      </>
                     </div>
-                    <div className={styles.detailValue}>{selectedBooking.client.telegramId}</div>
-                  </div>
+                  </>
                 </div>
               )}
 
               <div className={styles.detailRow}>
-                <Clock size={18} className={styles.detailIcon} />
-                <div>
-                  <div className={styles.detailLabel}>
-                    {intl.formatMessage({ id: 'booking.selectTime' })}
+                <>
+                  <Clock size={18} className={styles.detailIcon} />
+                  <div>
+                    <>
+                      <div className={styles.detailLabel}>
+                        {intl.formatMessage({ id: 'booking.selectTime' })}
+                      </div>
+                      <div className={styles.detailValue}>
+                        {`${formatTime(selectedBooking.startTime)} — ${formatTime(selectedBooking.endTime)}`}
+                      </div>
+                    </>
                   </div>
-                  <div className={styles.detailValue}>
-                    {formatTime(selectedBooking.startTime)} — {formatTime(selectedBooking.endTime)}
-                  </div>
-                </div>
+                </>
               </div>
 
               <div className={styles.detailRow}>
-                <Pencil size={18} className={styles.detailIcon} />
-                <div>
-                  <div className={styles.detailLabel}>
-                    {intl.formatMessage({ id: 'booking.selectService' })}
+                <>
+                  <Pencil size={18} className={styles.detailIcon} />
+                  <div>
+                    <>
+                      <div className={styles.detailLabel}>
+                        {intl.formatMessage({ id: 'booking.selectService' })}
+                      </div>
+                      <div className={styles.detailValue}>
+                        {selectedBooking.serviceNameSnapshot}
+                      </div>
+                    </>
                   </div>
-                  <div className={styles.detailValue}>{selectedBooking.serviceNameSnapshot}</div>
-                </div>
+                </>
               </div>
 
               <div className={styles.detailRow}>
-                <Ban size={18} className={styles.detailIcon} />
-                <div>
-                  <div className={styles.detailLabel}>
-                    {intl.formatMessage({ id: 'calendar.status' })}
+                <>
+                  <Ban size={18} className={styles.detailIcon} />
+                  <div>
+                    <>
+                      <div className={styles.detailLabel}>
+                        {intl.formatMessage({ id: 'calendar.status' })}
+                      </div>
+                      <div className={styles.detailValue}>
+                        <Badge variant={statusVariant(selectedBooking.status)}>
+                          {intl.formatMessage({
+                            id: `booking.status.${selectedBooking.status}`,
+                          })}
+                        </Badge>
+                      </div>
+                    </>
                   </div>
-                  <div className={styles.detailValue}>
-                    <Badge variant={statusVariant(selectedBooking.status)}>
-                      {intl.formatMessage({
-                        id: `booking.status.${selectedBooking.status}`,
-                      })}
-                    </Badge>
-                  </div>
-                </div>
+                </>
               </div>
 
               <div className={styles.detailRow}>
-                <Clock size={18} className={styles.detailIcon} />
-                <div>
-                  <div className={styles.detailLabel}>
-                    {intl.formatMessage({ id: 'calendar.price' })}
+                <>
+                  <Clock size={18} className={styles.detailIcon} />
+                  <div>
+                    <>
+                      <div className={styles.detailLabel}>
+                        {intl.formatMessage({ id: 'calendar.price' })}
+                      </div>
+                      <div className={styles.detailValue}>
+                        {`${(selectedBooking.priceAtBooking / 100).toFixed(0)} ${intl.formatMessage({ id: 'common.uah' })}`}
+                      </div>
+                    </>
                   </div>
-                  <div className={styles.detailValue}>
-                    {(selectedBooking.priceAtBooking / 100).toFixed(0)}{' '}
-                    {intl.formatMessage({ id: 'common.uah' })}
-                  </div>
-                </div>
+                </>
               </div>
 
               {selectedBooking.notes && (
                 <div className={styles.detailRow}>
-                  <Pencil size={18} className={styles.detailIcon} />
-                  <div>
-                    <div className={styles.detailLabel}>
-                      {intl.formatMessage({ id: 'calendar.notes' })}
+                  <>
+                    <Pencil size={18} className={styles.detailIcon} />
+                    <div>
+                      <>
+                        <div className={styles.detailLabel}>
+                          {intl.formatMessage({ id: 'calendar.notes' })}
+                        </div>
+                        <div className={styles.detailValue}>{selectedBooking.notes}</div>
+                      </>
                     </div>
-                    <div className={styles.detailValue}>{selectedBooking.notes}</div>
-                  </div>
+                  </>
                 </div>
               )}
 
               <div className={styles.detailActions}>
-                {selectedBooking.client?.telegramId && (
+                <>
+                  {selectedBooking.client?.telegramId && (
+                    <button
+                      className={styles.detailActionBtn}
+                      onClick={() =>
+                        openTelegramUserChat(selectedBooking.client?.telegramId as string)
+                      }
+                    >
+                      <>
+                        <MessageCircle size={16} />
+                        {intl.formatMessage({ id: 'clients.writeInTelegram' })}
+                      </>
+                    </button>
+                  )}
                   <button
                     className={styles.detailActionBtn}
-                    onClick={() =>
-                      openTelegramUserChat(selectedBooking.client?.telegramId as string)
-                    }
+                    onClick={() => {
+                      setEditNotes(selectedBooking.notes || '');
+                      setEditServiceId(selectedBooking.service?.id || '');
+                      setEditStatus(selectedBooking.status);
+                      setDetailMode('edit');
+                    }}
                   >
-                    <MessageCircle size={16} />
-                    {intl.formatMessage({ id: 'clients.writeInTelegram' })}
+                    <>
+                      <Pencil size={16} />
+                      {intl.formatMessage({ id: 'calendar.editBooking' })}
+                    </>
                   </button>
-                )}
-                <button
-                  className={styles.detailActionBtn}
-                  onClick={() => {
-                    setEditNotes(selectedBooking.notes || '');
-                    setEditServiceId(selectedBooking.service?.id || '');
-                    setEditStatus(selectedBooking.status);
-                    setDetailMode('edit');
-                  }}
-                >
-                  <Pencil size={16} />
-                  {intl.formatMessage({ id: 'calendar.editBooking' })}
-                </button>
-                <button
-                  className={styles.detailActionBtn}
-                  onClick={() => setDetailMode('reschedule')}
-                >
-                  <Clock size={16} />
-                  {intl.formatMessage({ id: 'calendar.reschedule' })}
-                </button>
-                <button
-                  className={styles.detailActionBtn}
-                  onClick={() => setDetailMode('reassign')}
-                >
-                  <UserRoundCog size={16} />
-                  {intl.formatMessage({ id: 'calendar.reassign' })}
-                </button>
-                <button
-                  className={styles.detailActionBtnDanger}
-                  onClick={() => setDetailMode('delete')}
-                >
-                  <Trash2 size={16} />
-                  {intl.formatMessage({ id: 'calendar.deleteBooking' })}
-                </button>
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() => setDetailMode('reschedule')}
+                  >
+                    <>
+                      <Clock size={16} />
+                      {intl.formatMessage({ id: 'calendar.reschedule' })}
+                    </>
+                  </button>
+                  <button
+                    className={styles.detailActionBtn}
+                    onClick={() => setDetailMode('reassign')}
+                  >
+                    <>
+                      <UserRoundCog size={16} />
+                      {intl.formatMessage({ id: 'calendar.reassign' })}
+                    </>
+                  </button>
+                  <button
+                    className={styles.detailActionBtnDanger}
+                    onClick={() => setDetailMode('delete')}
+                  >
+                    <>
+                      <Trash2 size={16} />
+                      {intl.formatMessage({ id: 'calendar.deleteBooking' })}
+                    </>
+                  </button>
+                </>
               </div>
             </>
           )}

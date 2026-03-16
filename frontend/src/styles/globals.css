@@ -92,6 +92,8 @@ ol {
 
 /* ---- Theme Variables ---- */
 :root {
+  --tg-viewport-height: 100vh;
+
   /* Telegram theme mappings (overridden by brand) */
   --tg-bg: #F4F2FF;
   --tg-text: #3D3654;
@@ -792,7 +794,7 @@ textarea:focus-visible,
 /* ---- Accessibility: High contrast mode ---- */
 @media (prefers-contrast: high) {
   :root {
-    --shadow-sm: 0 0 0 1px var(--color-separator);
+    min-height: var(--tg-viewport-height, 100vh);
     --shadow-md: 0 0 0 1px var(--color-separator);
     --shadow-lg: 0 0 0 2px var(--color-separator);
     --shadow-card: 0 0 0 1px var(--color-separator);

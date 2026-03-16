@@ -234,6 +234,7 @@ export interface CreateBookingDto {
   startTime: string;
   notes?: string;
   clientId?: string; // master creating for a client
+  promoCampaignId?: string;
 }
 
 export interface CancelBookingDto {
@@ -254,6 +255,92 @@ export interface UpdateBookingDto {
 export interface SendMessageToMasterDto {
   message: string;
   bookingId?: string;
+}
+
+export interface SendClientMessageDto {
+  message: string;
+}
+
+export interface RebookingKpis {
+  repeatClientRate: number;
+  occupancyRate: number;
+  averageLtv: number;
+}
+
+export interface RebookingHeatmapDay {
+  date: string;
+  totalSlots: number;
+  bookedSlots: number;
+  freeSlots: number;
+  occupancyRate: number;
+}
+
+export interface RebookingEmptySlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  freeSlotCount: number;
+  isMorning: boolean;
+}
+
+export interface RebookingRecommendation {
+  clientId: string;
+  firstName: string;
+  lastName: string | null;
+  telegramId: string | null;
+  lastVisitAt: string | null;
+  expectedReturnDate: string;
+  averageCycleDays: number;
+  visitCount: number;
+  ltv: number;
+  priority: 'high' | 'medium' | 'low';
+  priorityScore: number;
+  reason: string;
+  segments: Array<'due_soon' | 'visits_3_plus' | 'morning' | 'favorite_service' | 'irregular'>;
+  favoriteService: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface RebookingOverview {
+  selectedDate: string;
+  bestSendTime: string;
+  heatmap: RebookingHeatmapDay[];
+  emptySlots: RebookingEmptySlot[];
+  recommendations: RebookingRecommendation[];
+  kpis: RebookingKpis;
+  sendLog: Array<{
+    id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    createdAt: string;
+    status: 'active' | 'filled';
+    sentCount: number;
+    bookedCount: number;
+    closedCount: number;
+  }>;
+}
+
+export interface GenerateRebookingMessageDto {
+  date: string;
+  startTime: string;
+  endTime: string;
+  clientIds: string[];
+  tone?: 'soft' | 'friendly';
+}
+
+export interface GenerateRebookingMessageResponse {
+  message: string;
+  meta: {
+    tone: 'soft' | 'friendly';
+    recipients: number;
+  };
+}
+
+export interface SendRebookingCampaignDto extends GenerateRebookingMessageDto {
+  message: string;
 }
 
 // ---- Client (CRM) ----
