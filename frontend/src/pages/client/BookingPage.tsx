@@ -120,6 +120,7 @@ export function BookingPage() {
         promoCampaignId: promoCampaignId || undefined,
       });
 
+      tg?.MainButton.hideProgress();
       setConfirmed(true);
       tg?.MainButton.hide();
       tg?.HapticFeedback.notificationOccurred('success');

@@ -283,6 +283,14 @@ export interface RebookingEmptySlot {
   isMorning: boolean;
 }
 
+export interface RebookingSlotOption {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export type RebookingCampaignType = 'slot_fill' | 'cycle_followup';
+
 export interface RebookingRecommendation {
   clientId: string;
   firstName: string;
@@ -305,6 +313,7 @@ export interface RebookingRecommendation {
 
 export interface RebookingOverview {
   selectedDate: string;
+  defaultCycleDays: number;
   bestSendTime: string;
   heatmap: RebookingHeatmapDay[];
   emptySlots: RebookingEmptySlot[];
@@ -324,11 +333,13 @@ export interface RebookingOverview {
 }
 
 export interface GenerateRebookingMessageDto {
+  campaignType?: RebookingCampaignType;
   date: string;
   startTime: string;
   endTime: string;
   clientIds: string[];
   tone?: 'soft' | 'friendly';
+  slotOptions?: RebookingSlotOption[];
 }
 
 export interface GenerateRebookingMessageResponse {
@@ -341,6 +352,7 @@ export interface GenerateRebookingMessageResponse {
 
 export interface SendRebookingCampaignDto extends GenerateRebookingMessageDto {
   message: string;
+  includeAllClients?: boolean;
 }
 
 // ---- Client (CRM) ----

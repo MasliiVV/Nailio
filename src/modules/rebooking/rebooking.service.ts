@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
@@ -10,6 +10,13 @@ import { GenerateRebookingMessageDto, SendRebookingCampaignDto } from './dto/reb
 
 type PriorityLevel = 'high' | 'medium' | 'low';
 type SegmentKey = 'due_soon' | 'visits_3_plus' | 'morning' | 'favorite_service' | 'irregular';
+type RebookingCampaignType = 'slot_fill' | 'cycle_followup';
+
+interface CampaignSlotOption {
+  date: string;
+  startTime: string;
+  endTime: string;
+}
 
 interface CampaignRecipient {
   clientId: string;
@@ -22,6 +29,7 @@ interface CampaignRecipient {
 
 interface StoredCampaign {
   id: string;
+  type?: RebookingCampaignType;
   date: string;
   startTime: string;
   endTime: string;
@@ -29,6 +37,7 @@ interface StoredCampaign {
   createdAt: string;
   status: 'active' | 'filled';
   bookedByClientId?: string;
+  slotOptions?: CampaignSlotOption[];
   recipients: CampaignRecipient[];
 }
 
@@ -65,6 +74,7 @@ interface TenantContext {
 export class RebookingService {
   private readonly logger = new Logger(RebookingService.name);
   private readonly campaignsKey = 'smart_rebooking_campaigns';
+  private readonly defaultCycleDays = 21;
   private readonly appUrl: string;
   private readonly aiApiKey?: string;
   private readonly aiModel: string;
@@ -94,6 +104,7 @@ export class RebookingService {
 
     return {
       selectedDate,
+      defaultCycleDays: this.getDefaultCycleDays(tenant.settings),
       bestSendTime: '18:00',
       heatmap,
       emptySlots,
@@ -105,21 +116,39 @@ export class RebookingService {
 
   async generateMessage(tenantId: string, dto: GenerateRebookingMessageDto) {
     const tenant = await this.getTenantContext(tenantId);
+    const campaignType = dto.campaignType || 'slot_fill';
     const clients = await this.prisma.tenantClient.client.findMany({
       where: { tenantId, id: { in: dto.clientIds } },
       select: { firstName: true },
       take: 3,
     });
 
-    const dateLabel = this.formatDateLabel(dto.date, tenant.timezone);
     const names = clients.map((client) => client.firstName).filter(Boolean);
+    const slotOptions =
+      campaignType === 'cycle_followup'
+        ? this.normalizeSlotOptions(
+            dto.slotOptions?.length
+              ? dto.slotOptions
+              : await this.getDefaultCampaignSlotOptions(tenant, dto.date),
+          )
+        : this.normalizeSlotOptions([
+            {
+              date: dto.date,
+              startTime: dto.startTime,
+              endTime: dto.endTime,
+            },
+          ]);
     const message = await this.generateAiMessage({
+      campaignType,
       tenantName: tenant.displayName,
-      dateLabel,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
+      dateLabel:
+        campaignType === 'slot_fill' ? this.formatDateLabel(dto.date, tenant.timezone) : undefined,
+      startTime: campaignType === 'slot_fill' ? dto.startTime : undefined,
+      endTime: campaignType === 'slot_fill' ? dto.endTime : undefined,
       tone: dto.tone || 'friendly',
       recipientNames: names,
+      slotOptions,
+      timezone: tenant.timezone,
     });
 
     return {
@@ -138,39 +167,59 @@ export class RebookingService {
       throw new NotFoundException('Tenant bot not found');
     }
 
-    const clients = await this.getRecommendationClients(tenantId, dto.clientIds);
+    const campaignType = dto.campaignType || 'slot_fill';
+    const clients = await this.resolveCampaignClients(tenant, dto, campaignType);
+    if (clients.length === 0) {
+      throw new BadRequestException('No eligible clients found for rebooking campaign');
+    }
+
     const campaignId = randomUUID();
     const recipients: CampaignRecipient[] = [];
+    const cycleSlotOptions =
+      campaignType === 'cycle_followup'
+        ? this.normalizeSlotOptions(
+            dto.slotOptions?.length
+              ? dto.slotOptions
+              : await this.getDefaultCampaignSlotOptions(tenant, dto.date),
+          )
+        : [];
 
     for (const client of clients) {
       if (!client.telegramId || !client.serviceId) {
         continue;
       }
 
-      const url = this.buildQuickBookingUrl(
-        tenant.slug,
-        client.serviceId,
-        dto.date,
-        dto.startTime,
-        campaignId,
-      );
-
       const sent = await this.botService.sendMessage(
         bot.id,
         BigInt(client.telegramId),
-        `Привіт, ${this.escapeHtml(client.firstName)}!\n\n${this.escapeHtml(dto.message)}`,
+        `Привіт, ${this.escapeHtml(client.firstName)}!\n\n${this.escapeHtml(
+          campaignType === 'slot_fill'
+            ? dto.message
+            : this.appendSlotOptionsToMessage(dto.message, cycleSlotOptions, tenant.timezone),
+        )}`,
         {
           parseMode: 'HTML',
-          replyMarkup: {
-            inline_keyboard: [
-              [
-                {
-                  text: '✨ Швидко записатися',
-                  web_app: { url },
-                },
-              ],
-            ],
-          },
+          replyMarkup:
+            campaignType === 'slot_fill'
+              ? {
+                  inline_keyboard: [
+                    [
+                      {
+                        text: '✨ Швидко записатися',
+                        web_app: {
+                          url: this.buildQuickBookingUrl(
+                            tenant.slug,
+                            client.serviceId,
+                            dto.date,
+                            dto.startTime,
+                            campaignId,
+                          ),
+                        },
+                      },
+                    ],
+                  ],
+                }
+              : this.buildCycleReplyMarkup(tenant.slug, client.serviceId, cycleSlotOptions),
         },
       );
 
@@ -188,24 +237,34 @@ export class RebookingService {
       });
     }
 
-    const campaigns = this.extractCampaigns(tenant.settings);
-    campaigns.push({
-      id: campaignId,
-      date: dto.date,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
-      message: dto.message,
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      recipients,
-    });
+    if (campaignType === 'slot_fill') {
+      const campaigns = this.extractCampaigns(tenant.settings);
+      campaigns.push({
+        id: campaignId,
+        type: campaignType,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        message: dto.message,
+        createdAt: new Date().toISOString(),
+        status: 'active',
+        slotOptions: [
+          {
+            date: dto.date,
+            startTime: dto.startTime,
+            endTime: dto.endTime,
+          },
+        ],
+        recipients,
+      });
 
-    await this.prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        settings: this.withCampaigns(tenant.settings, campaigns),
-      },
-    });
+      await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          settings: this.withCampaigns(tenant.settings, campaigns),
+        },
+      });
+    }
 
     return {
       success: true,
@@ -380,7 +439,7 @@ export class RebookingService {
       }
     }
 
-    return result.slice(0, 12);
+    return result;
   }
 
   private async buildRecommendations(tenant: TenantContext, selectedDate: string) {
@@ -456,31 +515,33 @@ export class RebookingService {
       .filter((client) => Boolean(client.user?.telegramId))
       .map((client) => {
         const history = bookingsByClient.get(client.id) || [];
-        if (history.length < 3) {
+        if (history.length === 0) {
           return null;
         }
 
-        const cycleDays = this.calculateAverageCycleDays(history.slice(0, 3));
-        if (!cycleDays) {
-          return null;
-        }
+        const cycleDays =
+          this.calculateAverageCycleDays(history.slice(0, 3)) ||
+          this.getDefaultCycleDays(tenant.settings);
 
         const expectedReturnDate = new Date(history[0].startTime.getTime() + cycleDays * 86400000);
         const daysUntilExpected = Math.round(
           (expectedReturnDate.getTime() - selectedDateObj.getTime()) / 86400000,
         );
+        if (daysUntilExpected > 7 || daysUntilExpected < -45) {
+          return null;
+        }
 
         const visitCount = countByClient.get(client.id) || 0;
         const servicePreference = this.getFavoriteService(history.slice(0, 3), fallbackService);
         const segments: SegmentKey[] = [];
 
-        if (daysUntilExpected >= 2 && daysUntilExpected <= 3) segments.push('due_soon');
+        if (daysUntilExpected <= 3) segments.push('due_soon');
         if (visitCount >= 3) segments.push('visits_3_plus');
         if (this.isMorningClient(history.slice(0, 3), tenant.timezone)) segments.push('morning');
         if (servicePreference) segments.push('favorite_service');
         if (this.isIrregular(history.slice(0, 3))) segments.push('irregular');
 
-        const daysOverdue = Math.max(0, 2 - daysUntilExpected);
+        const daysOverdue = Math.max(0, -daysUntilExpected);
         const ltv = revenueMap.get(client.id) || 0;
 
         let priorityScore = 30;
@@ -491,7 +552,7 @@ export class RebookingService {
         if (ltv >= 300000) priorityScore += 12;
         else if (ltv >= 150000) priorityScore += 6;
         if (segments.includes('irregular')) priorityScore -= 15;
-        if (daysUntilExpected < 2) priorityScore += 20;
+        if (daysUntilExpected <= 0) priorityScore += 20;
         if (daysOverdue > 0) priorityScore += Math.min(daysOverdue * 3, 12);
 
         const priority: PriorityLevel =
@@ -603,6 +664,132 @@ export class RebookingService {
         serviceName: favoriteService?.name || fallbackService?.name || 'процедуру',
       };
     });
+  }
+
+  private async resolveCampaignClients(
+    tenant: TenantContext,
+    dto: SendRebookingCampaignDto,
+    campaignType: RebookingCampaignType,
+  ) {
+    if (dto.includeAllClients) {
+      if (campaignType === 'cycle_followup') {
+        const selectedDate = dto.date || this.getTodayKey(tenant.timezone);
+        const recommendations = await this.buildRecommendations(tenant, selectedDate);
+        const eligibleRecommendations = recommendations.filter(
+          (item): item is NonNullable<(typeof recommendations)[number]> => Boolean(item?.clientId),
+        );
+        return this.getRecommendationClients(
+          tenant.id,
+          eligibleRecommendations.map((item) => item.clientId),
+        );
+      }
+
+      const clients = await this.prisma.tenantClient.client.findMany({
+        where: {
+          tenantId: tenant.id,
+          isBlocked: false,
+          botBlocked: false,
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              telegramId: true,
+            },
+          },
+        },
+      });
+
+      return this.getRecommendationClients(
+        tenant.id,
+        clients.filter((client) => Boolean(client.user.telegramId)).map((client) => client.id),
+      );
+    }
+
+    return this.getRecommendationClients(tenant.id, dto.clientIds);
+  }
+
+  private async getDefaultCampaignSlotOptions(tenant: TenantContext, requestedDate?: string) {
+    const startDate = requestedDate || this.getTodayKey(tenant.timezone);
+    const emptySlots = await this.buildEmptySlots(tenant, this.getDateRange(startDate, 7));
+    return emptySlots.slice(0, 6).map((slot) => ({
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    }));
+  }
+
+  private normalizeSlotOptions(
+    slotOptions: Array<{ date: string; startTime: string; endTime: string }> = [],
+  ): CampaignSlotOption[] {
+    const seen = new Set<string>();
+
+    return slotOptions.filter((slot) => {
+      const key = `${slot.date}-${slot.startTime}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private appendSlotOptionsToMessage(
+    message: string,
+    slotOptions: CampaignSlotOption[],
+    timezone: string,
+  ) {
+    const summary = this.describeSlotOptionsMultiline(slotOptions, timezone);
+    if (!summary) {
+      return message.trim();
+    }
+
+    return `${message.trim()}\n\nНайближчі вільні дати:\n${summary}`;
+  }
+
+  private describeSlotOptionsInline(slotOptions: CampaignSlotOption[], timezone: string) {
+    return slotOptions
+      .slice(0, 4)
+      .map((slot) => `${this.formatDateLabel(slot.date, timezone)} ${slot.startTime}`)
+      .join(', ');
+  }
+
+  private describeSlotOptionsMultiline(slotOptions: CampaignSlotOption[], timezone: string) {
+    const grouped = new Map<string, string[]>();
+
+    for (const slot of slotOptions) {
+      const list = grouped.get(slot.date) || [];
+      list.push(slot.startTime);
+      grouped.set(slot.date, list);
+    }
+
+    return [...grouped.entries()]
+      .map(
+        ([date, times]) =>
+          `${this.formatDateLabel(date, timezone)}\n${times.map((time) => `• ${time}`).join(' ')}`,
+      )
+      .join('\n\n');
+  }
+
+  private buildCycleReplyMarkup(
+    tenantSlug: string,
+    serviceId: string,
+    slotOptions: CampaignSlotOption[],
+  ) {
+    if (slotOptions.length === 0) {
+      return undefined;
+    }
+
+    return {
+      inline_keyboard: slotOptions.slice(0, 6).map((slot) => [
+        {
+          text: `${this.shortDateLabel(slot.date)} · ${slot.startTime}`,
+          web_app: {
+            url: this.buildQuickBookingUrl(tenantSlug, serviceId, slot.date, slot.startTime),
+          },
+        },
+      ]),
+    };
   }
 
   private async getTenantContext(tenantId: string): Promise<TenantContext> {
@@ -717,10 +904,10 @@ export class RebookingService {
     priority: PriorityLevel,
     segments: SegmentKey[],
   ) {
-    if (daysUntilExpected >= 2 && daysUntilExpected <= 3) {
+    if (daysUntilExpected >= 0 && daysUntilExpected <= 3) {
       return `За циклом клієнту варто нагадати за ${daysUntilExpected} дні до звичного візиту (${cycleDays} дн.)`;
     }
-    if (daysUntilExpected < 2) {
+    if (daysUntilExpected < 0) {
       return `Клієнт уже наближається або перевищив звичний цикл (${cycleDays} дн.)`;
     }
     if (segments.includes('irregular')) {
@@ -733,6 +920,7 @@ export class RebookingService {
 
   private buildCampaignLog(settings: Prisma.JsonValue | null): CampaignLogItem[] {
     return this.extractCampaigns(settings)
+      .filter((campaign) => (campaign.type || 'slot_fill') === 'slot_fill')
       .slice()
       .reverse()
       .slice(0, 8)
@@ -752,12 +940,15 @@ export class RebookingService {
   }
 
   private async generateAiMessage(input: {
+    campaignType: RebookingCampaignType;
     tenantName: string;
-    dateLabel: string;
-    startTime: string;
-    endTime: string;
+    dateLabel?: string;
+    startTime?: string;
+    endTime?: string;
     tone: 'soft' | 'friendly';
     recipientNames: string[];
+    slotOptions: CampaignSlotOption[];
+    timezone: string;
   }) {
     const fallback = this.generateFallbackMessage(input);
     if (!this.aiApiKey) {
@@ -770,13 +961,20 @@ export class RebookingService {
         'Напиши одне повідомлення українською мовою.',
         'Тон: ' + (input.tone === 'soft' ? 'м’який' : 'дружній') + '.',
         'Без знижок, лише нагадування.',
-        `Є вільне вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}.`,
+        input.campaignType === 'slot_fill'
+          ? `Є вільне вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}.`
+          : `Потрібно нагадати клієнту, що минуло близько ${this.defaultCycleDays} дня після попереднього візиту, і запропонувати швидко записатися знову.`,
         `Назва майстра або студії: ${input.tenantName}.`,
         input.recipientNames.length > 0
           ? `Можна звернутися по імені: ${input.recipientNames[0]}.`
           : 'Без звернення по імені.',
+        input.campaignType === 'cycle_followup' && input.slotOptions.length > 0
+          ? `Найближчі вільні варіанти: ${this.describeSlotOptionsInline(input.slotOptions, input.timezone)}.`
+          : null,
         'Довжина: 2-4 короткі абзаци, без лапок, без службових пояснень.',
-      ].join('\n');
+      ]
+        .filter(Boolean)
+        .join('\n');
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -811,18 +1009,26 @@ export class RebookingService {
   }
 
   private generateFallbackMessage(input: {
+    campaignType: RebookingCampaignType;
     tenantName: string;
-    dateLabel: string;
-    startTime: string;
-    endTime: string;
+    dateLabel?: string;
+    startTime?: string;
+    endTime?: string;
     tone: 'soft' | 'friendly';
     recipientNames: string[];
+    slotOptions: CampaignSlotOption[];
+    timezone: string;
   }) {
     const intro =
       input.tone === 'soft'
         ? 'Хочу м’яко нагадати, що вже може бути час оновити процедуру ✨'
         : 'Дружньо нагадую, що вже може бути час потішити себе процедурою 💜';
     const greeting = input.recipientNames[0] ? `Привіт, ${input.recipientNames[0]}!` : 'Привіт!';
+
+    if (input.campaignType === 'cycle_followup') {
+      const summary = this.describeSlotOptionsMultiline(input.slotOptions, input.timezone);
+      return `${greeting}\n\n${intro}\nВід останнього візиту вже минуло близько 3 тижнів, тож саме час обрати новий запис 🌷${summary ? `\n\nОсь найближчі вільні дати:\n${summary}` : ''}`;
+    }
 
     return `${greeting}\n\n${intro}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
   }
@@ -910,10 +1116,18 @@ export class RebookingService {
     serviceId: string,
     date: string,
     startTime: string,
-    campaignId: string,
+    campaignId?: string,
   ) {
     const normalizedBase = this.appUrl.endsWith('/') ? this.appUrl.slice(0, -1) : this.appUrl;
-    return `${normalizedBase}/client/book/${serviceId}?startapp=${tenantSlug}&date=${date}&slot=${startTime}&campaignId=${campaignId}`;
+    const campaignQuery = campaignId ? `&campaignId=${campaignId}` : '';
+    return `${normalizedBase}/client/book/${serviceId}?startapp=${tenantSlug}&date=${date}&slot=${startTime}${campaignQuery}`;
+  }
+
+  private shortDateLabel(date: string) {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('uk-UA', {
+      day: 'numeric',
+      month: 'short',
+    });
   }
 
   private formatDateKey(date: Date, timezone: string) {
@@ -990,6 +1204,12 @@ export class RebookingService {
     const object = this.asObject(settings);
     const slotStep = object.slot_step_minutes;
     return typeof slotStep === 'number' ? slotStep : this.getDefaultStep();
+  }
+
+  private getDefaultCycleDays(settings: Prisma.JsonValue | null) {
+    const object = this.asObject(settings);
+    const cycleDays = object.rebooking_default_cycle_days;
+    return typeof cycleDays === 'number' && cycleDays > 0 ? cycleDays : this.defaultCycleDays;
   }
 
   private getDefaultStep() {

@@ -35,3 +35,7 @@ prisma/*.db
 
 # Docker
 docker-compose.override.yml
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/

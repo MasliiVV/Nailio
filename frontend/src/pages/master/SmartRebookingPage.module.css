@@ -25,9 +25,10 @@
 }
 
 .slotGrid,
-.heatmapGrid,
 .clientList,
-.logList {
+.logList,
+.clientListCompact,
+.previewDates {
   display: grid;
   gap: var(--space-md);
 }
@@ -45,6 +46,21 @@
   background: color-mix(in srgb, var(--color-primary) 8%, white);
 }
 
+.campaignCard {
+  margin-top: var(--space-lg);
+}
+
+.subTitle {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+}
+
+.helperText {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .slotTime {
   font-size: var(--font-size-md);
   font-weight: 700;
@@ -55,6 +71,13 @@
   margin-top: var(--space-xs);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+.modeRow {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
 }
 
 .filterRow {
@@ -84,6 +107,10 @@
   text-align: left;
 }
 
+.clientCardCompact {
+  text-align: left;
+}
+
 .clientCardTop {
   display: flex;
   align-items: center;
@@ -95,6 +122,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+}
+
+.checkboxWrap input {
+  margin: 0;
 }
 
 .clientName {
@@ -114,32 +145,6 @@
   flex-wrap: wrap;
   gap: var(--space-xs);
   margin-top: var(--space-sm);
-}
-
-.heatmapGrid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.heatmapCard {
-  text-align: center;
-}
-
-.heatmapDate {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.heatmapValue {
-  margin-top: var(--space-xs);
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.heatmapMeta {
-  margin-top: var(--space-xs);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
 }
 
 .logCard {
@@ -162,10 +167,51 @@
   color: var(--color-text-secondary);
 }
 
+.previewBlock {
+  margin-bottom: var(--space-md);
+}
+
+.previewTitle {
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.previewDates {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.previewDateCard {
+  text-align: left;
+}
+
+.previewDate {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.previewTimeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.previewTimeChip {
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 6px 10px;
+  font-size: var(--font-size-xs);
+}
+
 .toneRow {
   display: flex;
   gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  margin: var(--space-md) 0;
+  flex-wrap: wrap;
 }
 
 .messageBox {
@@ -193,4 +239,35 @@
 .textarea:focus {
   outline: none;
   border-color: var(--color-primary);
+}
+
+.occupancyCard {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, white), white);
+}
+
+.occupancyTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.occupancyLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.occupancyValue {
+  margin-top: var(--space-xs);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+@media (max-width: 640px) {
+  .slotGrid,
+  .previewDates {
+    grid-template-columns: 1fr;
+  }
 }

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
   ApiResponse,
@@ -42,6 +42,8 @@ export function useGenerateRebookingMessage() {
 }
 
 export function useSendRebookingCampaign() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (dto: SendRebookingCampaignDto) => {
       const res = await api.post<ApiResponse<{ success: boolean; sentCount: number }>>(
@@ -52,6 +54,7 @@ export function useSendRebookingCampaign() {
     },
     onSuccess: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
+      queryClient.invalidateQueries({ queryKey: rebookingKeys.all });
     },
     onError: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('error');

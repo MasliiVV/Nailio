@@ -257,12 +257,13 @@ export class BookingsService {
       );
 
       if (user.role === 'client' && dto.promoCampaignId) {
-        await this.rebookingService.handleCampaignBooking(
-          tenantId,
-          clientId,
-          dto.promoCampaignId,
-          service.id,
-        );
+        void this.rebookingService
+          .handleCampaignBooking(tenantId, clientId, dto.promoCampaignId, service.id)
+          .catch((rebookingError: unknown) => {
+            this.logger.error(
+              `Failed to finalize rebooking campaign ${dto.promoCampaignId}: ${String(rebookingError)}`,
+            );
+          });
       }
 
       return this.formatBookingResponse(booking);
