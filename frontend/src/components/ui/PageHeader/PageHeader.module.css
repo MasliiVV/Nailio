@@ -9,6 +9,11 @@
   gap: var(--space-lg);
 }
 
+.titleRow > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .title {
   font-size: var(--font-size-3xl);
   font-weight: 800;
@@ -25,5 +30,20 @@
 }
 
 .action {
+  min-width: 0;
   flex-shrink: 0;
+  max-width: min(100%, 240px);
+}
+
+@media (max-width: 640px) {
+  .titleRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action {
+    width: 100%;
+    max-width: 100%;
+  }
+}
 }
