@@ -196,12 +196,26 @@ describe('SmartRebookingPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockGenerateMessage).toHaveBeenCalledWith(
+      expect(mockGenerateMessage).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          campaignType: 'slot_fill',
+          date: '2026-03-17',
+          startTime: '10:00',
+          endTime: '11:00',
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockGenerateMessage).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
           campaignType: 'cycle_followup',
-          slotOptions: expect.arrayContaining([
-            expect.objectContaining({ date: '2026-03-17', startTime: '10:00' }),
-          ]),
+          slotOptions: [
+            { date: '2026-03-17', startTime: '10:00', endTime: '11:00' },
+            { date: '2026-03-18', startTime: '13:00', endTime: '14:00' },
+          ],
         }),
       );
     });
@@ -225,13 +239,15 @@ describe('SmartRebookingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'rebooking.sendSlotPromo' }));
 
     await waitFor(() => {
-      expect(mockSendCampaign).toHaveBeenCalledWith(
+      expect(mockSendCampaign).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           campaignType: 'slot_fill',
           clientIds: expect.arrayContaining(['client-1', 'client-2']),
-          slotOptions: expect.arrayContaining([
-            expect.objectContaining({ date: '2026-03-17', startTime: '10:00' }),
-          ]),
+          slotOptions: [
+            { date: '2026-03-17', startTime: '10:00', endTime: '11:00' },
+            { date: '2026-03-18', startTime: '13:00', endTime: '14:00' },
+          ],
         }),
       );
     });
@@ -240,13 +256,15 @@ describe('SmartRebookingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'rebooking.sendCyclePromo' }));
 
     await waitFor(() => {
-      expect(mockSendCampaign).toHaveBeenCalledWith(
+      expect(mockSendCampaign).toHaveBeenNthCalledWith(
+        2,
         expect.objectContaining({
           campaignType: 'cycle_followup',
           clientIds: expect.arrayContaining(['client-1', 'client-2']),
-          slotOptions: expect.arrayContaining([
-            expect.objectContaining({ date: '2026-03-17', startTime: '10:00' }),
-          ]),
+          slotOptions: [
+            { date: '2026-03-17', startTime: '10:00', endTime: '11:00' },
+            { date: '2026-03-18', startTime: '13:00', endTime: '14:00' },
+          ],
         }),
       );
     });

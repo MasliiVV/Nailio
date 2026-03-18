@@ -14,6 +14,8 @@ import {
   Tabs,
 } from '@/components/ui';
 import { useClients } from '@/hooks';
+import { ApiRequestError } from '@/lib/api';
+import { getTelegram } from '@/lib/telegram';
 import {
   useGenerateRebookingMessage,
   useRebookingOverview,
@@ -107,6 +109,11 @@ export function SmartRebookingPage() {
         )
         .filter((slot): slot is RebookingEmptySlot => Boolean(slot)),
     [cycleSelectedSlotKeys, cycleSlotPool],
+  );
+
+  const cycleCampaignOptions = useMemo(
+    () => cycleSlotOptions.map(toCampaignSlotOption),
+    [cycleSlotOptions],
   );
 
   const slotSuggestedRecipients = useMemo(
@@ -384,7 +391,7 @@ export function SmartRebookingPage() {
       endTime: firstSlot.endTime,
       clientIds: cyclePreviewIds,
       tone: cycleTone,
-      slotOptions: cycleSlotOptions,
+      slotOptions: cycleCampaignOptions,
     });
 
     setCycleMessage(result.message);
@@ -393,36 +400,44 @@ export function SmartRebookingPage() {
   const handleSendSlotCampaign = async () => {
     if (!selectedSlot || slotDisabled) return;
 
-    const result = await sendSlotCampaign.mutateAsync({
-      campaignType: 'slot_fill',
-      date: selectedSlot.date,
-      startTime: selectedSlot.startTime,
-      endTime: selectedSlot.endTime,
-      clientIds: slotSelectedClientIds,
-      tone: slotTone,
-      slotOptions: slotCampaignOptions,
-      message: slotMessage.trim(),
-    });
+    try {
+      const result = await sendSlotCampaign.mutateAsync({
+        campaignType: 'slot_fill',
+        date: selectedSlot.date,
+        startTime: selectedSlot.startTime,
+        endTime: selectedSlot.endTime,
+        clientIds: slotSelectedClientIds,
+        tone: slotTone,
+        slotOptions: slotCampaignOptions,
+        message: slotMessage.trim(),
+      });
 
-    setLastSent({ type: 'slot_fill', count: result.sentCount });
+      setLastSent({ type: 'slot_fill', count: result.sentCount });
+    } catch (error) {
+      showPromoError(error, intl);
+    }
   };
 
   const handleSendCycleCampaign = async () => {
     const firstSlot = cycleSlotOptions[0];
     if (!firstSlot || cycleDisabled) return;
 
-    const result = await sendCycleCampaign.mutateAsync({
-      campaignType: 'cycle_followup',
-      date: firstSlot.date,
-      startTime: firstSlot.startTime,
-      endTime: firstSlot.endTime,
-      clientIds: cycleSelectedClientIds,
-      tone: cycleTone,
-      slotOptions: cycleSlotOptions,
-      message: cycleMessage.trim(),
-    });
+    try {
+      const result = await sendCycleCampaign.mutateAsync({
+        campaignType: 'cycle_followup',
+        date: firstSlot.date,
+        startTime: firstSlot.startTime,
+        endTime: firstSlot.endTime,
+        clientIds: cycleSelectedClientIds,
+        tone: cycleTone,
+        slotOptions: cycleCampaignOptions,
+        message: cycleMessage.trim(),
+      });
 
-    setLastSent({ type: 'cycle_followup', count: result.sentCount });
+      setLastSent({ type: 'cycle_followup', count: result.sentCount });
+    } catch (error) {
+      showPromoError(error, intl);
+    }
   };
 
   return (
@@ -1127,7 +1142,7 @@ function buildSlotCampaignOptions(
   allSlots: RebookingEmptySlot[],
 ) {
   if (!selectedSlot) {
-    return [] as RebookingEmptySlot[];
+    return [] as Array<{ date: string; startTime: string; endTime: string }>;
   }
 
   const selectedKey = `${selectedSlot.date}-${selectedSlot.startTime}`;
@@ -1138,7 +1153,30 @@ function buildSlotCampaignOptions(
     (slot) => slot.date !== selectedSlot.date && `${slot.date}-${slot.startTime}` !== selectedKey,
   );
 
-  return [selectedSlot, ...sameDayAlternatives, ...crossDayAlternatives].slice(0, 4);
+  return [selectedSlot, ...sameDayAlternatives, ...crossDayAlternatives]
+    .slice(0, 4)
+    .map(toCampaignSlotOption);
+}
+
+function toCampaignSlotOption(slot: RebookingEmptySlot) {
+  return {
+    date: slot.date,
+    startTime: slot.startTime,
+    endTime: slot.endTime,
+  };
+}
+
+function showPromoError(error: unknown, intl: ReturnType<typeof useIntl>) {
+  const message =
+    error instanceof ApiRequestError && error.message
+      ? error.message
+      : intl.formatMessage({ id: 'common.error' });
+
+  try {
+    getTelegram().showAlert(message);
+  } catch {
+    window.alert(message);
+  }
 }
 
 function buildDefaultCycleMessage({
