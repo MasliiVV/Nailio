@@ -262,7 +262,9 @@ export function OnboardingWizard() {
               <div className={styles.phoneTopBar}>
                 <div>
                   <div className={styles.phoneBrand}>Nailio</div>
-                  <div className={styles.phoneLabel}>Beauty booking mini app</div>
+                  <div className={styles.phoneLabel}>
+                    {intl.formatMessage({ id: 'onboarding.showcasePhoneLabel' })}
+                  </div>
                 </div>
                 <span className={styles.liveBadge}>
                   {intl.formatMessage({ id: 'onboarding.showcaseLive' })}
@@ -377,9 +379,15 @@ export function OnboardingWizard() {
             </div>
           </div>
           <div className={styles.showcaseChips}>
-            <span className={styles.showcaseStatChip}>2 tap booking</span>
-            <span className={styles.showcaseStatChip}>Telegram reminders</span>
-            <span className={styles.showcaseStatChip}>24/7</span>
+            <span className={styles.showcaseStatChip}>
+              {intl.formatMessage({ id: 'onboarding.showcase2.stat1' })}
+            </span>
+            <span className={styles.showcaseStatChip}>
+              {intl.formatMessage({ id: 'onboarding.showcase2.stat2' })}
+            </span>
+            <span className={styles.showcaseStatChip}>
+              {intl.formatMessage({ id: 'onboarding.showcase2.stat3' })}
+            </span>
           </div>
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
@@ -417,7 +425,9 @@ export function OnboardingWizard() {
                 {intl.formatMessage({ id: 'onboarding.showcase3.metric1Label' })}
               </div>
               <div className={styles.metricValue}>36</div>
-              <div className={styles.metricTrend}>+12% this week</div>
+              <div className={styles.metricTrend}>
+                {intl.formatMessage({ id: 'onboarding.showcase3.metric1Trend' })}
+              </div>
             </div>
             <div className={styles.metricCard}>
               <div className={styles.metricLabel}>

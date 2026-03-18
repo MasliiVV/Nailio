@@ -104,6 +104,7 @@
   box-shadow:
     0 20px 48px rgba(76, 63, 145, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  animation: showcaseFloat 7.5s ease-in-out infinite;
 }
 
 .phoneTopBar {
@@ -148,6 +149,7 @@
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple-muted) 100%);
   color: white;
   box-shadow: 0 18px 40px rgba(110, 90, 230, 0.24);
+  animation: showcaseGlow 5.5s ease-in-out infinite;
 }
 
 .phoneHeroIcon {
@@ -245,6 +247,7 @@
   grid-template-columns: auto 1fr;
   gap: 12px;
   align-items: center;
+  animation: fadeIn 0.45s ease, showcaseFloatSoft 8.5s ease-in-out infinite;
 }
 
 .showcaseFooterTitle {
@@ -349,6 +352,7 @@
 .metricCardPrimary {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple-muted) 100%);
+  animation: showcaseGlow 6.5s ease-in-out infinite;
 }
 
 .metricCardPrimary .metricLabel,
@@ -606,6 +610,50 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes showcaseFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes showcaseFloatSoft {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes showcaseGlow {
+  0%,
+  100% {
+    box-shadow: 0 18px 40px rgba(110, 90, 230, 0.24);
+    filter: saturate(1);
+  }
+
+  50% {
+    box-shadow: 0 22px 50px rgba(110, 90, 230, 0.34);
+    filter: saturate(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phoneFrame,
+  .phoneHeroCard,
+  .showcaseFooterCard,
+  .metricCardPrimary {
+    animation: none;
+  }
 }
 
 @media (max-width: 380px) {
