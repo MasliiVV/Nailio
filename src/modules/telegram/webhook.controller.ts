@@ -399,6 +399,16 @@ export class WebhookController {
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
     const text = message.text.trim();
 
+    if (text === '✍️ Свій варіант') {
+      await this.sendPlatformMessageWithKeyboard(
+        platformBotToken,
+        message.chat.id,
+        '✍️ Введіть один або кілька варіантів часу вручну через кому.\n\nНаприклад: <b>14:30</b> або <b>14:30, 15:00, 16:30</b>',
+        { remove_keyboard: true },
+      );
+      return;
+    }
+
     // Parse times: expect "HH:MM" or "HH:MM, HH:MM, ..."
     const timeRegex = /\d{1,2}:\d{2}/g;
     const times = text.match(timeRegex);
@@ -1270,6 +1280,7 @@ export class WebhookController {
     for (let index = 0; index < suggestions.length; index += 3) {
       keyboard.push(suggestions.slice(index, index + 3).map((time) => ({ text: time })));
     }
+    keyboard.push([{ text: '✍️ Свій варіант' }]);
 
     return {
       keyboard,
