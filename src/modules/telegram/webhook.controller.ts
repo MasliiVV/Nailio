@@ -409,6 +409,17 @@ export class WebhookController {
       return;
     }
 
+    if (text === '❌ Скасувати') {
+      this.conversationStateService.delete(userId);
+      await this.sendPlatformMessageWithKeyboard(
+        platformBotToken,
+        message.chat.id,
+        '❌ Режим пропозиції іншого часу скасовано.',
+        { remove_keyboard: true },
+      );
+      return;
+    }
+
     // Parse times: expect "HH:MM" or "HH:MM, HH:MM, ..."
     const timeRegex = /\d{1,2}:\d{2}/g;
     const times = text.match(timeRegex);
@@ -1280,7 +1291,7 @@ export class WebhookController {
     for (let index = 0; index < suggestions.length; index += 3) {
       keyboard.push(suggestions.slice(index, index + 3).map((time) => ({ text: time })));
     }
-    keyboard.push([{ text: '✍️ Свій варіант' }]);
+    keyboard.push([{ text: '✍️ Свій варіант' }, { text: '❌ Скасувати' }]);
 
     return {
       keyboard,
