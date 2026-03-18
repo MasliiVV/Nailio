@@ -95,17 +95,17 @@ export class ServicesController {
   }
 
   /**
-   * Soft delete service (deactivate)
+   * Delete service
    * docs/api/endpoints.md — DELETE /api/v1/services/:id 🔑👑⚡
-   * docs/backlog.md #37 — Soft-delete (is_active flag)
+   * Active services are deactivated, inactive services are permanently deleted when safe.
    */
   @Delete(':id')
   @Roles('master')
   @RequiresActiveSubscription()
   @UseGuards(RolesGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Deactivate service (soft delete)' })
-  @ApiResponse({ status: 204, description: 'Service deactivated' })
+  @ApiOperation({ summary: 'Deactivate or permanently delete service' })
+  @ApiResponse({ status: 204, description: 'Service deleted or deactivated' })
   @ApiResponse({ status: 404, description: 'Service not found' })
   async remove(@CurrentTenant() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.servicesService.softDelete(tenantId, id);

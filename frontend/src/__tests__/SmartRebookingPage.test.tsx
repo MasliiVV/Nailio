@@ -84,6 +84,7 @@ const mockOverview = {
   sendLog: [
     {
       id: 'log-1',
+      type: 'slot_fill' as const,
       date: '2026-03-16',
       startTime: '15:00',
       endTime: '16:00',
@@ -169,18 +170,19 @@ describe('SmartRebookingPage', () => {
   it('renders redesigned rebooking sections without heatmap', () => {
     renderPage();
 
-    expect(screen.getByText('rebooking.slotPromoTitle')).toBeInTheDocument();
-    expect(screen.getByText('rebooking.availableDatesPreview')).toBeInTheDocument();
-    expect(screen.getAllByText('rebooking.recommendations').length).toBeGreaterThan(0);
-    expect(screen.getByText('rebooking.sendLog')).toBeInTheDocument();
+    expect(screen.getByText('rebooking.flow.slot')).toBeInTheDocument();
+    expect(screen.getByText('rebooking.flow.cycle')).toBeInTheDocument();
+    expect(screen.getByText('rebooking.step.slot')).toBeInTheDocument();
+    expect(screen.getByText('rebooking.showDetails')).toBeInTheDocument();
     expect(screen.queryByText('rebooking.heatmap')).not.toBeInTheDocument();
   });
 
   it('generates slot-fill and cycle-followup messages with correct payloads', async () => {
     renderPage();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'rebooking.generateText' })[0]!);
-    fireEvent.click(screen.getAllByRole('button', { name: 'rebooking.generateText' })[1]!);
+    fireEvent.click(screen.getAllByRole('button', { name: 'rebooking.improveText' })[0]!);
+    fireEvent.click(screen.getByText('rebooking.flow.cycle'));
+    fireEvent.click(screen.getByRole('button', { name: 'rebooking.improveText' }));
 
     await waitFor(() => {
       expect(mockGenerateMessage).toHaveBeenCalledWith(
@@ -208,11 +210,42 @@ describe('SmartRebookingPage', () => {
   it('shows manual client picker for empty-slot promo', async () => {
     renderPage();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'rebooking.selectManually' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'rebooking.editRecipients' }));
 
     await waitFor(() => {
+      expect(screen.getByText('rebooking.recipientPickerTitle.slot')).toBeInTheDocument();
       expect(screen.getAllByText(/Anna/).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Olha/).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('sends explicit client lists for slot and cycle flows', async () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'rebooking.sendSlotPromo' }));
+
+    await waitFor(() => {
+      expect(mockSendCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          campaignType: 'slot_fill',
+          clientIds: expect.arrayContaining(['client-1', 'client-2']),
+        }),
+      );
+    });
+
+    fireEvent.click(screen.getByText('rebooking.flow.cycle'));
+    fireEvent.click(screen.getByRole('button', { name: 'rebooking.sendCyclePromo' }));
+
+    await waitFor(() => {
+      expect(mockSendCampaign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          campaignType: 'cycle_followup',
+          clientIds: expect.arrayContaining(['client-1', 'client-2']),
+          slotOptions: expect.arrayContaining([
+            expect.objectContaining({ date: '2026-03-17', startTime: '10:00' }),
+          ]),
+        }),
+      );
     });
   });
 });

@@ -27,7 +27,7 @@ module.exports = [
     },
   },
   {
-    files: ['frontend/src/**/*.{ts,tsx}', 'frontend/vite-env.d.ts'],
+    files: ['frontend/src/**/*.{ts,tsx}', 'frontend/e2e/**/*.{ts,tsx}', 'frontend/vite-env.d.ts'],
     languageOptions: {
       parser,
       parserOptions: {

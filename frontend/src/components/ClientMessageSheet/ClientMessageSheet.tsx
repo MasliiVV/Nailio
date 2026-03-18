@@ -22,8 +22,7 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
   const titleId = mode === 'promo' ? 'clients.reminderPromoTitle' : 'clients.messageClientTitle';
   const placeholderId =
     mode === 'promo' ? 'clients.reminderPromoPlaceholder' : 'clients.messageClientPlaceholder';
-  const successId =
-    mode === 'promo' ? 'clients.reminderPromoSent' : 'clients.messageClientSent';
+  const successId = mode === 'promo' ? 'clients.reminderPromoSent' : 'clients.messageClientSent';
 
   useEffect(() => {
     if (open && !sent) {

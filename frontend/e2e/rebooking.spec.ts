@@ -1,4 +1,4 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAuth, mockAPI, openMiniApp } from './helpers';
 
 test.describe('Rebooking Page', () => {
   test.beforeEach(async ({ tgPage: page }) => {
@@ -75,6 +75,7 @@ test.describe('Rebooking Page', () => {
       sendLog: [
         {
           id: 'log-1',
+          type: 'slot_fill',
           date: '2026-03-16',
           startTime: '15:00',
           endTime: '16:00',
@@ -118,18 +119,23 @@ test.describe('Rebooking Page', () => {
   });
 
   test('renders redesigned Rebooking layout', async ({ tgPage: page }) => {
-    await page.goto('/master/rebooking?date=2026-03-17&slot=10:00');
+    await openMiniApp(page, '/master/rebooking?date=2026-03-17&slot=10:00');
 
-    await expect(page.getByText('Smart Rebooking')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText('Промо для вільного часу')).toBeVisible();
-    await expect(page.getByText('Рекомендуємо написати')).toBeVisible();
-    await expect(page.getByText('Завантаженість')).toBeVisible();
-    await expect(page.getByText('Send log')).toBeVisible();
-    await expect(page.getByText('10:00 — 11:00')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Повернення клієнтів' })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText('Заповнити вікно')).toBeVisible();
+    await expect(page.getByText('Нагадати клієнтам')).toBeVisible();
+    await expect(page.getByText('Показати історію та аналітику')).toBeVisible();
+    await expect(page.getByRole('button', { name: '10:00 — 11:00' })).toBeVisible();
+    await expect(page.getByText('2. Кому надіслати')).toBeVisible();
+    await expect(page.getByText('3. Перевір повідомлення')).toBeVisible();
     await expect(page.getByText('Heatmap по днях')).toHaveCount(0);
   });
 
-  test('sends generate and campaign requests for slot and cycle flows', async ({ tgPage: page }) => {
+  test('sends generate and campaign requests for slot and cycle flows', async ({
+    tgPage: page,
+  }) => {
     const generateBodies: unknown[] = [];
     const campaignBodies: unknown[] = [];
 
@@ -154,11 +160,12 @@ test.describe('Rebooking Page', () => {
       });
     });
 
-    await page.goto('/master/rebooking?date=2026-03-17&slot=10:00');
+    await openMiniApp(page, '/master/rebooking?date=2026-03-17&slot=10:00');
 
-    const generateButtons = page.getByRole('button', { name: 'Згенерувати текст' });
-    await generateButtons.nth(0).click();
-    await generateButtons.nth(1).click();
+    await page.getByRole('button', { name: 'Покращити текст' }).click();
+    await page.getByRole('button', { name: 'Розіслати промо по слоту' }).click();
+    await page.getByText('Нагадати клієнтам').click();
+    await page.getByRole('button', { name: 'Покращити текст' }).click();
 
     await expect.poll(() => generateBodies.length).toBe(2);
     expect(generateBodies[0]).toMatchObject({
@@ -174,15 +181,14 @@ test.describe('Rebooking Page', () => {
       ]),
     });
 
-    await page.getByRole('button', { name: 'Розіслати промо по слоту' }).click();
     await page.getByRole('button', { name: 'Надіслати нагадування' }).click();
 
     await expect.poll(() => campaignBodies.length).toBe(2);
     expect(campaignBodies[0]).toMatchObject({
       campaignType: 'slot_fill',
-      includeAllClients: true,
       date: '2026-03-17',
       startTime: '10:00',
+      clientIds: expect.arrayContaining(['client-1', 'client-2']),
     });
     expect(campaignBodies[1]).toMatchObject({
       campaignType: 'cycle_followup',

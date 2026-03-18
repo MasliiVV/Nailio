@@ -2,14 +2,33 @@
   margin-bottom: var(--space-lg);
 }
 
+.bestTimeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(100%, 220px);
+  white-space: normal;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.bestTimeIcon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.bestTimeText {
+  min-width: 0;
+}
+
 .section {
-  margin-top: var(--space-2xl);
+  margin-top: var(--space-xl);
 }
 
 .sectionHeader {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
   gap: var(--space-md);
   margin-bottom: var(--space-md);
 }
@@ -19,46 +38,66 @@
   color: var(--color-text);
 }
 
-.sectionMeta {
+.helperText,
+.metaLine,
+.slotMeta,
+.sendMeta,
+.occupancyLabel {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
+.stepCard,
+.summaryCard,
+.previewCard,
+.pickerRow,
+.logCard,
+.previewDateCard,
+.resultCard {
+  text-align: left;
+}
+
 .slotGrid,
-.clientList,
-.logList,
-.clientListCompact,
-.previewDates {
+.previewDates,
+.previewList,
+.pickerList,
+.logList {
   display: grid;
   gap: var(--space-md);
 }
 
-.slotGrid {
+.slotGrid,
+.previewDates {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .slotCard {
   text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.slotCard:active,
+.previewTimeChip:active,
+.filterChip:active {
+  transform: scale(0.98);
 }
 
 .slotSelected {
-  outline: 2px solid var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 8%, white);
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, white);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
-.campaignCard {
-  margin-top: var(--space-lg);
-}
-
-.subTitle {
-  font-size: var(--font-size-md);
-  color: var(--color-text);
-}
-
-.helperText {
-  margin-top: var(--space-xs);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+.slotCardTop,
+.previewCardTop,
+.clientCardTop,
+.logTop,
+.logTitleRow,
+.occupancyTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
 .slotTime {
@@ -67,33 +106,52 @@
   color: var(--color-text);
 }
 
-.slotMeta {
-  margin-top: var(--space-xs);
-  font-size: var(--font-size-sm);
+.summaryCard {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-primary) 6%, white), white);
+}
+
+.summaryTitle,
+.resultTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.summaryText {
+  margin-top: var(--space-sm);
   color: var(--color-text-secondary);
 }
 
-.modeRow {
+.previewList {
+  margin-top: var(--space-md);
+}
+
+.previewCard {
+  background: var(--color-bg);
+}
+
+.actionRow {
   display: flex;
-  gap: var(--space-sm);
   flex-wrap: wrap;
-  margin-bottom: var(--space-md);
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
 }
 
 .filterRow {
   display: flex;
   gap: var(--space-sm);
   overflow-x: auto;
-  margin-bottom: var(--space-md);
   padding-bottom: 2px;
 }
 
 .filterChip {
   flex: 0 0 auto;
-  padding: 8px 12px;
-  border-radius: var(--radius-full);
-  background: var(--color-section-bg);
   border: 1px solid var(--color-separator);
+  border-radius: var(--radius-full);
+  padding: 8px 12px;
+  background: var(--color-section-bg);
   color: var(--color-text-secondary);
 }
 
@@ -103,90 +161,59 @@
   border-color: var(--color-primary);
 }
 
-.clientCard {
-  text-align: left;
-}
-
-.clientCardCompact {
-  text-align: left;
-}
-
-.clientCardTop {
+.toneRow {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.checkboxWrap {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
+  margin: var(--space-md) 0;
 }
 
-.checkboxWrap input {
-  margin: 0;
+.messageBox {
+  margin: var(--space-md) 0;
 }
 
-.clientName {
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.reason,
-.metaLine {
-  margin-top: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.segmentRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin-top: var(--space-sm);
-}
-
-.logCard {
-  text-align: left;
-}
-
-.logTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.logStats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.previewBlock {
-  margin-bottom: var(--space-md);
-}
-
-.previewTitle {
+.messageLabel {
+  display: block;
   margin-bottom: var(--space-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
-.previewDates {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.textarea,
+.searchInput {
+  width: 100%;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-section-bg);
+  color: var(--color-text);
 }
 
-.previewDateCard {
-  text-align: left;
+.textarea {
+  min-height: 140px;
+  padding: 12px 16px;
+  resize: vertical;
+}
+
+.searchInput {
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.textarea:focus,
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.sendBar {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-separator);
 }
 
 .previewDate {
-  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--color-text);
 }
@@ -207,55 +234,20 @@
   font-size: var(--font-size-xs);
 }
 
-.toneRow {
-  display: flex;
-  gap: var(--space-sm);
-  margin: var(--space-md) 0;
-  flex-wrap: wrap;
-}
-
-.messageBox {
-  margin: var(--space-md) 0;
-}
-
-.messageLabel {
-  display: block;
-  margin-bottom: var(--space-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.textarea {
-  width: 100%;
-  min-height: 140px;
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-separator);
-  background: var(--color-section-bg);
-  color: var(--color-text);
-  resize: vertical;
-}
-
-.textarea:focus {
-  outline: none;
+.previewTimeChipSelected {
+  background: color-mix(in srgb, var(--color-primary) 12%, white);
   border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.detailsStack {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
 }
 
 .occupancyCard {
   background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, white), white);
-}
-
-.occupancyTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-sm);
-}
-
-.occupancyLabel {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
 }
 
 .occupancyValue {
@@ -265,9 +257,68 @@
   color: var(--color-text);
 }
 
+.logTitleRow {
+  align-items: center;
+}
+
+.logStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.resultCard {
+  margin-top: var(--space-lg);
+  background: color-mix(in srgb, var(--color-primary) 8%, white);
+}
+
+.pickerContent {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.pickerRowMuted {
+  opacity: 0.72;
+}
+
+.pickerRowDisabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
+.checkboxWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.checkboxWrap input {
+  margin: 0;
+}
+
+.clientName {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
 @media (max-width: 640px) {
   .slotGrid,
   .previewDates {
     grid-template-columns: 1fr;
+  }
+
+  .bestTimeBadge {
+    max-width: 100%;
+  }
+
+  .sectionHeader,
+  .slotCardTop,
+  .logTop,
+  .logTitleRow,
+  .occupancyTop {
+    flex-direction: column;
   }
 }

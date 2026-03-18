@@ -98,7 +98,9 @@ test.describe('Clients Page', () => {
 
   test('search input filters clients', async ({ tgPage: page }) => {
     await page.goto('/master/clients');
-    const searchInput = page.locator('input[placeholder*="search" i], input[placeholder*="пошук" i]');
+    const searchInput = page.locator(
+      'input[placeholder*="search" i], input[placeholder*="пошук" i]',
+    );
     await searchInput.fill('Олена');
     // Search triggers API call with new param
   });
@@ -120,7 +122,13 @@ test.describe('My Bookings (Client)', () => {
           data: {
             accessToken: 'mock-token',
             refreshToken: 'mock-refresh',
-            user: { id: 'u2', telegramId: 12345, firstName: 'Client', role: 'client', tenantId: 't1' },
+            user: {
+              id: 'u2',
+              telegramId: 12345,
+              firstName: 'Client',
+              role: 'client',
+              tenantId: 't1',
+            },
             tenant: { id: 't1', displayName: 'Salon', branding: {} },
             needsOnboarding: false,
           },
@@ -168,6 +176,8 @@ test.describe('My Bookings (Client)', () => {
   test('cancel button shows in detail sheet for pending/confirmed', async ({ tgPage: page }) => {
     await page.goto('/client/bookings');
     await page.getByText('Манікюр').click();
-    await expect(page.locator('[class*="sheet"] button[class*="destructive"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[class*="sheet"] button[class*="destructive"]')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

@@ -36,7 +36,8 @@ export function prefetchMasterInsights(): void {
 
   queryClientRef.prefetchQuery({
     queryKey: ['analytics', 'dashboard', 'week'],
-    queryFn: () => api.get<ApiResponse<DashboardData>>('/analytics/dashboard?period=week').then((r) => r.data),
+    queryFn: () =>
+      api.get<ApiResponse<DashboardData>>('/analytics/dashboard?period=week').then((r) => r.data),
     staleTime: 60_000,
   });
 
@@ -48,7 +49,10 @@ export function prefetchMasterInsights(): void {
 
   queryClientRef.prefetchQuery({
     queryKey: ['finance', 'transactions'],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Transaction>>>('/finance/transactions').then((r) => r.data),
+    queryFn: () =>
+      api
+        .get<ApiResponse<PaginatedResponse<Transaction>>>('/finance/transactions')
+        .then((r) => r.data),
     staleTime: 60_000,
   });
 
@@ -92,14 +96,18 @@ export function prefetchMasterData(): void {
   // Prefetch all bookings (calendar landing page needs them)
   queryClientRef.prefetchQuery({
     queryKey: ['bookings', 'list', undefined],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings').then((r) => r.data),
+    queryFn: () =>
+      api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings').then((r) => r.data),
     staleTime: 60_000,
   });
 
   // Prefetch upcoming bookings
   queryClientRef.prefetchQuery({
     queryKey: ['bookings', 'list', { upcoming: 'true' }],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true').then((r) => r.data),
+    queryFn: () =>
+      api
+        .get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true')
+        .then((r) => r.data),
     staleTime: 60_000,
   });
 
@@ -113,7 +121,10 @@ export function prefetchClientData(): void {
   // Prefetch client's bookings
   queryClientRef.prefetchQuery({
     queryKey: ['bookings', 'list', { upcoming: 'true' }],
-    queryFn: () => api.get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true').then((r) => r.data),
+    queryFn: () =>
+      api
+        .get<ApiResponse<PaginatedResponse<Booking>>>('/bookings?upcoming=true')
+        .then((r) => r.data),
     staleTime: 60_000,
   });
 }

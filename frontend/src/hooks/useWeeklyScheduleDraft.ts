@@ -13,14 +13,11 @@ export function useWeeklyScheduleDraft(initialDays: ScheduleDay[] = createEmptyW
     setDraft(cloneDays(days));
   }, []);
 
-  const updateDay = useCallback(
-    (dayOfWeek: number, updater: (day: ScheduleDay) => ScheduleDay) => {
-      setDraft((previous) =>
-        previous.map((day) => (day.dayOfWeek === dayOfWeek ? updater(day) : day)),
-      );
-    },
-    [],
-  );
+  const updateDay = useCallback((dayOfWeek: number, updater: (day: ScheduleDay) => ScheduleDay) => {
+    setDraft((previous) =>
+      previous.map((day) => (day.dayOfWeek === dayOfWeek ? updater(day) : day)),
+    );
+  }, []);
 
   const toggleDay = useCallback(
     (dayOfWeek: number) => {

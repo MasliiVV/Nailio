@@ -75,7 +75,9 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
           <div className={styles.handle} />
         </div>
         {title && <h3 className={styles.title}>{title}</h3>}
-        <div className={styles.content} ref={contentRef}>{children}</div>
+        <div className={styles.content} ref={contentRef}>
+          {children}
+        </div>
       </div>
     </>,
     document.body,

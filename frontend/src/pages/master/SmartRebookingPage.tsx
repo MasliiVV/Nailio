@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarClock, Clock3, Send, Sparkles } from 'lucide-react';
+import { CalendarClock, Clock3, History, Send, Sparkles, Users, Wand2 } from 'lucide-react';
 import {
   Badge,
+  BottomSheet,
   Button,
   Card,
   DatePicker,
   EmptyState,
   PageHeader,
   SkeletonList,
+  Tabs,
 } from '@/components/ui';
 import { useClients } from '@/hooks';
 import {
@@ -17,52 +19,50 @@ import {
   useRebookingOverview,
   useSendRebookingCampaign,
 } from '@/hooks/useRebooking';
-import type { Client, RebookingEmptySlot, RebookingRecommendation } from '@/types';
+import type {
+  Client,
+  RebookingCampaignType,
+  RebookingEmptySlot,
+  RebookingRecommendation,
+} from '@/types';
 import styles from './SmartRebookingPage.module.css';
 
-function formatDateKey(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+const CYCLE_FILTERS = ['all', 'due_soon', 'visits_3_plus', 'morning', 'favorite_service'] as const;
 
-function formatDateLabel(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString('uk-UA', {
-    day: 'numeric',
-    month: 'short',
-    weekday: 'short',
-  });
-}
+const MAX_SLOT_RECIPIENTS = 8;
+const MAX_CYCLE_SLOT_OPTIONS = 3;
 
-const FILTERS = [
-  'all',
-  'due_soon',
-  'visits_3_plus',
-  'morning',
-  'favorite_service',
-  'irregular',
-] as const;
-
-type FilterKey = (typeof FILTERS)[number];
+type CycleFilterKey = (typeof CYCLE_FILTERS)[number];
+type PickerMode = 'slot' | 'cycle' | null;
 
 export function SmartRebookingPage() {
   const intl = useIntl();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestedMode = searchParams.get('mode');
+  const requestedSlot = searchParams.get('slot');
+
   const [selectedDate, setSelectedDate] = useState(
     searchParams.get('date') || formatDateKey(new Date()),
   );
-  const initialSlot = searchParams.get('slot');
-  const [segmentFilter, setSegmentFilter] = useState<FilterKey>('all');
-  const [selectedSlotKey, setSelectedSlotKey] = useState<string>('');
-  const [slotAudienceMode, setSlotAudienceMode] = useState<'all' | 'selected'>('all');
-  const [cycleAudienceMode, setCycleAudienceMode] = useState<'all' | 'selected'>('selected');
+  const [activeFlow, setActiveFlow] = useState<RebookingCampaignType>(
+    requestedMode === 'cycle' ? 'cycle_followup' : 'slot_fill',
+  );
+  const [selectedSlotKey, setSelectedSlotKey] = useState('');
+  const [cycleFilter, setCycleFilter] = useState<CycleFilterKey>('all');
   const [slotSelectedClientIds, setSlotSelectedClientIds] = useState<string[]>([]);
   const [cycleSelectedClientIds, setCycleSelectedClientIds] = useState<string[]>([]);
+  const [cycleSelectedSlotKeys, setCycleSelectedSlotKeys] = useState<string[]>([]);
   const [slotTone, setSlotTone] = useState<'soft' | 'friendly'>('friendly');
   const [cycleTone, setCycleTone] = useState<'soft' | 'friendly'>('friendly');
   const [slotMessage, setSlotMessage] = useState('');
   const [cycleMessage, setCycleMessage] = useState('');
+  const [pickerMode, setPickerMode] = useState<PickerMode>(null);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [lastSent, setLastSent] = useState<{
+    type: RebookingCampaignType;
+    count: number;
+  } | null>(null);
 
   const { data, isLoading } = useRebookingOverview(selectedDate);
   const { data: clientsData, isLoading: clientsLoading } = useClients();
@@ -71,18 +71,12 @@ export function SmartRebookingPage() {
   const sendSlotCampaign = useSendRebookingCampaign();
   const sendCycleCampaign = useSendRebookingCampaign();
 
-  useEffect(() => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('date', selectedDate);
-      if (selectedSlotKey) {
-        next.set('slot', selectedSlotKey.split('-').slice(1).join('-'));
-      } else {
-        next.delete('slot');
-      }
-      return next;
-    });
-  }, [selectedDate, selectedSlotKey, setSearchParams]);
+  const allClients = useMemo(() => clientsData?.items || [], [clientsData?.items]);
+
+  const telegramClients = useMemo(
+    () => allClients.filter((client) => Boolean(client.telegramId)),
+    [allClients],
+  );
 
   const availableSlots = useMemo(
     () => (data?.emptySlots || []).filter((slot) => slot.date === selectedDate),
@@ -95,10 +89,173 @@ export function SmartRebookingPage() {
     [availableSlots, selectedSlotKey],
   );
 
-  const allClients = useMemo(
-    () => (clientsData?.items || []).filter((client) => Boolean(client.telegramId)),
-    [clientsData?.items],
+  const filteredRecommendations = useMemo(() => {
+    const items = data?.recommendations || [];
+    if (cycleFilter === 'all') {
+      return items;
+    }
+    return items.filter((item) => item.segments.includes(cycleFilter));
+  }, [cycleFilter, data?.recommendations]);
+
+  const cycleSlotPool = useMemo(() => data?.emptySlots || [], [data?.emptySlots]);
+
+  const cycleSlotOptions = useMemo(
+    () =>
+      cycleSelectedSlotKeys
+        .map(
+          (key) => cycleSlotPool.find((slot) => `${slot.date}-${slot.startTime}` === key) || null,
+        )
+        .filter((slot): slot is RebookingEmptySlot => Boolean(slot)),
+    [cycleSelectedSlotKeys, cycleSlotPool],
   );
+
+  const slotSuggestedRecipients = useMemo(
+    () => buildSlotSuggestions(selectedSlot, data?.recommendations || [], telegramClients),
+    [selectedSlot, data?.recommendations, telegramClients],
+  );
+
+  const slotSuggestedIds = useMemo(
+    () => slotSuggestedRecipients.map((item) => item.clientId),
+    [slotSuggestedRecipients],
+  );
+
+  const slotSelectedClients = useMemo(
+    () => allClients.filter((client) => slotSelectedClientIds.includes(client.id)),
+    [allClients, slotSelectedClientIds],
+  );
+
+  const recommendationMap = useMemo(
+    () => new Map((data?.recommendations || []).map((item) => [item.clientId, item])),
+    [data?.recommendations],
+  );
+
+  const cycleSelectedRecipients = useMemo(
+    () =>
+      cycleSelectedClientIds
+        .map((clientId) => {
+          const recommended = recommendationMap.get(clientId);
+          if (recommended) {
+            return recommended;
+          }
+
+          const client = allClients.find((entry) => entry.id === clientId);
+          if (!client) {
+            return null;
+          }
+
+          return {
+            clientId: client.id,
+            firstName: client.firstName,
+            lastName: client.lastName,
+            telegramId: client.telegramId || null,
+            lastVisitAt: client.lastVisitAt,
+            expectedReturnDate: selectedDate,
+            averageCycleDays: data?.defaultCycleDays || 0,
+            visitCount: client.stats?.totalBookings || 0,
+            ltv: client.stats?.totalSpent || 0,
+            priority: 'low' as const,
+            priorityScore: 0,
+            reason: client.telegramId
+              ? intl.formatMessage({ id: 'rebooking.manualRecipient' })
+              : intl.formatMessage({ id: 'rebooking.manualRecipientNoTelegram' }),
+            segments: [],
+            favoriteService: null,
+          };
+        })
+        .filter((item): item is RebookingRecommendation => Boolean(item)),
+    [
+      allClients,
+      cycleSelectedClientIds,
+      data?.defaultCycleDays,
+      intl,
+      recommendationMap,
+      selectedDate,
+    ],
+  );
+
+  const slotPreviewIds = useMemo(() => slotSelectedClientIds.slice(0, 3), [slotSelectedClientIds]);
+  const cyclePreviewIds = useMemo(
+    () => cycleSelectedClientIds.slice(0, 3),
+    [cycleSelectedClientIds],
+  );
+
+  const slotPickerItems = useMemo(() => {
+    const normalizedSearch = pickerSearch.trim().toLowerCase();
+    const suggestionMap = new Map(
+      slotSuggestedRecipients.map((item) => [item.clientId, item.reason]),
+    );
+
+    return allClients
+      .filter((client) => {
+        if (!normalizedSearch) return true;
+        const fullName = `${client.firstName} ${client.lastName || ''}`.toLowerCase();
+        return fullName.includes(normalizedSearch);
+      })
+      .map((client) => ({
+        id: client.id,
+        title: `${client.firstName} ${client.lastName || ''}`.trim(),
+        subtitle: client.telegramId
+          ? suggestionMap.get(client.id) || intl.formatMessage({ id: 'rebooking.manualRecipient' })
+          : intl.formatMessage({ id: 'rebooking.manualRecipientNoTelegram' }),
+        checked: slotSelectedClientIds.includes(client.id),
+        disabled: !client.telegramId,
+        onToggle: () => toggleArrayValue(client.id, setSlotSelectedClientIds),
+      }));
+  }, [allClients, intl, pickerSearch, slotSelectedClientIds, slotSuggestedRecipients]);
+
+  const cyclePickerItems = useMemo(() => {
+    const normalizedSearch = pickerSearch.trim().toLowerCase();
+    const filteredIds = new Set(filteredRecommendations.map((item) => item.clientId));
+
+    return allClients
+      .filter((client) => {
+        if (!normalizedSearch) return true;
+        const recommendation = recommendationMap.get(client.id);
+        const fullName = `${client.firstName} ${client.lastName || ''}`.toLowerCase();
+        return (
+          fullName.includes(normalizedSearch) ||
+          recommendation?.reason.toLowerCase().includes(normalizedSearch) ||
+          recommendation?.favoriteService?.name.toLowerCase().includes(normalizedSearch)
+        );
+      })
+      .map((client) => {
+        const recommendation = recommendationMap.get(client.id);
+
+        return {
+          id: client.id,
+          title: `${client.firstName} ${client.lastName || ''}`.trim(),
+          subtitle: client.telegramId
+            ? recommendation?.reason || intl.formatMessage({ id: 'rebooking.manualRecipient' })
+            : intl.formatMessage({ id: 'rebooking.manualRecipientNoTelegram' }),
+          checked: cycleSelectedClientIds.includes(client.id),
+          badge: recommendation?.priority,
+          muted: !filteredIds.has(client.id),
+          disabled: !client.telegramId,
+          onToggle: () => toggleArrayValue(client.id, setCycleSelectedClientIds),
+        };
+      });
+  }, [
+    allClients,
+    cycleSelectedClientIds,
+    filteredRecommendations,
+    intl,
+    pickerSearch,
+    recommendationMap,
+  ]);
+
+  useEffect(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('date', selectedDate);
+      next.set('mode', activeFlow === 'slot_fill' ? 'slot' : 'cycle');
+      if (selectedSlotKey) {
+        next.set('slot', selectedSlotKey.split('-').slice(1).join('-'));
+      } else {
+        next.delete('slot');
+      }
+      return next;
+    });
+  }, [activeFlow, selectedDate, selectedSlotKey, setSearchParams]);
 
   useEffect(() => {
     if (!availableSlots.length) {
@@ -106,52 +263,69 @@ export function SmartRebookingPage() {
       return;
     }
 
-    if (initialSlot) {
-      const requestedSlot = availableSlots.find((slot) => slot.startTime === initialSlot);
-      if (requestedSlot) {
-        setSelectedSlotKey(`${requestedSlot.date}-${requestedSlot.startTime}`);
-        return;
-      }
+    const requestedSlotKey = requestedSlot ? `${selectedDate}-${requestedSlot}` : null;
+    if (
+      requestedSlotKey &&
+      availableSlots.some((slot) => `${slot.date}-${slot.startTime}` === requestedSlotKey)
+    ) {
+      setSelectedSlotKey(requestedSlotKey);
+      return;
     }
 
-    const hasSelected = availableSlots.some(
-      (slot) => `${slot.date}-${slot.startTime}` === selectedSlotKey,
-    );
-    if (!hasSelected) {
-      const [firstSlot] = availableSlots;
+    if (!availableSlots.some((slot) => `${slot.date}-${slot.startTime}` === selectedSlotKey)) {
+      const firstSlot = availableSlots[0];
       if (firstSlot) {
         setSelectedSlotKey(`${firstSlot.date}-${firstSlot.startTime}`);
       }
     }
-  }, [availableSlots, initialSlot, selectedSlotKey]);
+  }, [availableSlots, requestedSlot, selectedDate, selectedSlotKey]);
 
-  const filteredRecommendations = useMemo(() => {
-    const items = data?.recommendations || [];
-    return items.filter((item) => {
-      if (segmentFilter === 'all') return true;
-      return item.segments.includes(segmentFilter);
+  useEffect(() => {
+    if (cycleSlotPool.length === 0) {
+      setCycleSelectedSlotKeys([]);
+      return;
+    }
+
+    const validKeys = cycleSelectedSlotKeys.filter((key) =>
+      cycleSlotPool.some((slot) => `${slot.date}-${slot.startTime}` === key),
+    );
+
+    if (validKeys.length > 0) {
+      if (validKeys.length !== cycleSelectedSlotKeys.length) {
+        setCycleSelectedSlotKeys(validKeys);
+      }
+      return;
+    }
+
+    setCycleSelectedSlotKeys(
+      cycleSlotPool
+        .slice(0, MAX_CYCLE_SLOT_OPTIONS)
+        .map((slot) => `${slot.date}-${slot.startTime}`),
+    );
+  }, [cycleSelectedSlotKeys, cycleSlotPool]);
+
+  useEffect(() => {
+    setSlotSelectedClientIds(slotSuggestedIds);
+  }, [slotSuggestedIds]);
+
+  useEffect(() => {
+    const recommendedIds = (data?.recommendations || []).map((item) => item.clientId);
+
+    setCycleSelectedClientIds((prev) => {
+      const validIds = prev.filter((clientId) =>
+        allClients.some((client) => client.id === clientId),
+      );
+      if (validIds.length > 0) {
+        return validIds;
+      }
+
+      return recommendedIds;
     });
-  }, [data?.recommendations, segmentFilter]);
+  }, [allClients, data?.recommendations]);
 
   useEffect(() => {
-    if (
-      slotAudienceMode === 'selected' &&
-      slotSelectedClientIds.length === 0 &&
-      allClients.length > 0
-    ) {
-      setSlotSelectedClientIds(allClients.slice(0, 8).map((client) => client.id));
-    }
-  }, [allClients, slotAudienceMode, slotSelectedClientIds.length]);
-
-  useEffect(() => {
-    if (
-      cycleAudienceMode === 'selected' &&
-      cycleSelectedClientIds.length === 0 &&
-      filteredRecommendations.length > 0
-    ) {
-      setCycleSelectedClientIds(filteredRecommendations.slice(0, 5).map((item) => item.clientId));
-    }
-  }, [cycleAudienceMode, cycleSelectedClientIds.length, filteredRecommendations]);
+    setPickerSearch('');
+  }, [pickerMode]);
 
   useEffect(() => {
     if (!selectedSlot) {
@@ -160,100 +334,89 @@ export function SmartRebookingPage() {
     }
 
     setSlotMessage(buildDefaultSlotMessage(selectedSlot));
-  }, [selectedSlot]);
+  }, [selectedSlotKey]);
 
   useEffect(() => {
     if (!data) {
       return;
     }
 
-    setCycleMessage(buildDefaultCycleMessage(data.defaultCycleDays));
-  }, [data]);
-
-  const cycleSlotPreview = useMemo(() => (data?.emptySlots || []).slice(0, 6), [data?.emptySlots]);
-
-  const slotSelectedCount =
-    slotAudienceMode === 'all' ? allClients.length : slotSelectedClientIds.length;
-  const cycleSelectedCount =
-    cycleAudienceMode === 'all' ? data?.recommendations.length || 0 : cycleSelectedClientIds.length;
-
-  const slotPreviewClientIds =
-    slotAudienceMode === 'all'
-      ? allClients.slice(0, 3).map((client) => client.id)
-      : slotSelectedClientIds.slice(0, 3);
-  const cyclePreviewClientIds =
-    cycleAudienceMode === 'all'
-      ? (data?.recommendations || []).slice(0, 3).map((item) => item.clientId)
-      : cycleSelectedClientIds.slice(0, 3);
-
-  const toggleSlotClient = (clientId: string) => {
-    setSlotSelectedClientIds((prev) =>
-      prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId],
+    setCycleMessage(
+      buildDefaultCycleMessage({
+        defaultCycleDays: data.defaultCycleDays,
+        slotOptions: cycleSlotOptions,
+      }),
     );
-  };
+  }, [cycleFilter, cycleSelectedSlotKeys, data]);
 
-  const toggleCycleClient = (clientId: string) => {
-    setCycleSelectedClientIds((prev) =>
-      prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId],
-    );
-  };
+  const slotDisabled = !selectedSlot || slotSelectedClientIds.length === 0 || !slotMessage.trim();
+  const cycleDisabled =
+    cycleSelectedClientIds.length === 0 || cycleSlotOptions.length === 0 || !cycleMessage.trim();
 
-  const handleGenerateSlotMessage = async () => {
-    if (!selectedSlot || slotPreviewClientIds.length === 0) return;
+  const handleImproveSlotMessage = async () => {
+    if (!selectedSlot || slotPreviewIds.length === 0) return;
+
     const result = await generateSlotMessage.mutateAsync({
       campaignType: 'slot_fill',
       date: selectedSlot.date,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
-      clientIds: slotPreviewClientIds,
+      clientIds: slotPreviewIds,
       tone: slotTone,
     });
+
     setSlotMessage(result.message);
   };
 
-  const handleGenerateCycleMessage = async () => {
-    if (cyclePreviewClientIds.length === 0 || cycleSlotPreview.length === 0) return;
-    const firstSlot = cycleSlotPreview[0];
+  const handleImproveCycleMessage = async () => {
+    const firstSlot = cycleSlotOptions[0];
+    if (!firstSlot || cyclePreviewIds.length === 0) return;
+
     const result = await generateCycleMessage.mutateAsync({
-      campaignType: 'cycle_followup',
-      date: firstSlot?.date || selectedDate,
-      startTime: firstSlot?.startTime || '09:00',
-      endTime: firstSlot?.endTime || '09:30',
-      clientIds: cyclePreviewClientIds,
-      tone: cycleTone,
-      slotOptions: cycleSlotPreview,
-    });
-    setCycleMessage(result.message);
-  };
-
-  const handleSendSlotCampaign = async () => {
-    if (!selectedSlot || !slotMessage.trim()) return;
-    await sendSlotCampaign.mutateAsync({
-      campaignType: 'slot_fill',
-      date: selectedSlot.date,
-      startTime: selectedSlot.startTime,
-      endTime: selectedSlot.endTime,
-      clientIds: slotAudienceMode === 'all' ? [] : slotSelectedClientIds,
-      includeAllClients: slotAudienceMode === 'all',
-      tone: slotTone,
-      message: slotMessage.trim(),
-    });
-  };
-
-  const handleSendCycleCampaign = async () => {
-    const firstSlot = cycleSlotPreview[0];
-    if (!cycleMessage.trim() || !firstSlot) return;
-    await sendCycleCampaign.mutateAsync({
       campaignType: 'cycle_followup',
       date: firstSlot.date,
       startTime: firstSlot.startTime,
       endTime: firstSlot.endTime,
-      clientIds: cycleAudienceMode === 'all' ? [] : cycleSelectedClientIds,
-      includeAllClients: cycleAudienceMode === 'all',
+      clientIds: cyclePreviewIds,
       tone: cycleTone,
-      slotOptions: cycleSlotPreview,
+      slotOptions: cycleSlotOptions,
+    });
+
+    setCycleMessage(result.message);
+  };
+
+  const handleSendSlotCampaign = async () => {
+    if (!selectedSlot || slotDisabled) return;
+
+    const result = await sendSlotCampaign.mutateAsync({
+      campaignType: 'slot_fill',
+      date: selectedSlot.date,
+      startTime: selectedSlot.startTime,
+      endTime: selectedSlot.endTime,
+      clientIds: slotSelectedClientIds,
+      tone: slotTone,
+      message: slotMessage.trim(),
+    });
+
+    setLastSent({ type: 'slot_fill', count: result.sentCount });
+  };
+
+  const handleSendCycleCampaign = async () => {
+    const firstSlot = cycleSlotOptions[0];
+    if (!firstSlot || cycleDisabled) return;
+
+    const result = await sendCycleCampaign.mutateAsync({
+      campaignType: 'cycle_followup',
+      date: firstSlot.date,
+      startTime: firstSlot.startTime,
+      endTime: firstSlot.endTime,
+      clientIds: cycleSelectedClientIds,
+      tone: cycleTone,
+      slotOptions: cycleSlotOptions,
       message: cycleMessage.trim(),
     });
+
+    setLastSent({ type: 'cycle_followup', count: result.sentCount });
   };
 
   return (
@@ -262,8 +425,14 @@ export function SmartRebookingPage() {
         title={intl.formatMessage({ id: 'rebooking.title' })}
         subtitle={intl.formatMessage({ id: 'rebooking.subtitle' })}
         action={
-          <Badge variant="secondary">
-            <Clock3 size={14} /> {data?.bestSendTime || '18:00'}
+          <Badge variant="secondary" className={styles.bestTimeBadge}>
+            <Clock3 size={14} className={styles.bestTimeIcon} />
+            <span className={styles.bestTimeText}>
+              {intl.formatMessage(
+                { id: 'rebooking.bestTimeHint' },
+                { time: data?.bestSendTime || '18:00' },
+              )}
+            </span>
           </Badge>
         }
       />
@@ -272,219 +441,234 @@ export function SmartRebookingPage() {
         <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={30} />
       </div>
 
+      <Tabs
+        tabs={[
+          { id: 'slot_fill', label: intl.formatMessage({ id: 'rebooking.flow.slot' }) },
+          { id: 'cycle_followup', label: intl.formatMessage({ id: 'rebooking.flow.cycle' }) },
+        ]}
+        activeId={activeFlow}
+        onChange={(id) => setActiveFlow(id as RebookingCampaignType)}
+      />
+
       {isLoading && <SkeletonList count={4} />}
 
       {!isLoading && data && (
         <>
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2>{intl.formatMessage({ id: 'rebooking.emptySlots' })}</h2>
-              <span className={styles.sectionMeta}>{formatDateLabel(selectedDate)}</span>
-            </div>
-            {!availableSlots.length ? (
-              <EmptyState
-                icon={<CalendarClock size={40} />}
-                title={intl.formatMessage({ id: 'rebooking.noEmptySlotsForDate' })}
-              />
-            ) : (
-              <>
-                <div className={styles.slotGrid}>
-                  {availableSlots.map((slot) => (
-                    <Card
-                      key={`${slot.date}-${slot.startTime}`}
-                      className={`${styles.slotCard} ${
-                        selectedSlotKey === `${slot.date}-${slot.startTime}`
-                          ? styles.slotSelected
-                          : ''
-                      }`}
-                      onClick={() => setSelectedSlotKey(`${slot.date}-${slot.startTime}`)}
-                    >
-                      <div className={styles.slotTime}>
-                        {slot.startTime} — {slot.endTime}
-                      </div>
-                      <div className={styles.slotMeta}>
-                        {intl.formatMessage(
-                          { id: 'rebooking.slotCount' },
-                          { count: slot.freeSlotCount },
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+          {lastSent && (
+            <Card className={styles.resultCard}>
+              <div className={styles.resultTitle}>
+                <Send size={16} />
+                {intl.formatMessage({ id: 'rebooking.sendResult' }, { count: lastSent.count })}
+              </div>
+              <div className={styles.helperText}>
+                {intl.formatMessage({ id: `rebooking.logType.${lastSent.type}` })}
+              </div>
+            </Card>
+          )}
 
-                {selectedSlot && (
-                  <Card className={styles.campaignCard}>
-                    <div className={styles.sectionHeader}>
-                      <div>
-                        <h3 className={styles.subTitle}>
-                          {intl.formatMessage({ id: 'rebooking.slotPromoTitle' })}
-                        </h3>
-                        <p className={styles.helperText}>
-                          {formatDateLabel(selectedSlot.date)} · {selectedSlot.startTime} —{' '}
-                          {selectedSlot.endTime}
-                        </p>
-                      </div>
-                      <Badge variant="secondary">
-                        {intl.formatMessage(
-                          { id: 'rebooking.selectedClients' },
-                          { count: slotSelectedCount },
-                        )}
-                      </Badge>
+          {activeFlow === 'slot_fill' ? (
+            <>
+              <section className={styles.section}>
+                <Card className={styles.stepCard}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <h2>{intl.formatMessage({ id: 'rebooking.step.slot' })}</h2>
+                      <p className={styles.helperText}>
+                        {intl.formatMessage({ id: 'rebooking.availableSlotsHint' })}
+                      </p>
                     </div>
+                    <Badge variant="secondary">{formatDateLabel(selectedDate)}</Badge>
+                  </div>
 
-                    <div className={styles.modeRow}>
-                      <Button
-                        size="sm"
-                        variant={slotAudienceMode === 'all' ? 'primary' : 'secondary'}
-                        onClick={() => setSlotAudienceMode('all')}
-                      >
-                        {intl.formatMessage({ id: 'rebooking.selectAllClients' })}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={slotAudienceMode === 'selected' ? 'primary' : 'secondary'}
-                        onClick={() => setSlotAudienceMode('selected')}
-                      >
-                        {intl.formatMessage({ id: 'rebooking.selectManually' })}
-                      </Button>
+                  {!availableSlots.length ? (
+                    <EmptyState
+                      icon={<CalendarClock size={40} />}
+                      title={intl.formatMessage({ id: 'rebooking.noEmptySlotsForDate' })}
+                    />
+                  ) : (
+                    <div className={styles.slotGrid}>
+                      {availableSlots.map((slot) => {
+                        const isSelected = selectedSlotKey === `${slot.date}-${slot.startTime}`;
+                        return (
+                          <Card
+                            key={`${slot.date}-${slot.startTime}`}
+                            className={`${styles.slotCard} ${isSelected ? styles.slotSelected : ''}`}
+                            onClick={() => setSelectedSlotKey(`${slot.date}-${slot.startTime}`)}
+                          >
+                            <div className={styles.slotCardTop}>
+                              <div className={styles.slotTime}>
+                                {slot.startTime} — {slot.endTime}
+                              </div>
+                              {isSelected && (
+                                <Badge variant="primary">
+                                  {intl.formatMessage({ id: 'rebooking.slotChosen' })}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className={styles.slotMeta}>
+                              {intl.formatMessage(
+                                { id: 'rebooking.slotCount' },
+                                { count: slot.freeSlotCount },
+                              )}
+                            </div>
+                          </Card>
+                        );
+                      })}
                     </div>
+                  )}
+                </Card>
+              </section>
 
-                    {slotAudienceMode === 'selected' && (
-                      <div className={styles.clientListCompact}>
-                        {clientsLoading && <SkeletonList count={3} />}
-                        {!clientsLoading &&
-                          allClients.map((client) => (
-                            <SelectableClientCard
+              {selectedSlot && (
+                <>
+                  <section className={styles.section}>
+                    <Card className={styles.stepCard}>
+                      <div className={styles.sectionHeader}>
+                        <div>
+                          <h2>{intl.formatMessage({ id: 'rebooking.step.audience' })}</h2>
+                          <p className={styles.helperText}>
+                            {intl.formatMessage({ id: 'rebooking.slotSuggestedHint' })}
+                          </p>
+                        </div>
+                        <Badge variant="secondary">
+                          {intl.formatMessage(
+                            { id: 'rebooking.selectionSummary' },
+                            { count: slotSelectedClientIds.length },
+                          )}
+                        </Badge>
+                      </div>
+
+                      <Card className={styles.summaryCard}>
+                        <div className={styles.summaryTitle}>
+                          <Sparkles size={16} />
+                          {intl.formatMessage({ id: 'rebooking.suggestedAudience' })}
+                        </div>
+                        <div className={styles.summaryText}>
+                          {intl.formatMessage(
+                            { id: 'rebooking.slotSummary' },
+                            {
+                              date: formatDateLabel(selectedSlot.date),
+                              time: `${selectedSlot.startTime} — ${selectedSlot.endTime}`,
+                            },
+                          )}
+                        </div>
+                        <div className={styles.previewList}>
+                          {slotSelectedClients.slice(0, 4).map((client) => (
+                            <MiniClientCard
                               key={client.id}
-                              client={client}
-                              checked={slotSelectedClientIds.includes(client.id)}
-                              onToggle={() => toggleSlotClient(client.id)}
+                              title={`${client.firstName} ${client.lastName || ''}`.trim()}
+                              subtitle={
+                                slotSuggestedRecipients.find((item) => item.clientId === client.id)
+                                  ?.reason
+                              }
                             />
                           ))}
-                      </div>
-                    )}
-
-                    <TonePicker tone={slotTone} onChange={setSlotTone} />
-
-                    <Button
-                      fullWidth
-                      onClick={handleGenerateSlotMessage}
-                      disabled={!selectedSlot || slotPreviewClientIds.length === 0}
-                      loading={generateSlotMessage.isPending}
-                    >
-                      {intl.formatMessage({ id: 'rebooking.generateText' })}
-                    </Button>
-
-                    <div className={styles.messageBox}>
-                      <label className={styles.messageLabel}>
-                        {intl.formatMessage({ id: 'rebooking.messageLabel' })}
-                      </label>
-                      <textarea
-                        className={styles.textarea}
-                        value={slotMessage}
-                        onChange={(event) => setSlotMessage(event.target.value)}
-                        rows={5}
-                      />
-                    </div>
-
-                    <Button
-                      fullWidth
-                      onClick={handleSendSlotCampaign}
-                      disabled={
-                        !selectedSlot ||
-                        !slotMessage.trim() ||
-                        (slotAudienceMode === 'all'
-                          ? allClients.length === 0
-                          : slotSelectedClientIds.length === 0)
-                      }
-                      loading={sendSlotCampaign.isPending}
-                      icon={<Send size={18} />}
-                    >
-                      {intl.formatMessage({ id: 'rebooking.sendSlotPromo' })}
-                    </Button>
-                  </Card>
-                )}
-              </>
-            )}
-          </section>
-
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2>{intl.formatMessage({ id: 'rebooking.recommendations' })}</h2>
-              <span className={styles.sectionMeta}>
-                {intl.formatMessage(
-                  { id: 'rebooking.defaultCycleDays' },
-                  { count: data.defaultCycleDays },
-                )}
-              </span>
-            </div>
-
-            <Card className={styles.campaignCard}>
-              <div className={styles.sectionHeader}>
-                <div>
-                  <h3 className={styles.subTitle}>
-                    {intl.formatMessage({ id: 'rebooking.recommendations' })}
-                  </h3>
-                  <p className={styles.helperText}>
-                    {intl.formatMessage({ id: 'rebooking.cyclePromoHint' })}
-                  </p>
-                </div>
-                <Badge variant="secondary">
-                  {intl.formatMessage(
-                    { id: 'rebooking.selectedClients' },
-                    { count: cycleSelectedCount },
-                  )}
-                </Badge>
-              </div>
-
-              <div className={styles.modeRow}>
-                <Button
-                  size="sm"
-                  variant={cycleAudienceMode === 'all' ? 'primary' : 'secondary'}
-                  onClick={() => setCycleAudienceMode('all')}
-                >
-                  {intl.formatMessage({ id: 'rebooking.selectAllDueClients' })}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={cycleAudienceMode === 'selected' ? 'primary' : 'secondary'}
-                  onClick={() => setCycleAudienceMode('selected')}
-                >
-                  {intl.formatMessage({ id: 'rebooking.selectManually' })}
-                </Button>
-              </div>
-
-              <div className={styles.previewBlock}>
-                <div className={styles.previewTitle}>
-                  {intl.formatMessage({ id: 'rebooking.availableDatesPreview' })}
-                </div>
-                <div className={styles.previewDates}>
-                  {groupSlotsByDate(cycleSlotPreview).map(([date, slots]) => (
-                    <Card key={date} className={styles.previewDateCard}>
-                      <div className={styles.previewDate}>{formatDateLabel(date)}</div>
-                      <div className={styles.previewTimeRow}>
-                        {slots.map((slot) => (
-                          <button
-                            key={`${slot.date}-${slot.startTime}`}
-                            className={styles.previewTimeChip}
+                        </div>
+                        <div className={styles.actionRow}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => setPickerMode('slot')}
                           >
-                            {slot.startTime}
-                          </button>
-                        ))}
+                            <Users size={16} />
+                            {intl.formatMessage({ id: 'rebooking.editRecipients' })}
+                          </Button>
+                        </div>
+                      </Card>
+                    </Card>
+                  </section>
+
+                  <section className={styles.section}>
+                    <Card className={styles.stepCard}>
+                      <div className={styles.sectionHeader}>
+                        <div>
+                          <h2>{intl.formatMessage({ id: 'rebooking.step.message' })}</h2>
+                          <p className={styles.helperText}>
+                            {intl.formatMessage({ id: 'rebooking.messageHint' })}
+                          </p>
+                        </div>
+                        <Badge variant="secondary">
+                          {intl.formatMessage(
+                            { id: 'rebooking.readyToSend.slot' },
+                            { count: slotSelectedClientIds.length },
+                          )}
+                        </Badge>
+                      </div>
+
+                      <TonePicker tone={slotTone} onChange={setSlotTone} />
+
+                      <div className={styles.actionRow}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleImproveSlotMessage}
+                          disabled={slotPreviewIds.length === 0}
+                          loading={generateSlotMessage.isPending}
+                        >
+                          <Wand2 size={16} />
+                          {intl.formatMessage({ id: 'rebooking.improveText' })}
+                        </Button>
+                      </div>
+
+                      <div className={styles.messageBox}>
+                        <label className={styles.messageLabel}>
+                          {intl.formatMessage({ id: 'rebooking.messageLabel' })}
+                        </label>
+                        <textarea
+                          className={styles.textarea}
+                          value={slotMessage}
+                          onChange={(event) => setSlotMessage(event.target.value)}
+                          rows={5}
+                        />
+                      </div>
+
+                      <div className={styles.sendBar}>
+                        <div className={styles.sendMeta}>
+                          {intl.formatMessage(
+                            { id: 'rebooking.readyToSend.slot' },
+                            { count: slotSelectedClientIds.length },
+                          )}
+                        </div>
+                        <Button
+                          fullWidth
+                          onClick={handleSendSlotCampaign}
+                          disabled={slotDisabled}
+                          loading={sendSlotCampaign.isPending}
+                          icon={<Send size={18} />}
+                        >
+                          {intl.formatMessage({ id: 'rebooking.sendSlotPromo' })}
+                        </Button>
                       </div>
                     </Card>
-                  ))}
-                </div>
-              </div>
+                  </section>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <section className={styles.section}>
+                <Card className={styles.stepCard}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <h2>{intl.formatMessage({ id: 'rebooking.step.segment' })}</h2>
+                      <p className={styles.helperText}>
+                        {intl.formatMessage({ id: 'rebooking.cycleSuggestedHint' })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {intl.formatMessage(
+                        { id: 'rebooking.selectionSummary' },
+                        { count: cycleSelectedClientIds.length },
+                      )}
+                    </Badge>
+                  </div>
 
-              {cycleAudienceMode === 'selected' && (
-                <>
                   <div className={styles.filterRow}>
-                    {FILTERS.map((filter) => (
+                    {CYCLE_FILTERS.map((filter) => (
                       <button
                         key={filter}
-                        className={`${styles.filterChip} ${segmentFilter === filter ? styles.filterChipActive : ''}`}
-                        onClick={() => setSegmentFilter(filter)}
+                        className={`${styles.filterChip} ${cycleFilter === filter ? styles.filterChipActive : ''}`}
+                        onClick={() => setCycleFilter(filter)}
                       >
                         {intl.formatMessage({
                           id:
@@ -499,160 +683,305 @@ export function SmartRebookingPage() {
                   {filteredRecommendations.length === 0 ? (
                     <EmptyState
                       icon={<Sparkles size={40} />}
-                      title={intl.formatMessage({ id: 'rebooking.noRecommendations' })}
+                      title={intl.formatMessage({ id: 'rebooking.noClientsMatch' })}
                     />
                   ) : (
-                    <div className={styles.clientList}>
-                      {filteredRecommendations.map((item) => (
-                        <RecommendationCard
-                          key={item.clientId}
-                          item={item}
-                          checked={cycleSelectedClientIds.includes(item.clientId)}
-                          onToggle={() => toggleCycleClient(item.clientId)}
-                        />
+                    <Card className={styles.summaryCard}>
+                      <div className={styles.summaryTitle}>
+                        <Sparkles size={16} />
+                        {intl.formatMessage({ id: 'rebooking.suggestedAudience' })}
+                      </div>
+                      <div className={styles.summaryText}>
+                        {intl.formatMessage(
+                          { id: 'rebooking.cycleSummary' },
+                          { count: data.defaultCycleDays },
+                        )}
+                      </div>
+                      <div className={styles.previewList}>
+                        {cycleSelectedRecipients.slice(0, 4).map((item) => (
+                          <MiniClientCard
+                            key={item.clientId}
+                            title={`${item.firstName} ${item.lastName || ''}`.trim()}
+                            subtitle={item.reason}
+                            badge={item.priority}
+                          />
+                        ))}
+                      </div>
+                      <div className={styles.actionRow}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setPickerMode('cycle')}
+                        >
+                          <Users size={16} />
+                          {intl.formatMessage({ id: 'rebooking.editRecipients' })}
+                        </Button>
+                      </div>
+                    </Card>
+                  )}
+                </Card>
+              </section>
+
+              <section className={styles.section}>
+                <Card className={styles.stepCard}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <h2>{intl.formatMessage({ id: 'rebooking.step.options' })}</h2>
+                      <p className={styles.helperText}>
+                        {intl.formatMessage({ id: 'rebooking.chooseQuickBookingSlots' })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {intl.formatMessage(
+                        { id: 'rebooking.selectedSlots' },
+                        { count: cycleSelectedSlotKeys.length },
+                      )}
+                    </Badge>
+                  </div>
+
+                  {cycleSlotPool.length === 0 ? (
+                    <EmptyState
+                      icon={<CalendarClock size={40} />}
+                      title={intl.formatMessage({ id: 'rebooking.noEmptySlotsForDate' })}
+                    />
+                  ) : (
+                    <div className={styles.previewDates}>
+                      {groupSlotsByDate(cycleSlotPool).map(([date, slots]) => (
+                        <Card key={date} className={styles.previewDateCard}>
+                          <div className={styles.previewDate}>{formatDateLabel(date)}</div>
+                          <div className={styles.previewTimeRow}>
+                            {slots.map((slot) => {
+                              const key = `${slot.date}-${slot.startTime}`;
+                              const selected = cycleSelectedSlotKeys.includes(key);
+                              return (
+                                <button
+                                  key={key}
+                                  className={`${styles.previewTimeChip} ${selected ? styles.previewTimeChipSelected : ''}`}
+                                  onClick={() => toggleCycleSlot(key, setCycleSelectedSlotKeys)}
+                                >
+                                  {slot.startTime}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </Card>
                       ))}
                     </div>
                   )}
-                </>
-              )}
+                </Card>
+              </section>
 
-              <TonePicker tone={cycleTone} onChange={setCycleTone} />
-
-              <Button
-                fullWidth
-                onClick={handleGenerateCycleMessage}
-                disabled={cyclePreviewClientIds.length === 0 || cycleSlotPreview.length === 0}
-                loading={generateCycleMessage.isPending}
-              >
-                {intl.formatMessage({ id: 'rebooking.generateText' })}
-              </Button>
-
-              <div className={styles.messageBox}>
-                <label className={styles.messageLabel}>
-                  {intl.formatMessage({ id: 'rebooking.messageLabel' })}
-                </label>
-                <textarea
-                  className={styles.textarea}
-                  value={cycleMessage}
-                  onChange={(event) => setCycleMessage(event.target.value)}
-                  rows={6}
-                />
-              </div>
-
-              <Button
-                fullWidth
-                onClick={handleSendCycleCampaign}
-                disabled={
-                  !cycleMessage.trim() ||
-                  cycleSlotPreview.length === 0 ||
-                  (cycleAudienceMode === 'all'
-                    ? (data?.recommendations.length || 0) === 0
-                    : cycleSelectedClientIds.length === 0)
-                }
-                loading={sendCycleCampaign.isPending}
-                icon={<Send size={18} />}
-              >
-                {intl.formatMessage({ id: 'rebooking.sendCyclePromo' })}
-              </Button>
-            </Card>
-          </section>
-
-          <section className={styles.section}>
-            <Card className={styles.occupancyCard}>
-              <div className={styles.occupancyTop}>
-                <div>
-                  <div className={styles.occupancyLabel}>
-                    {intl.formatMessage({ id: 'rebooking.occupancy' })}
-                  </div>
-                  <div className={styles.occupancyValue}>{data.kpis.occupancyRate}%</div>
-                </div>
-                <CalendarClock size={22} />
-              </div>
-              {intl.formatMessage(
-                { id: 'rebooking.occupancySummary' },
-                {
-                  booked: data.heatmap.reduce((sum, day) => sum + day.bookedSlots, 0),
-                  total: data.heatmap.reduce((sum, day) => sum + day.totalSlots, 0),
-                },
-              )}
-            </Card>
-          </section>
-
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2>{intl.formatMessage({ id: 'rebooking.sendLog' })}</h2>
-            </div>
-            <div className={styles.logList}>
-              {data.sendLog.map((logItem) => (
-                <Card key={logItem.id} className={styles.logCard}>
-                  <div className={styles.logTop}>
+              <section className={styles.section}>
+                <Card className={styles.stepCard}>
+                  <div className={styles.sectionHeader}>
                     <div>
-                      <div className={styles.slotTime}>
-                        {formatDateLabel(logItem.date)} · {logItem.startTime} — {logItem.endTime}
-                      </div>
-                      <div className={styles.slotMeta}>
-                        {new Date(logItem.createdAt).toLocaleString('uk-UA', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
+                      <h2>{intl.formatMessage({ id: 'rebooking.step.message' })}</h2>
+                      <p className={styles.helperText}>
+                        {intl.formatMessage({ id: 'rebooking.messageHint' })}
+                      </p>
                     </div>
-                    <Badge variant={logItem.status === 'filled' ? 'success' : 'secondary'}>
-                      {logItem.status === 'filled'
-                        ? intl.formatMessage({ id: 'rebooking.logFilled' })
-                        : intl.formatMessage({ id: 'rebooking.logActive' })}
+                    <Badge variant="secondary">
+                      {intl.formatMessage(
+                        { id: 'rebooking.readyToSend.cycle' },
+                        { count: cycleSelectedClientIds.length },
+                      )}
                     </Badge>
                   </div>
-                  <div className={styles.logStats}>
-                    <span>
+
+                  <TonePicker tone={cycleTone} onChange={setCycleTone} />
+
+                  <div className={styles.actionRow}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleImproveCycleMessage}
+                      disabled={cyclePreviewIds.length === 0 || cycleSlotOptions.length === 0}
+                      loading={generateCycleMessage.isPending}
+                    >
+                      <Wand2 size={16} />
+                      {intl.formatMessage({ id: 'rebooking.improveText' })}
+                    </Button>
+                  </div>
+
+                  <div className={styles.messageBox}>
+                    <label className={styles.messageLabel}>
+                      {intl.formatMessage({ id: 'rebooking.messageLabel' })}
+                    </label>
+                    <textarea
+                      className={styles.textarea}
+                      value={cycleMessage}
+                      onChange={(event) => setCycleMessage(event.target.value)}
+                      rows={6}
+                    />
+                  </div>
+
+                  <div className={styles.sendBar}>
+                    <div className={styles.sendMeta}>
                       {intl.formatMessage(
-                        { id: 'rebooking.logSent' },
-                        { count: logItem.sentCount },
+                        { id: 'rebooking.readyToSend.cycle' },
+                        { count: cycleSelectedClientIds.length },
                       )}
-                    </span>
-                    <span>
-                      {intl.formatMessage(
-                        { id: 'rebooking.logBooked' },
-                        { count: logItem.bookedCount },
-                      )}
-                    </span>
-                    <span>
-                      {intl.formatMessage(
-                        { id: 'rebooking.logClosed' },
-                        { count: logItem.closedCount },
-                      )}
-                    </span>
+                    </div>
+                    <Button
+                      fullWidth
+                      onClick={handleSendCycleCampaign}
+                      disabled={cycleDisabled}
+                      loading={sendCycleCampaign.isPending}
+                      icon={<Send size={18} />}
+                    >
+                      {intl.formatMessage({ id: 'rebooking.sendCyclePromo' })}
+                    </Button>
                   </div>
                 </Card>
-              ))}
-            </div>
+              </section>
+            </>
+          )}
+
+          <section className={styles.section}>
+            <Button
+              fullWidth
+              variant="secondary"
+              onClick={() => setDetailsOpen((prev) => !prev)}
+              icon={<History size={18} />}
+            >
+              {detailsOpen
+                ? intl.formatMessage({ id: 'rebooking.hideDetails' })
+                : intl.formatMessage({ id: 'rebooking.showDetails' })}
+            </Button>
+
+            {detailsOpen && (
+              <div className={styles.detailsStack}>
+                <Card className={styles.occupancyCard}>
+                  <div className={styles.occupancyTop}>
+                    <div>
+                      <div className={styles.occupancyLabel}>
+                        {intl.formatMessage({ id: 'rebooking.occupancy' })}
+                      </div>
+                      <div className={styles.occupancyValue}>{data.kpis.occupancyRate}%</div>
+                    </div>
+                    <CalendarClock size={22} />
+                  </div>
+                  {intl.formatMessage(
+                    { id: 'rebooking.occupancySummary' },
+                    {
+                      booked: data.heatmap.reduce((sum, day) => sum + day.bookedSlots, 0),
+                      total: data.heatmap.reduce((sum, day) => sum + day.totalSlots, 0),
+                    },
+                  )}
+                </Card>
+
+                <div className={styles.sectionHeader}>
+                  <h2>{intl.formatMessage({ id: 'rebooking.sendLog' })}</h2>
+                </div>
+                <div className={styles.logList}>
+                  {data.sendLog.map((logItem) => (
+                    <Card key={logItem.id} className={styles.logCard}>
+                      <div className={styles.logTop}>
+                        <div>
+                          <div className={styles.logTitleRow}>
+                            <div className={styles.slotTime}>
+                              {`${formatDateLabel(logItem.date)} · ${logItem.startTime} — ${logItem.endTime}`}
+                            </div>
+                            <Badge variant="secondary">
+                              {intl.formatMessage({ id: `rebooking.logType.${logItem.type}` })}
+                            </Badge>
+                          </div>
+                          <div className={styles.slotMeta}>
+                            {new Date(logItem.createdAt).toLocaleString('uk-UA', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                        <Badge variant={logItem.status === 'filled' ? 'success' : 'secondary'}>
+                          {logItem.status === 'filled'
+                            ? intl.formatMessage({ id: 'rebooking.logFilled' })
+                            : intl.formatMessage({ id: 'rebooking.logActive' })}
+                        </Badge>
+                      </div>
+                      <div className={styles.logStats}>
+                        <span>
+                          {intl.formatMessage(
+                            { id: 'rebooking.logSent' },
+                            { count: logItem.sentCount },
+                          )}
+                        </span>
+                        <span>
+                          {intl.formatMessage(
+                            { id: 'rebooking.logBooked' },
+                            { count: logItem.bookedCount },
+                          )}
+                        </span>
+                        <span>
+                          {intl.formatMessage(
+                            { id: 'rebooking.logClosed' },
+                            { count: logItem.closedCount },
+                          )}
+                        </span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </>
       )}
+
+      <BottomSheet
+        open={pickerMode !== null}
+        onClose={() => setPickerMode(null)}
+        title={intl.formatMessage({
+          id:
+            pickerMode === 'cycle'
+              ? 'rebooking.recipientPickerTitle.cycle'
+              : 'rebooking.recipientPickerTitle.slot',
+        })}
+      >
+        <div className={styles.pickerContent}>
+          <input
+            className={styles.searchInput}
+            value={pickerSearch}
+            onChange={(event) => setPickerSearch(event.target.value)}
+            placeholder={intl.formatMessage({ id: 'rebooking.recipientSearch' })}
+          />
+
+          <div className={styles.pickerList}>
+            {pickerMode === 'slot' && clientsLoading && <SkeletonList count={4} />}
+
+            {pickerMode === 'slot' &&
+              !clientsLoading &&
+              slotPickerItems.map((item) => (
+                <PickerRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  checked={item.checked}
+                  disabled={item.disabled}
+                  onToggle={item.onToggle}
+                />
+              ))}
+
+            {pickerMode === 'cycle' &&
+              cyclePickerItems.map((item) => (
+                <PickerRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  checked={item.checked}
+                  badge={item.badge}
+                  muted={item.muted}
+                  disabled={item.disabled}
+                  onToggle={item.onToggle}
+                />
+              ))}
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
-}
-
-function buildDefaultSlotMessage(slot: RebookingEmptySlot) {
-  return `Звільнилося вікно ${formatDateLabel(slot.date)} з ${slot.startTime} до ${slot.endTime}. Якщо тобі зручно — переходь та записуйся 💅`;
-}
-
-function buildDefaultCycleMessage(defaultCycleDays: number) {
-  return `Минуло вже близько ${defaultCycleDays} днів від минулого візиту. Час зробити новий запис ✨ Переходь та обирай зручну дату.`;
-}
-
-function groupSlotsByDate(slots: RebookingEmptySlot[]) {
-  const grouped = new Map<string, RebookingEmptySlot[]>();
-
-  slots.forEach((slot) => {
-    const list = grouped.get(slot.date) || [];
-    list.push(slot);
-    grouped.set(slot.date, list);
-  });
-
-  return [...grouped.entries()];
 }
 
 function TonePicker({
@@ -684,96 +1013,178 @@ function TonePicker({
   );
 }
 
-function SelectableClientCard({
-  client,
-  checked,
-  onToggle,
+function MiniClientCard({
+  title,
+  subtitle,
+  badge,
 }: {
-  client: Client;
-  checked: boolean;
-  onToggle: () => void;
+  title: string;
+  subtitle?: string;
+  badge?: 'high' | 'medium' | 'low';
 }) {
   return (
-    <Card className={styles.clientCardCompact} onClick={onToggle}>
-      <label className={styles.checkboxWrap}>
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={onToggle}
-          onClick={(event) => event.stopPropagation()}
-        />
-        <span className={styles.clientName}>
-          {client.firstName} {client.lastName || ''}
-        </span>
-      </label>
+    <Card className={styles.previewCard}>
+      <div className={styles.previewCardTop}>
+        <div className={styles.clientName}>{title}</div>
+        {badge && (
+          <Badge
+            variant={badge === 'high' ? 'success' : badge === 'medium' ? 'warning' : 'secondary'}
+          >
+            {badge.toUpperCase()}
+          </Badge>
+        )}
+      </div>
+      {subtitle && <div className={styles.metaLine}>{subtitle}</div>}
     </Card>
   );
 }
 
-function RecommendationCard({
-  item,
+function PickerRow({
+  title,
+  subtitle,
   checked,
+  badge,
+  muted,
+  disabled,
   onToggle,
 }: {
-  item: RebookingRecommendation;
+  title: string;
+  subtitle?: string;
   checked: boolean;
+  badge?: 'high' | 'medium' | 'low';
+  muted?: boolean;
+  disabled?: boolean;
   onToggle: () => void;
 }) {
-  const intl = useIntl();
-
   return (
-    <Card className={styles.clientCard} onClick={onToggle}>
+    <Card
+      className={`${styles.pickerRow} ${muted ? styles.pickerRowMuted : ''} ${disabled ? styles.pickerRowDisabled : ''}`}
+      onClick={disabled ? undefined : onToggle}
+    >
       <div className={styles.clientCardTop}>
         <label className={styles.checkboxWrap}>
           <input
             type="checkbox"
             checked={checked}
+            disabled={disabled}
             onChange={onToggle}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           />
-          <span className={styles.clientName}>
-            {item.firstName} {item.lastName || ''}
-          </span>
+          <span className={styles.clientName}>{title}</span>
         </label>
-        <Badge
-          variant={
-            item.priority === 'high'
-              ? 'success'
-              : item.priority === 'medium'
-                ? 'warning'
-                : 'secondary'
-          }
-        >
-          {item.priority.toUpperCase()}
-        </Badge>
-      </div>
-      <p className={styles.reason}>{item.reason}</p>
-      <div className={styles.segmentRow}>
-        {item.segments.map((segment) => (
-          <Badge key={segment} variant="secondary">
-            {intl.formatMessage({ id: `rebooking.segment.${segment}` })}
+        {badge && (
+          <Badge
+            variant={badge === 'high' ? 'success' : badge === 'medium' ? 'warning' : 'secondary'}
+          >
+            {badge.toUpperCase()}
           </Badge>
-        ))}
-      </div>
-      {item.favoriteService && (
-        <div className={styles.metaLine}>
-          {intl.formatMessage(
-            { id: 'rebooking.favoriteService' },
-            { service: item.favoriteService.name },
-          )}
-        </div>
-      )}
-      <div className={styles.metaLine}>
-        {intl.formatMessage(
-          { id: 'rebooking.expectedReturn' },
-          {
-            date: new Date(item.expectedReturnDate).toLocaleDateString('uk-UA', {
-              day: 'numeric',
-              month: 'short',
-            }),
-          },
         )}
       </div>
+      {subtitle && <div className={styles.metaLine}>{subtitle}</div>}
     </Card>
   );
+}
+
+function formatDateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatDateLabel(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+  });
+}
+
+function groupSlotsByDate(slots: RebookingEmptySlot[]) {
+  const grouped = new Map<string, RebookingEmptySlot[]>();
+
+  slots.forEach((slot) => {
+    const list = grouped.get(slot.date) || [];
+    list.push(slot);
+    grouped.set(slot.date, list);
+  });
+
+  return [...grouped.entries()];
+}
+
+function buildDefaultSlotMessage(slot: RebookingEmptySlot) {
+  return `Привіт! Звільнилося вікно ${formatDateLabel(slot.date)} з ${slot.startTime} до ${slot.endTime}. Якщо тобі зручно — можеш швидко записатися через кнопку нижче 💅`;
+}
+
+function buildDefaultCycleMessage({
+  defaultCycleDays,
+  slotOptions,
+}: {
+  defaultCycleDays: number;
+  slotOptions: RebookingEmptySlot[];
+}) {
+  const summary = slotOptions
+    .map((slot) => `${formatDateLabel(slot.date)} · ${slot.startTime}`)
+    .join(', ');
+
+  return `Привіт! Від попереднього візиту вже минуло близько ${defaultCycleDays} днів, тож саме час обрати новий запис ✨${summary ? ` Найближчі варіанти: ${summary}.` : ''}`;
+}
+
+function buildSlotSuggestions(
+  selectedSlot: RebookingEmptySlot | null,
+  recommendations: RebookingRecommendation[],
+  allClients: Client[],
+) {
+  const scored = recommendations
+    .map((item) => {
+      let score = item.priorityScore;
+
+      if (item.segments.includes('due_soon')) score += 14;
+      if (item.visitCount >= 3) score += 8;
+      if (selectedSlot?.isMorning && item.segments.includes('morning')) score += 18;
+      if (!selectedSlot?.isMorning && !item.segments.includes('morning')) score += 6;
+
+      return {
+        clientId: item.clientId,
+        score,
+        reason:
+          selectedSlot?.isMorning && item.segments.includes('morning')
+            ? 'Зазвичай обирає ранковий час'
+            : item.reason,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_SLOT_RECIPIENTS);
+
+  const seen = new Set(scored.map((item) => item.clientId));
+  const fallback = allClients
+    .filter((client) => !seen.has(client.id))
+    .slice(0, Math.max(0, MAX_SLOT_RECIPIENTS - scored.length))
+    .map((client) => ({
+      clientId: client.id,
+      score: 0,
+      reason: 'Активний клієнт у Telegram',
+    }));
+
+  return [...scored, ...fallback];
+}
+
+function toggleArrayValue(value: string, setter: Dispatch<SetStateAction<string[]>>) {
+  setter((prev) =>
+    prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+  );
+}
+
+function toggleCycleSlot(key: string, setter: Dispatch<SetStateAction<string[]>>) {
+  setter((prev) => {
+    if (prev.includes(key)) {
+      return prev.filter((item) => item !== key);
+    }
+
+    if (prev.length >= MAX_CYCLE_SLOT_OPTIONS) {
+      return [...prev.slice(1), key];
+    }
+
+    return [...prev, key];
+  });
 }

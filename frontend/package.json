@@ -13,7 +13,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "qa:headed": "playwright test --headed",
+    "qa:booking": "playwright test e2e/manual-booking.spec.ts --headed",
+    "qa:smoke": "playwright test e2e/manual-booking.spec.ts e2e/rebooking.spec.ts --headed"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.0",

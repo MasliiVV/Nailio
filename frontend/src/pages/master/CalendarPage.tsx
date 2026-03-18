@@ -38,6 +38,7 @@ import {
   Button,
   FormGroup,
 } from '@/components/ui';
+import { ApiRequestError } from '@/lib/api';
 import { getTelegram, openTelegramUserChat } from '@/lib/telegram';
 import type { Service, Client, Booking, DayScheduleSlotBooking } from '@/types';
 import { getNextSlotTime, normalizeSlotTimes } from '@/lib/schedule';
@@ -401,18 +402,30 @@ export function CalendarPage() {
   };
 
   const handleCreateBooking = () => {
-    if (!selectedServiceId || !selectedSlot) return;
+    if (!selectedServiceId || !selectedClientId || !selectedSlot) {
+      getTelegram()?.showAlert?.(intl.formatMessage({ id: 'calendar.clientRequired' }));
+      return;
+    }
+
     const startTime = `${manualBookingDate}T${selectedSlot}:00`;
     createBooking.mutate(
       {
         serviceId: selectedServiceId,
         startTime,
-        clientId: selectedClientId || undefined,
+        clientId: selectedClientId,
         notes: bookingNotes || undefined,
       },
       {
         onSuccess: () => {
+          getTelegram()?.showAlert?.(intl.formatMessage({ id: 'calendar.bookingCreated' }));
           setShowAddForm(false);
+        },
+        onError: (error) => {
+          const message =
+            error instanceof ApiRequestError || error instanceof Error
+              ? error.message
+              : intl.formatMessage({ id: 'common.error' });
+          getTelegram()?.showAlert?.(`${intl.formatMessage({ id: 'common.error' })}: ${message}`);
         },
       },
     );
@@ -1013,7 +1026,9 @@ export function CalendarPage() {
             value={selectedClientId}
             onChange={(e) => setSelectedClientId(e.target.value)}
           >
-            <option value="">{intl.formatMessage({ id: 'calendar.walkIn' })}</option>
+            <option value="">
+              {intl.formatMessage({ id: 'calendar.selectClientPlaceholder' })}
+            </option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.firstName} {c.lastName || ''}
@@ -1057,7 +1072,9 @@ export function CalendarPage() {
 
           <Button
             onClick={handleCreateBooking}
-            disabled={!selectedServiceId || !selectedSlot || createBooking.isPending}
+            disabled={
+              !selectedServiceId || !selectedClientId || !selectedSlot || createBooking.isPending
+            }
             style={{ marginTop: 8 }}
           >
             {createBooking.isPending

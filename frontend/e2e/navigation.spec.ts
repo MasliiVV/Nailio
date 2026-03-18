@@ -17,31 +17,46 @@ test.describe('Settings & Navigation', () => {
 
   test('analytics card navigates to analytics', async ({ tgPage: page }) => {
     await page.goto('/master/settings');
-    await page.locator('[class*="row"]').filter({ hasText: /analytics|Аналітика/i }).click();
+    await page
+      .locator('[class*="row"]')
+      .filter({ hasText: /analytics|Аналітика/i })
+      .click();
     await expect(page).toHaveURL(/\/master\/analytics/);
   });
 
   test('finance card navigates to finance', async ({ tgPage: page }) => {
     await page.goto('/master/settings');
-    await page.locator('[class*="row"]').filter({ hasText: /finance|Фінанси/i }).click();
+    await page
+      .locator('[class*="row"]')
+      .filter({ hasText: /finance|Фінанси/i })
+      .click();
     await expect(page).toHaveURL(/\/master\/finance/);
   });
 
   test('subscription card navigates to subscription', async ({ tgPage: page }) => {
     await page.goto('/master/settings');
-    await page.locator('[class*="row"]').filter({ hasText: /subscription|Підписка/i }).click();
+    await page
+      .locator('[class*="row"]')
+      .filter({ hasText: /subscription|Підписка/i })
+      .click();
     await expect(page).toHaveURL(/\/master\/subscription/);
   });
 
   test('branding card opens bottom sheet', async ({ tgPage: page }) => {
     await page.goto('/master/settings');
-    await page.locator('[class*="row"]').filter({ hasText: /branding|Брендинг/i }).click();
+    await page
+      .locator('[class*="row"]')
+      .filter({ hasText: /branding|Брендинг/i })
+      .click();
     await expect(page.locator('[class*="sheet"]')).toBeVisible();
   });
 
   test('branding form has color presets', async ({ tgPage: page }) => {
     await page.goto('/master/settings');
-    await page.locator('[class*="row"]').filter({ hasText: /branding|Брендинг/i }).click();
+    await page
+      .locator('[class*="row"]')
+      .filter({ hasText: /branding|Брендинг/i })
+      .click();
     // 12 color preset buttons
     const presets = page.locator('[class*="sheet"] button[style*="background"]');
     await expect(presets).toHaveCount(12, { timeout: 5_000 });
@@ -62,20 +77,25 @@ test.describe('Bottom Navigation', () => {
   });
 
   test('master layout has bottom nav bar', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
+    await page.goto('/master');
     await expect(page.locator('[class*="nav"]')).toBeVisible({ timeout: 10_000 });
   });
 
   test('nav items navigate between pages', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
-    // Click on Calendar nav item
+    await page.goto('/master');
     const navItems = page.locator('[class*="navItem"]');
     await navItems.nth(1).click();
-    await expect(page).toHaveURL(/\/master\/calendar/);
+    await expect(page).toHaveURL(/\/master\/clients/);
+  });
+
+  test('bottom nav hides analytics entry', async ({ tgPage: page }) => {
+    await page.goto('/master');
+    await expect(page.locator('[class*="navItem"]')).toHaveCount(4, { timeout: 10_000 });
+    await expect(page.getByRole('link', { name: /analytics|аналітика/i })).toHaveCount(0);
   });
 
   test('active nav item is highlighted', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
+    await page.goto('/master');
     const activeItem = page.locator('[class*="active"]').first();
     await expect(activeItem).toBeVisible({ timeout: 10_000 });
   });

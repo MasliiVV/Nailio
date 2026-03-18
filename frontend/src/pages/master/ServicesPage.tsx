@@ -30,6 +30,9 @@ export function ServicesPage() {
   const [duration, setDuration] = useState('');
   const [description, setDescription] = useState('');
 
+  const activeServices = (services || []).filter((service) => service.isActive);
+  const inactiveServices = (services || []).filter((service) => !service.isActive);
+
   const resetForm = () => {
     setName('');
     setPrice('');
@@ -37,6 +40,38 @@ export function ServicesPage() {
     setDescription('');
     setEditing(null);
     setShowForm(false);
+  };
+
+  const handleDelete = async (service: Service) => {
+    try {
+      await deleteService.mutateAsync(service.id);
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+    } catch (err) {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      getTelegram()?.showAlert?.(
+        intl.formatMessage({ id: 'common.error' }) +
+          ': ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
+    }
+  };
+
+  const confirmDelete = (service: Service) => {
+    const tg = getTelegram();
+    const message = intl.formatMessage({
+      id: service.isActive ? 'services.deleteConfirm' : 'services.deleteInactiveConfirm',
+    });
+
+    if (tg) {
+      tg.showConfirm(message, (confirmed) => {
+        if (confirmed) {
+          void handleDelete(service);
+        }
+      });
+      return;
+    }
+
+    void handleDelete(service);
   };
 
   const handleEdit = (service: Service) => {
@@ -106,50 +141,90 @@ export function ServicesPage() {
       )}
 
       <div className={styles.list}>
-        {services &&
-          services.map((service: Service) => (
-            <Card key={service.id} className={styles.serviceCard}>
-              <div
-                className={styles.colorBar}
-                style={{ background: service.color || 'var(--color-primary)' }}
-              />
-              <div className={styles.serviceInfo}>
+        {activeServices.map((service: Service) => (
+          <Card key={service.id} className={styles.serviceCard}>
+            <div
+              className={styles.colorBar}
+              style={{ background: service.color || 'var(--color-primary)' }}
+            />
+            <div className={styles.serviceInfo}>
+              <div className={styles.serviceHeader}>
                 <div className={styles.serviceName}>{service.name}</div>
-                <div className={styles.serviceMeta}>
-                  {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} ·{' '}
-                  {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+                <span className={styles.statusBadge}>
+                  {intl.formatMessage({ id: 'services.active' })}
+                </span>
+              </div>
+              <div className={styles.serviceMeta}>
+                {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} ·{' '}
+                {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+              </div>
+            </div>
+            <div className={styles.serviceActions}>
+              <button
+                className="touchable"
+                onClick={() => handleEdit(service)}
+                aria-label={intl.formatMessage({ id: 'common.edit' })}
+              >
+                <Pencil size={18} />
+              </button>
+              <button
+                className="touchable"
+                onClick={() => {
+                  confirmDelete(service);
+                }}
+                aria-label={intl.formatMessage({ id: 'common.delete' })}
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </Card>
+        ))}
+
+        {inactiveServices.length > 0 && (
+          <div className={styles.section}>
+            <div className={styles.sectionTitle}>
+              {intl.formatMessage({ id: 'services.inactive' })} · {inactiveServices.length}
+            </div>
+            {inactiveServices.map((service: Service) => (
+              <Card key={service.id} className={`${styles.serviceCard} ${styles.inactiveCard}`}>
+                <div
+                  className={styles.colorBar}
+                  style={{ background: service.color || 'var(--color-primary)' }}
+                />
+                <div className={styles.serviceInfo}>
+                  <div className={styles.serviceHeader}>
+                    <div className={styles.serviceName}>{service.name}</div>
+                    <span className={`${styles.statusBadge} ${styles.inactiveBadge}`}>
+                      {intl.formatMessage({ id: 'services.inactive' })}
+                    </span>
+                  </div>
+                  <div className={styles.serviceMeta}>
+                    {service.durationMinutes} {intl.formatMessage({ id: 'common.min' })} ·{' '}
+                    {(service.price / 100).toFixed(0)} {intl.formatMessage({ id: 'common.uah' })}
+                  </div>
                 </div>
-              </div>
-              <div className={styles.serviceActions}>
-                <button
-                  className="touchable"
-                  onClick={() => handleEdit(service)}
-                  aria-label={intl.formatMessage({ id: 'common.edit' })}
-                >
-                  <Pencil size={18} />
-                </button>
-                <button
-                  className="touchable"
-                  onClick={() => {
-                    const tg = getTelegram();
-                    if (tg) {
-                      tg.showConfirm(
-                        intl.formatMessage({ id: 'services.deleteConfirm' }),
-                        (confirmed) => {
-                          if (confirmed) deleteService.mutate(service.id);
-                        },
-                      );
-                    } else {
-                      deleteService.mutate(service.id);
-                    }
-                  }}
-                  aria-label={intl.formatMessage({ id: 'common.delete' })}
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </Card>
-          ))}
+                <div className={styles.serviceActions}>
+                  <button
+                    className={`touchable ${styles.inactiveAction}`}
+                    onClick={() => handleEdit(service)}
+                    aria-label={intl.formatMessage({ id: 'common.edit' })}
+                  >
+                    <Pencil size={18} />
+                  </button>
+                  <button
+                    className={`touchable ${styles.inactiveAction}`}
+                    onClick={() => {
+                      confirmDelete(service);
+                    }}
+                    aria-label={intl.formatMessage({ id: 'common.delete' })}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <BottomSheet

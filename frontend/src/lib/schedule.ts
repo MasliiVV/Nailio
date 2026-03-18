@@ -33,16 +33,12 @@ function minutesToTime(totalMinutes: number): string {
 }
 
 export function normalizeSlotTimes(times: string[]): string[] {
-  return [...new Set(times.filter((time) => isValidSlotTime(time)).map((time) => time.trim()))].sort(
-    (left, right) => left.localeCompare(right),
-  );
+  return [
+    ...new Set(times.filter((time) => isValidSlotTime(time)).map((time) => time.trim())),
+  ].sort((left, right) => left.localeCompare(right));
 }
 
-export function getNextSlotTime(
-  times: string[],
-  fallback = '09:00',
-  stepMinutes = 30,
-): string {
+export function getNextSlotTime(times: string[], fallback = '09:00', stepMinutes = 30): string {
   const normalized = normalizeSlotTimes(times);
   if (normalized.length === 0) {
     return fallback;

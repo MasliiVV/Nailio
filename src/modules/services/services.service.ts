@@ -1,7 +1,7 @@
 // docs/backlog.md #36-#38 — Services CRUD, soft-delete, validation
 // docs/api/endpoints.md — Services endpoints
 
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateServiceDto, UpdateServiceDto } from './dto/services.dto';
 
@@ -105,7 +105,26 @@ export class ServicesService {
    * docs/backlog.md #37 — Service soft-delete (is_active flag)
    */
   async softDelete(tenantId: string, serviceId: string) {
-    await this.findById(tenantId, serviceId);
+    const service = await this.findById(tenantId, serviceId);
+
+    if (!service.isActive) {
+      const bookingsCount = await this.prisma.tenantClient.booking.count({
+        where: { tenantId, serviceId },
+      });
+
+      if (bookingsCount > 0) {
+        throw new BadRequestException(
+          'Inactive service with existing bookings cannot be permanently deleted',
+        );
+      }
+
+      await this.prisma.tenantClient.service.delete({
+        where: { id: serviceId },
+      });
+
+      this.logger.log(`Service permanently deleted: ${serviceId} in tenant ${tenantId}`);
+      return;
+    }
 
     await this.prisma.tenantClient.service.update({
       where: { id: serviceId },

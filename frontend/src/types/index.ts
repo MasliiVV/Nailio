@@ -321,6 +321,7 @@ export interface RebookingOverview {
   kpis: RebookingKpis;
   sendLog: Array<{
     id: string;
+    type: RebookingCampaignType;
     date: string;
     startTime: string;
     endTime: string;

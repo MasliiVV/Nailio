@@ -1,4 +1,4 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAPI } from './helpers';
 
 test.describe('Client Booking Flow', () => {
   test.beforeEach(async ({ tgPage: page }) => {

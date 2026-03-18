@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useIntl } from 'react-intl';
-import { Calendar, Users, BarChart3, Sparkles, Settings } from 'lucide-react';
+import { Calendar, Users, Sparkles, Settings } from 'lucide-react';
 import styles from './MasterLayout.module.css';
 import { getTelegram } from '@/lib/telegram';
 import { type ReactNode, useEffect } from 'react';
@@ -11,7 +11,6 @@ const ICON_SIZE = 20;
 const NAV_ITEMS: { path: string; icon: ReactNode; labelKey: string }[] = [
   { path: '/master', icon: <Calendar size={ICON_SIZE} />, labelKey: 'master.calendar' },
   { path: '/master/clients', icon: <Users size={ICON_SIZE} />, labelKey: 'master.clients' },
-  { path: '/master/analytics', icon: <BarChart3 size={ICON_SIZE} />, labelKey: 'master.analytics' },
   { path: '/master/rebooking', icon: <Sparkles size={ICON_SIZE} />, labelKey: 'master.rebooking' },
   { path: '/master/settings', icon: <Settings size={ICON_SIZE} />, labelKey: 'master.settings' },
 ];
@@ -21,7 +20,7 @@ export function MasterLayout() {
   const location = useLocation();
 
   const handleIntentPrefetch = (path: string) => {
-    if (path === '/master/analytics' || path === '/master/finance' || path === '/master/settings') {
+    if (path === '/master/finance' || path === '/master/settings') {
       prefetchMasterInsights();
     }
   };

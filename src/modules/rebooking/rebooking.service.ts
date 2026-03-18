@@ -43,6 +43,7 @@ interface StoredCampaign {
 
 export interface CampaignLogItem {
   id: string;
+  type: RebookingCampaignType;
   date: string;
   startTime: string;
   endTime: string;
@@ -237,34 +238,35 @@ export class RebookingService {
       });
     }
 
-    if (campaignType === 'slot_fill') {
-      const campaigns = this.extractCampaigns(tenant.settings);
-      campaigns.push({
-        id: campaignId,
-        type: campaignType,
-        date: dto.date,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-        message: dto.message,
-        createdAt: new Date().toISOString(),
-        status: 'active',
-        slotOptions: [
-          {
-            date: dto.date,
-            startTime: dto.startTime,
-            endTime: dto.endTime,
-          },
-        ],
-        recipients,
-      });
+    const campaigns = this.extractCampaigns(tenant.settings);
+    campaigns.push({
+      id: campaignId,
+      type: campaignType,
+      date: dto.date,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      message: dto.message,
+      createdAt: new Date().toISOString(),
+      status: 'active',
+      slotOptions:
+        campaignType === 'cycle_followup'
+          ? cycleSlotOptions
+          : [
+              {
+                date: dto.date,
+                startTime: dto.startTime,
+                endTime: dto.endTime,
+              },
+            ],
+      recipients,
+    });
 
-      await this.prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
-          settings: this.withCampaigns(tenant.settings, campaigns),
-        },
-      });
-    }
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        settings: this.withCampaigns(tenant.settings, campaigns),
+      },
+    });
 
     return {
       success: true,
@@ -920,12 +922,12 @@ export class RebookingService {
 
   private buildCampaignLog(settings: Prisma.JsonValue | null): CampaignLogItem[] {
     return this.extractCampaigns(settings)
-      .filter((campaign) => (campaign.type || 'slot_fill') === 'slot_fill')
       .slice()
       .reverse()
       .slice(0, 8)
       .map((campaign) => ({
         id: campaign.id,
+        type: campaign.type || 'slot_fill',
         date: campaign.date,
         startTime: campaign.startTime,
         endTime: campaign.endTime,

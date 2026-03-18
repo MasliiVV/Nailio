@@ -17,9 +17,7 @@ import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
-import {
-  WEEK_DAY_KEYS,
-} from '@/lib/schedule';
+import { WEEK_DAY_KEYS } from '@/lib/schedule';
 import { useWeeklyScheduleDraft } from '@/hooks';
 import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
@@ -393,12 +391,7 @@ export function OnboardingWizard() {
             <Button variant="ghost" onClick={prev}>
               ←
             </Button>
-            <Button
-              variant="secondary"
-              fullWidth
-              onClick={next}
-              disabled={createService.isPending}
-            >
+            <Button variant="secondary" fullWidth onClick={next} disabled={createService.isPending}>
               {intl.formatMessage({ id: 'common.skip' })}
             </Button>
             <Button fullWidth onClick={handleSaveServices} loading={createService.isPending}>
@@ -436,7 +429,10 @@ export function OnboardingWizard() {
                   {!day.isDayOff && (
                     <div className={styles.scheduleTime}>
                       {day.slots.map((slot, slotIndex) => (
-                        <div key={`${day.dayOfWeek}-${slotIndex}`} className={styles.scheduleSlotRow}>
+                        <div
+                          key={`${day.dayOfWeek}-${slotIndex}`}
+                          className={styles.scheduleSlotRow}
+                        >
                           <input
                             type="time"
                             className={styles.timeInput}
