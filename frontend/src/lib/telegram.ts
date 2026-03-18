@@ -159,7 +159,18 @@ export function getTelegram(): WebApp {
 }
 
 export function isTelegramEnv(): boolean {
-  return !!getWebApp()?.initData;
+  const webApp = getWebApp();
+  if (webApp) {
+    return true;
+  }
+
+  const url = new URL(window.location.href);
+
+  return Boolean(
+    url.searchParams.get('tgWebAppData') ||
+    url.searchParams.get('tgWebAppPlatform') ||
+    url.searchParams.get('tgWebAppVersion'),
+  );
 }
 
 /** Get raw initData string for backend auth */
