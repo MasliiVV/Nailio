@@ -39,11 +39,16 @@ interface AddedService {
   durationMinutes: number;
 }
 
-export function OnboardingWizard() {
+interface OnboardingWizardProps {
+  previewMode?: boolean;
+}
+
+export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps) {
   const intl = useIntl();
   const navigate = useNavigate();
   const { setOnboardingComplete } = useAuth();
   const createService = useCreateService();
+  const totalSteps = previewMode ? SHOWCASE_STEPS : TOTAL_STEPS;
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -74,8 +79,8 @@ export function OnboardingWizard() {
 
   const next = useCallback(() => {
     getTelegram()?.HapticFeedback.impactOccurred('light');
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  }, []);
+    setStep((s) => Math.min(s + 1, totalSteps));
+  }, [totalSteps]);
 
   const prev = useCallback(() => {
     setStep((s) => Math.max(s - 1, 1));
@@ -196,12 +201,17 @@ export function OnboardingWizard() {
 
   // Step 6: Finish
   const handleFinish = () => {
+    if (previewMode) {
+      navigate('/master/settings', { replace: true });
+      return;
+    }
+
     setOnboardingComplete();
     getTelegram()?.HapticFeedback.notificationOccurred('success');
     navigate('/master', { replace: true });
   };
 
-  const progressPct = (step / TOTAL_STEPS) * 100;
+  const progressPct = (step / totalSteps) * 100;
 
   const openTelegramTarget = useCallback((url: string) => {
     const telegram = getTelegram();
@@ -233,8 +243,14 @@ export function OnboardingWizard() {
 
   const handleStartRegistration = useCallback(() => {
     getTelegram()?.HapticFeedback.notificationOccurred('success');
+
+    if (previewMode) {
+      navigate('/master/settings', { replace: true });
+      return;
+    }
+
     setStep(REGISTRATION_START_STEP);
-  }, []);
+  }, [navigate, previewMode]);
 
   return (
     <div className={styles.wizard}>
@@ -243,7 +259,7 @@ export function OnboardingWizard() {
         <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
       </div>
       <div className={styles.stepIndicator}>
-        {step} / {TOTAL_STEPS}
+        {step} / {totalSteps}
       </div>
 
       {/* Step 1: Showcase hero */}
@@ -558,7 +574,7 @@ export function OnboardingWizard() {
               {intl.formatMessage({ id: 'onboarding.signIn' })}
             </Button>
             <Button fullWidth onClick={handleStartRegistration}>
-              {intl.formatMessage({ id: 'onboarding.start' })}
+              {intl.formatMessage({ id: previewMode ? 'onboarding.returnToApp' : 'onboarding.start' })}
               <ArrowRight size={16} />
             </Button>
             <Button variant="ghost" fullWidth onClick={handleCloseMiniApp}>
@@ -572,7 +588,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step 5: BotFather instructions */}
-      {step === 5 && (
+      {!previewMode && step === 5 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Bot size={48} />
@@ -616,7 +632,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step 6: Enter token */}
-      {step === 6 && (
+      {!previewMode && step === 6 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <KeyRound size={48} />
@@ -667,7 +683,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step 7: Services */}
-      {step === 7 && (
+      {!previewMode && step === 7 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Scissors size={48} />
@@ -739,7 +755,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step 8: Schedule */}
-      {step === 8 && (
+      {!previewMode && step === 8 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Calendar size={48} />
@@ -834,7 +850,7 @@ export function OnboardingWizard() {
       )}
 
       {/* Step 9: Done */}
-      {step === 9 && (
+      {!previewMode && step === 9 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <PartyPopper size={48} />

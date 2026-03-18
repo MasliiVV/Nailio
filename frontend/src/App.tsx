@@ -176,6 +176,7 @@ export function App() {
                     <Route path="services" element={<ServicesPage />} />
                     <Route path="schedule" element={<SchedulePage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="showcase-preview" element={<OnboardingWizard previewMode />} />
                     <Route path="analytics" element={<AnalyticsPage />} />
                     <Route path="finance" element={<FinancePage />} />
                     <Route path="subscription" element={<SubscriptionPage />} />

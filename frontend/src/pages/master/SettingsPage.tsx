@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Wallet, Crown, Clock, LogOut, Scissors } from 'lucide-react';
+import { BarChart3, Wallet, Crown, Clock, LogOut, Scissors, Sparkles } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import { Card, CardRow, PageHeader } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
@@ -61,6 +61,11 @@ export function SettingsPage() {
               icon={<Scissors size={20} />}
               title={intl.formatMessage({ id: 'services.title' })}
               onClick={() => navigate('/master/services')}
+            />
+            <CardRow
+              icon={<Sparkles size={20} />}
+              title={intl.formatMessage({ id: 'onboarding.previewShowcase' })}
+              onClick={() => navigate('/master/showcase-preview')}
             />
           </>
         </Card>

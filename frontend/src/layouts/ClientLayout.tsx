@@ -25,12 +25,11 @@ export function ClientLayout() {
     const tg = getTelegram();
     if (!tg) return;
 
-    const isSubPage = location.pathname.split('/').length > 3;
-    if (isSubPage) {
-      tg.BackButton.show();
-    } else {
+    tg.BackButton.show();
+
+    return () => {
       tg.BackButton.hide();
-    }
+    };
   }, [location.pathname]);
 
   return (
