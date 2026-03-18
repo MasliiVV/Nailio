@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router-dom';
-import { Check, ChevronLeft, Image, Trash2 } from 'lucide-react';
+import { Check, Image, Trash2 } from 'lucide-react';
 import { useAuth, useSettings, useUpdateBranding } from '@/hooks';
 import { Button, Input, Card, PageHeader } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
@@ -9,7 +8,6 @@ import styles from './BrandingPage.module.css';
 
 export function BrandingPage() {
   const intl = useIntl();
-  const navigate = useNavigate();
   const { tenant, updateTenant } = useAuth();
   const { data: settings } = useSettings();
   const updateBranding = useUpdateBranding();
@@ -24,7 +22,7 @@ export function BrandingPage() {
     if (settings) {
       setDisplayName(settings.displayName || tenant?.displayName || '');
       setWelcomeMessage(settings.branding?.welcomeMessage || '');
-      setLogoUrl((settings as Record<string, unknown>).logoUrl as string || '');
+      setLogoUrl(settings.logoUrl || '');
     } else if (tenant) {
       setDisplayName(tenant.displayName || '');
       setWelcomeMessage(tenant.branding?.welcomeMessage || '');
@@ -69,10 +67,7 @@ export function BrandingPage() {
 
   return (
     <div className="page animate-fade-in">
-      <PageHeader
-        title={intl.formatMessage({ id: 'settings.branding' })}
-        backTo="/master/settings"
-      />
+      <PageHeader title={intl.formatMessage({ id: 'settings.branding' })} />
 
       <div className={styles.form}>
         {/* Logo section */}
@@ -106,7 +101,10 @@ export function BrandingPage() {
           <Input
             placeholder={intl.formatMessage({ id: 'branding.logoUrlPlaceholder' })}
             value={logoUrl}
-            onChange={(e) => { setLogoUrl(e.target.value); markDirty(); }}
+            onChange={(e) => {
+              setLogoUrl(e.target.value);
+              markDirty();
+            }}
             hint={intl.formatMessage({ id: 'branding.logoUrlHint' })}
           />
 
@@ -123,7 +121,10 @@ export function BrandingPage() {
           <Input
             label={intl.formatMessage({ id: 'settings.displayName' })}
             value={displayName}
-            onChange={(e) => { setDisplayName(e.target.value); markDirty(); }}
+            onChange={(e) => {
+              setDisplayName(e.target.value);
+              markDirty();
+            }}
             placeholder={intl.formatMessage({ id: 'branding.displayNamePlaceholder' })}
           />
 
@@ -134,7 +135,10 @@ export function BrandingPage() {
             <textarea
               className={styles.textarea}
               value={welcomeMessage}
-              onChange={(e) => { setWelcomeMessage(e.target.value); markDirty(); }}
+              onChange={(e) => {
+                setWelcomeMessage(e.target.value);
+                markDirty();
+              }}
               placeholder={intl.formatMessage({ id: 'branding.welcomePlaceholder' })}
               rows={3}
             />
@@ -147,18 +151,12 @@ export function BrandingPage() {
           disabled={!isDirty || updateBranding.isPending}
           className={styles.saveBtn}
         >
-          {updateBranding.isPending ? (
-            <span className="spinner spinner-sm" />
-          ) : (
-            <Check size={18} />
-          )}
+          {updateBranding.isPending ? <span className="spinner spinner-sm" /> : <Check size={18} />}
           {intl.formatMessage({ id: 'common.save' })}
         </Button>
 
         {updateBranding.isSuccess && !isDirty && (
-          <p className={styles.successMsg}>
-            ✓ {intl.formatMessage({ id: 'branding.saved' })}
-          </p>
+          <p className={styles.successMsg}>✓ {intl.formatMessage({ id: 'branding.saved' })}</p>
         )}
       </div>
     </div>
