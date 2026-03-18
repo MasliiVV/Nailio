@@ -472,6 +472,15 @@
   "settings.welcomeMessage": "Привітальне повідомлення",
   "settings.primaryColor": "Основний колір",
 
+  "branding.logoUrl": "Логотип",
+  "branding.logoUrlPlaceholder": "https://example.com/logo.png",
+  "branding.logoUrlHint": "Вставте посилання на зображення (PNG, JPG, SVG)",
+  "branding.noLogo": "Логотип не встановлено",
+  "branding.removeLogo": "Видалити логотип",
+  "branding.displayNamePlaceholder": "Назва вашого салону",
+  "branding.welcomePlaceholder": "Привіт! Раді вас бачити ✨",
+  "branding.saved": "Брендінг збережено",
+
   "error.network": "Немає з'єднання з сервером",
   "error.unknown": "Щось пішло не так",
   "error.slotNotAvailable": "Цей час вже зайнятий",

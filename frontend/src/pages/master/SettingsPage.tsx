@@ -1,6 +1,6 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Wallet, Crown, Clock, Scissors, Sparkles } from 'lucide-react';
+import { BarChart3, Wallet, Crown, Clock, Scissors, Sparkles, Palette } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import { Card, CardRow, PageHeader } from '@/components/ui';
 import { prefetchMasterInsights } from '@/lib/prefetch';
@@ -54,6 +54,11 @@ export function SettingsPage() {
 
         <Card padding="none" className={styles.cardGroup}>
           <>
+            <CardRow
+              icon={<Palette size={20} />}
+              title={intl.formatMessage({ id: 'settings.branding' })}
+              onClick={() => navigate('/master/branding')}
+            />
             <CardRow
               icon={<Clock size={20} />}
               title={intl.formatMessage({ id: 'schedule.title' })}

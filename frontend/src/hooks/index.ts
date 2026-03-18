@@ -53,6 +53,7 @@ export {
   subscriptionKeys,
 } from './useSubscription';
 export { useAdminTenants, useAdminTenant, adminTenantKeys } from './useAdminTenants';
+export { useSettings, useUpdateBranding, settingsKeys } from './useSettings';
 export { useWeeklyScheduleDraft } from './useWeeklyScheduleDraft';
 export {
   useRebookingOverview,

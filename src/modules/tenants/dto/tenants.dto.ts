@@ -52,6 +52,12 @@ export class BrandingDto {
   @IsOptional()
   @IsObject()
   contacts?: Record<string, string>;
+
+  @ApiPropertyOptional({ description: 'Logo URL for client mini-app' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  logoUrl?: string;
 }
 
 /**

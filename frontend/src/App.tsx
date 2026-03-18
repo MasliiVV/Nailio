@@ -42,6 +42,9 @@ const SchedulePage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/pages/master/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const BrandingPage = lazy(() =>
+  import('@/pages/master/BrandingPage').then((m) => ({ default: m.BrandingPage })),
+);
 const AnalyticsPage = lazy(() =>
   import('@/pages/master/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
 );
@@ -176,6 +179,7 @@ export function App() {
                     <Route path="services" element={<ServicesPage />} />
                     <Route path="schedule" element={<SchedulePage />} />
                     <Route path="settings" element={<SettingsPage />} />
+                    <Route path="branding" element={<BrandingPage />} />
                     <Route path="showcase-preview" element={<OnboardingWizard previewMode />} />
                     <Route path="analytics" element={<AnalyticsPage />} />
                     <Route path="finance" element={<FinancePage />} />

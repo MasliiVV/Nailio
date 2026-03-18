@@ -490,4 +490,5 @@ export interface UpdateBrandingDto {
   secondaryColor?: string;
   displayName?: string;
   welcomeMessage?: string;
+  logoUrl?: string;
 }

@@ -137,12 +137,15 @@ export class TenantsService {
     if (dto.description !== undefined) updatedBranding.description = dto.description;
     if (dto.contacts !== undefined) updatedBranding.contacts = dto.contacts;
 
-    // Build update data: branding JSONB + optional top-level displayName
+    // Build update data: branding JSONB + optional top-level fields
     const updateData: Record<string, unknown> = {
       branding: updatedBranding as Prisma.InputJsonValue,
     };
     if (dto.displayName !== undefined) {
       updateData.displayName = dto.displayName;
+    }
+    if (dto.logoUrl !== undefined) {
+      updateData.logoUrl = dto.logoUrl || null;
     }
 
     const updated = await this.prisma.tenant.update({
@@ -171,6 +174,8 @@ export class TenantsService {
     return {
       primaryColor: typeof src.primary_color === 'string' ? src.primary_color : undefined,
       secondaryColor: typeof src.secondary_color === 'string' ? src.secondary_color : undefined,
+      accentColor: typeof src.accent_color === 'string' ? src.accent_color : undefined,
+      backgroundColor: typeof src.background_color === 'string' ? src.background_color : undefined,
       welcomeMessage:
         typeof src.welcome_text === 'string'
           ? src.welcome_text

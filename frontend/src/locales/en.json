@@ -377,6 +377,15 @@
   "settings.welcomeMessage": "Welcome message",
   "settings.primaryColor": "Primary color",
 
+  "branding.logoUrl": "Logo",
+  "branding.logoUrlPlaceholder": "https://example.com/logo.png",
+  "branding.logoUrlHint": "Paste a link to an image (PNG, JPG, SVG)",
+  "branding.noLogo": "No logo set",
+  "branding.removeLogo": "Remove logo",
+  "branding.displayNamePlaceholder": "Your business name",
+  "branding.welcomePlaceholder": "Hi! Glad to see you ✨",
+  "branding.saved": "Branding saved",
+
   "onboarding.welcome": "Welcome to Nailio!",
   "onboarding.welcomeText": "Create your own booking bot in just 5 minutes.",
   "onboarding.welcomeDesc": "Create your own booking bot in just 5 minutes.",
