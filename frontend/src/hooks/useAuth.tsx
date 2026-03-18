@@ -141,15 +141,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Setup Telegram back button close behavior
   useEffect(() => {
-    const tg = getTelegram();
-    if (!tg) return;
+    if (!isTelegramEnv()) {
+      return;
+    }
+
+    let tg;
+    try {
+      tg = getTelegram();
+    } catch {
+      return;
+    }
+
+    const normalizePathname = (pathname: string) => pathname.replace(/\/+$/, '') || '/';
+
+    const topLevelPaths = new Set([
+      '/onboarding',
+      '/master',
+      '/master/clients',
+      '/master/rebooking',
+      '/master/services',
+      '/master/schedule',
+      '/master/settings',
+      '/master/branding',
+      '/master/analytics',
+      '/master/finance',
+      '/master/subscription',
+      '/client',
+      '/client/bookings',
+      '/client/profile',
+      '/client/onboarding',
+      '/admin',
+    ]);
 
     const shouldCloseMiniApp = (pathname: string) => {
-      if (pathname === '/onboarding' || pathname === '/master' || pathname === '/client') {
-        return true;
-      }
+      const normalizedPathname = normalizePathname(pathname);
+      const historyIndex =
+        typeof window.history.state?.idx === 'number' ? window.history.state.idx : 0;
 
-      return false;
+      return topLevelPaths.has(normalizedPathname) || historyIndex <= 0;
     };
 
     const handleBack = () => {
