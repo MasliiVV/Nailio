@@ -991,15 +991,20 @@ export class RebookingService {
     }
 
     try {
+      const normalizedTopic = input.extraInstructions?.trim();
+      const reminderGoal =
+        input.campaignType === 'slot_fill'
+          ? `Є вільне вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}.`
+          : normalizedTopic
+            ? `ГОЛОВНА ТЕМА повідомлення від майстра: ${normalizedTopic}. Побудуй повідомлення саме навколо цієї теми, не підмінюй її іншою.`
+            : `Потрібно м’яко нагадати клієнту про повторний візит (з моменту останнього пройшло близько ${this.defaultCycleDays} днів) і запропонувати записатися знову.`;
       const prompt = [
         'Ти допомагаєш б’юті-майстру написати коротке повідомлення клієнту в Telegram.',
         'Напиши одне повідомлення українською мовою.',
         'Тон: ' + (input.tone === 'soft' ? 'м’який і турботливий' : 'дружній і теплий') + '.',
         'ЗАБОРОНЕНО: звинувачувати клієнта, запитувати "чому не прийшов/прийшла", натякати на провину, використовувати негативні формулювання.',
-        'ОБОВ\'ЯЗКОВО: бути турботливим і позитивним, показати що майстер скучив/рад бачити, запропонувати зручний час. Без знижок.',
-        input.campaignType === 'slot_fill'
-          ? `Є вільне вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}.`
-          : `Потрібно м’яко нагадати клієнту про повторний візит (з моменту останнього пройшло близько ${this.defaultCycleDays} днів) і запропонувати записатися знову.`,
+        "ОБОВ'ЯЗКОВО: бути турботливим і позитивним, показати що майстер скучив/рад бачити, запропонувати зручний час. Без знижок.",
+        reminderGoal,
         `Назва майстра або студії: ${input.tenantName}.`,
         input.recipientNames.length > 0
           ? `Можна звернутися по імені: ${input.recipientNames[0]}.`
@@ -1007,8 +1012,8 @@ export class RebookingService {
         input.campaignType === 'cycle_followup' && input.slotOptions.length > 0
           ? `Найближчі вільні варіанти: ${this.describeSlotOptionsInline(input.slotOptions, input.timezone)}.`
           : null,
-        input.extraInstructions?.trim()
-          ? `Тема/контекст повідомлення від майстра (НЕ копіюй дослівно, переформулюй ПОЗИТИВНО і ТУРБОТЛИВО): ${input.extraInstructions.trim()}.`
+        normalizedTopic
+          ? 'Якщо тема від майстра конкретна, вона має бути центральною ідеєю повідомлення. Не замінюй її загальним нагадуванням про повторний візит.'
           : null,
         'Довжина: 2-4 короткі абзаци, без лапок, без службових пояснень.',
       ]
@@ -1025,7 +1030,11 @@ export class RebookingService {
           model: this.aiModel,
           temperature: 0.8,
           messages: [
-            { role: 'system', content: 'Відповідай лише готовим текстом повідомлення. Ніколи не звинувачуй клієнта, не питай "чому не прийшов", завжди пиши в позитивному турботливому тоні.' },
+            {
+              role: 'system',
+              content:
+                'Відповідай лише готовим текстом повідомлення. Ніколи не звинувачуй клієнта, не питай "чому не прийшов", завжди пиши в позитивному турботливому тоні.',
+            },
             { role: 'user', content: prompt },
           ],
         }),
@@ -1064,15 +1073,20 @@ export class RebookingService {
         ? 'Хочу м’яко нагадати, що вже може бути час оновити процедуру ✨'
         : 'Дружньо нагадую, що вже може бути час потішити себе процедурою 💜';
     const greeting = input.recipientNames[0] ? `Привіт, ${input.recipientNames[0]}!` : 'Привіт!';
+    const guidance = input.extraInstructions?.trim();
 
     if (input.campaignType === 'cycle_followup') {
       const summary = this.describeSlotOptionsMultiline(input.slotOptions, input.timezone);
-      return `${greeting}\n\n${intro}\nВід останнього візиту вже минуло близько 3 тижнів, тож саме час обрати новий запис 🌷${summary ? `\n\nОсь найближчі вільні дати:\n${summary}` : ''}`;
+      const topicLine = guidance
+        ? `${guidance.charAt(0).toUpperCase()}${guidance.slice(1)}${/[.!?…]$/.test(guidance) ? '' : '.'}`
+        : 'Від останнього візиту вже минуло близько 3 тижнів, тож саме час обрати новий запис 🌷';
+
+      return `${greeting}\n\n${intro}\n${topicLine}${summary ? `\n\nОсь найближчі вільні дати:\n${summary}` : ''}`;
     }
 
-    const guidance = input.extraInstructions?.trim() ? ` ${input.extraInstructions.trim()}` : '';
+    const slotGuidance = guidance ? ` ${guidance}` : '';
 
-    return `${greeting}\n\n${intro}${guidance}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
+    return `${greeting}\n\n${intro}${slotGuidance}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
   }
 
   private async filterAvailableCampaignSlotOptions(
