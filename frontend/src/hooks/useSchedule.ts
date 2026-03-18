@@ -40,24 +40,25 @@ export function useUpdateWorkingHours() {
     },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey: scheduleKeys.weekly() });
-      const previous = queryClient.getQueryData<ApiResponse<Schedule>>(scheduleKeys.weekly());
+      const previous = queryClient.getQueryData<Schedule>(scheduleKeys.weekly());
 
       if (previous) {
-        queryClient.setQueryData(scheduleKeys.weekly(), {
+        queryClient.setQueryData<Schedule>(scheduleKeys.weekly(), {
           ...previous,
-          data: { ...(previous as ApiResponse<Schedule>).data, weekly: payload.days },
+          weekly: payload.days,
         });
       }
       return { previous };
     },
     onError: (_err, _payload, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(scheduleKeys.weekly(), context.previous);
+        queryClient.setQueryData<Schedule>(scheduleKeys.weekly(), context.previous);
       }
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     },
-    onSuccess: () => {
+    onSuccess: (schedule) => {
       getTelegram()?.HapticFeedback.notificationOccurred('success');
+      queryClient.setQueryData<Schedule>(scheduleKeys.weekly(), schedule);
       queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
       queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });

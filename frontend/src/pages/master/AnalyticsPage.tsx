@@ -19,6 +19,13 @@ export function AnalyticsPage() {
   const intl = useIntl();
   const [period, setPeriod] = useState<Period>('week');
   const { data, isLoading } = useDashboard(period);
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(intl.locale === 'en' ? 'en-US' : 'uk-UA', {
+        maximumFractionDigits: 0,
+      }),
+    [intl.locale],
+  );
 
   const periodTabs = [
     { id: 'week', label: intl.formatMessage({ id: 'analytics.week' }) },
@@ -51,14 +58,6 @@ export function AnalyticsPage() {
   const attentionRate = total > 0 ? Math.round(((cancelled + noShows) / total) * 100) : 0;
   const averageCheck = total > 0 ? Math.round(revenue / total / 100) : 0;
   const topService = data?.period?.popularServices?.[0] ?? null;
-
-  const currencyFormatter = useMemo(
-    () =>
-      new Intl.NumberFormat(intl.locale === 'en' ? 'en-US' : 'uk-UA', {
-        maximumFractionDigits: 0,
-      }),
-    [intl.locale],
-  );
 
   const formatCurrency = (value: number) => `${currencyFormatter.format(value / 100)} ₴`;
 
@@ -188,7 +187,12 @@ export function AnalyticsPage() {
                   <div
                     className={styles.progressRing}
                     style={{
-                      background: `conic-gradient(var(--color-success) ${completedPct}%, var(--color-warning) ${completedPct}% ${completedPct + cancelledPct}%, var(--color-destructive) ${completedPct + cancelledPct}% 100%)`,
+                      background: `conic-gradient(
+                        color-mix(in srgb, var(--color-success) 82%, white 18%) 0 ${completedPct}%,
+                        color-mix(in srgb, var(--color-warning) 74%, white 26%) ${completedPct}% ${completedPct + cancelledPct}%,
+                        color-mix(in srgb, var(--color-destructive) 74%, white 26%) ${completedPct + cancelledPct}% ${Math.min(100, completedPct + cancelledPct + noShowsPct)}%,
+                        color-mix(in srgb, var(--color-primary) 10%, var(--color-secondary-bg)) ${Math.min(100, completedPct + cancelledPct + noShowsPct)}% 100%
+                      )`,
                     }}
                   >
                     <div className={styles.progressRingInner}>
