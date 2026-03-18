@@ -89,6 +89,7 @@
   "master.viewAll": "View all",
 
   "calendar.addBooking": "Add booking",
+  "calendar.recordAction": "Book",
   "calendar.selectClient": "Client",
   "calendar.selectClientPlaceholder": "Select a client",
   "calendar.walkIn": "No client (walk-in)",

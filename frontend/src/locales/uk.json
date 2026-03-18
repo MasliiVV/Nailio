@@ -89,6 +89,7 @@
   "master.viewAll": "Дивитись всі",
 
   "calendar.addBooking": "Додати запис",
+  "calendar.recordAction": "Записати",
   "calendar.selectClient": "Клієнт",
   "calendar.selectClientPlaceholder": "Оберіть клієнта",
   "calendar.walkIn": "Без клієнта (walk-in)",

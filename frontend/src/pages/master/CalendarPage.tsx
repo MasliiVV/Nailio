@@ -451,9 +451,9 @@ export function CalendarPage() {
           <button
             className={styles.addBtn}
             onClick={handleOpenAddForm}
-            aria-label={intl.formatMessage({ id: 'common.add' })}
+            aria-label={intl.formatMessage({ id: 'calendar.recordAction' })}
           >
-            <Plus size={20} />
+            {intl.formatMessage({ id: 'calendar.recordAction' })}
           </button>
         }
       />
