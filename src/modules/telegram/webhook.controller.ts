@@ -327,11 +327,14 @@ export class WebhookController {
       id: string;
       tenantId: string;
       status: string;
+      startTime: Date;
       serviceNameSnapshot: string;
+      tenant: { timezone: string | null };
       client: { firstName: string; lastName: string | null };
     },
   ): Promise<void> {
     const masterId = cbq.from.id.toString();
+    const { timeStr } = this.formatBookingDateTime(booking);
 
     // Set conversation state — expect time input from master
     this.conversationStateService.set(masterId, {
@@ -356,6 +359,13 @@ export class WebhookController {
           `📋 ${booking.serviceNameSnapshot}\n\n` +
           `Введіть один або кілька варіантів часу через кому:\n` +
           `<i>Наприклад: 14:30, 15:00, 16:30</i>`,
+      );
+
+      await this.sendPlatformMessageWithKeyboard(
+        platformBotToken,
+        cbq.message.chat.id,
+        'Швидкий вибір часу нижче 👇\nАбо просто введіть свій варіант вручну.',
+        this.buildPopularTimeReplyMarkup(timeStr),
       );
     }
 
@@ -478,10 +488,11 @@ export class WebhookController {
       );
 
       // Confirm to master
-      await this.sendPlatformMessage(
+      await this.sendPlatformMessageWithKeyboard(
         platformBotToken,
         message.chat.id,
         `✅ Клієнту ${booking.client.firstName} надіслано пропозицію часу: <b>${validTimes.join(', ')}</b>\n\nОчікуйте відповіді.`,
+        { remove_keyboard: true },
       );
 
       this.logger.log(
@@ -1235,6 +1246,37 @@ export class WebhookController {
         reply_markup: replyMarkup,
       }),
     });
+  }
+
+  private buildPopularTimeReplyMarkup(referenceTime: string): Record<string, unknown> {
+    const [hours, minutes] = referenceTime.split(':').map(Number);
+    const baseMinutes =
+      (Number.isFinite(hours) ? hours : 12) * 60 + (Number.isFinite(minutes) ? minutes : 0);
+    const offsets = [-60, -30, 0, 30, 60, 90];
+    const suggestions = [
+      ...new Set(
+        offsets
+          .map((offset) => baseMinutes + offset)
+          .filter((total) => total >= 8 * 60 && total <= 21 * 60 + 30)
+          .map((total) => {
+            const nextHours = Math.floor(total / 60);
+            const nextMinutes = total % 60;
+            return `${String(nextHours).padStart(2, '0')}:${String(nextMinutes).padStart(2, '0')}`;
+          }),
+      ),
+    ];
+
+    const keyboard: Array<Array<{ text: string }>> = [];
+    for (let index = 0; index < suggestions.length; index += 3) {
+      keyboard.push(suggestions.slice(index, index + 3).map((time) => ({ text: time })));
+    }
+
+    return {
+      keyboard,
+      resize_keyboard: true,
+      one_time_keyboard: true,
+      input_field_placeholder: 'Наприклад: 14:30, 15:00',
+    };
   }
 
   /**
