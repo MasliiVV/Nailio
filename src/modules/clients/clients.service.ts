@@ -46,6 +46,11 @@ export class ClientsService {
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       include: {
+        user: {
+          select: {
+            telegramId: true,
+          },
+        },
         _count: { select: { bookings: true } },
       },
     };
@@ -62,12 +67,19 @@ export class ClientsService {
     const nextCursor = hasMore ? items[items.length - 1].id : undefined;
 
     return {
-      items: items.map((c: Client & { _count?: { bookings: number } }) => ({
-        ...this.formatClientListItem(c),
-        stats: {
-          totalBookings: c._count?.bookings ?? 0,
-        },
-      })),
+      items: items.map(
+        (
+          c: Client & {
+            user?: { telegramId?: bigint | null } | null;
+            _count?: { bookings: number };
+          },
+        ) => ({
+          ...this.formatClientListItem(c),
+          stats: {
+            totalBookings: c._count?.bookings ?? 0,
+          },
+        }),
+      ),
       nextCursor,
       hasMore,
     };
@@ -318,12 +330,13 @@ export class ClientsService {
   // Helpers
   // ──────────────────────────────────────────────
 
-  private formatClientListItem(client: Client) {
+  private formatClientListItem(client: Client & { user?: { telegramId?: bigint | null } | null }) {
     return {
       id: client.id,
       firstName: client.firstName,
       lastName: client.lastName,
       phone: client.phone,
+      telegramId: client.user?.telegramId?.toString() || null,
       notes: client.notes,
       tags: client.tags,
       isBlocked: client.isBlocked,
