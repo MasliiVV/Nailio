@@ -31,7 +31,6 @@ const SHOWCASE_STEPS = 4;
 const REGISTRATION_START_STEP = SHOWCASE_STEPS + 1;
 const TOTAL_STEPS = SHOWCASE_STEPS + 5;
 const DEVELOPER_CONTACT_URL = 'https://t.me/MasliiVV';
-const NAILIO_BOT_URL = 'https://t.me/nailioapp_bot';
 
 interface AddedService {
   name: string;
@@ -231,16 +230,6 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
     openTelegramTarget(DEVELOPER_CONTACT_URL);
   }, [openTelegramTarget]);
 
-  const handleSignIn = useCallback(() => {
-    getTelegram()?.HapticFeedback.impactOccurred('light');
-    openTelegramTarget(NAILIO_BOT_URL);
-  }, [openTelegramTarget]);
-
-  const handleCloseMiniApp = useCallback(() => {
-    getTelegram()?.HapticFeedback.impactOccurred('light');
-    getTelegram()?.close();
-  }, []);
-
   const handleStartRegistration = useCallback(() => {
     getTelegram()?.HapticFeedback.notificationOccurred('success');
 
@@ -335,17 +324,11 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
             </div>
           </div>
           <div className={styles.showcaseActions}>
-            <Button variant="secondary" fullWidth onClick={handleSignIn}>
-              {intl.formatMessage({ id: 'onboarding.signIn' })}
-            </Button>
             <Button fullWidth onClick={next}>
               {intl.formatMessage({ id: 'common.next' })}
               <ArrowRight size={16} />
             </Button>
           </div>
-          <Button variant="ghost" fullWidth onClick={handleCloseMiniApp}>
-            {intl.formatMessage({ id: 'onboarding.exitMiniApp' })}
-          </Button>
           <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
             {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
           </button>
@@ -417,9 +400,6 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
             <Button variant="ghost" onClick={prev}>
               <ChevronLeft size={16} />
             </Button>
-            <Button variant="secondary" fullWidth onClick={handleSignIn}>
-              {intl.formatMessage({ id: 'onboarding.signIn' })}
-            </Button>
             <Button fullWidth onClick={next}>
               {intl.formatMessage({ id: 'common.next' })}
               <ArrowRight size={16} />
@@ -484,18 +464,22 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
               <span>{intl.formatMessage({ id: 'onboarding.showcase3.panelItem3' })}</span>
             </div>
           </div>
-          <div className={styles.navButtons}>
+          <div className={styles.penultimateActions}>
             <Button variant="ghost" onClick={prev}>
               <ChevronLeft size={16} />
-            </Button>
-            <Button variant="secondary" fullWidth onClick={handleContactDeveloper}>
-              {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
             </Button>
             <Button fullWidth onClick={next}>
               {intl.formatMessage({ id: 'common.next' })}
               <ArrowRight size={16} />
             </Button>
           </div>
+          <button
+            type="button"
+            className={styles.showcaseLinkButton}
+            onClick={handleContactDeveloper}
+          >
+            {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
+          </button>
         </div>
       )}
 
@@ -571,9 +555,6 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
               {intl.formatMessage({ id: 'common.back' })}
             </Button>
             <div className={styles.finalSlideCtas}>
-              <Button variant="secondary" fullWidth onClick={handleSignIn}>
-                {intl.formatMessage({ id: 'onboarding.signIn' })}
-              </Button>
               <Button fullWidth onClick={handleStartRegistration}>
                 {intl.formatMessage({ id: previewMode ? 'onboarding.returnToApp' : 'onboarding.start' })}
                 <ArrowRight size={16} />

@@ -267,6 +267,13 @@
   gap: 10px;
 }
 
+.penultimateActions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
 .showcaseLinkButton {
   border: 0;
   background: transparent;
@@ -684,6 +691,10 @@
 
   .showcaseActions {
     flex-direction: column;
+  }
+
+  .penultimateActions {
+    flex-direction: row;
   }
 
   .metricsGrid {
