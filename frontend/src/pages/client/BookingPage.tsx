@@ -6,7 +6,7 @@ import { CheckCircle, CalendarOff } from 'lucide-react';
 import { useService, useSlots, useCreateBooking } from '@/hooks';
 import { Button, DatePicker, EmptyState } from '@/components/ui';
 import { api } from '@/lib/api';
-import { getTelegram } from '@/lib/telegram';
+import { getTelegram, isTelegramEnv } from '@/lib/telegram';
 import type { ApiResponse, SlotsResponse } from '@/types';
 import styles from './BookingPage.module.css';
 
@@ -30,6 +30,7 @@ export function BookingPage() {
   const [selectedDate, setSelectedDate] = useState(initialDate || formatDateKey(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const hasTelegramMainButton = isTelegramEnv();
 
   const { data: service } = useService(serviceId || '');
   const { data: slotsData, isLoading: slotsLoading } = useSlots(selectedDate, serviceId || '');
@@ -249,16 +250,18 @@ export function BookingPage() {
               ))}
             </div>
 
-            <div className={styles.confirmBar}>
-              <Button
-                fullWidth
-                onClick={() => void handleConfirm()}
-                disabled={!selectedSlot}
-                loading={createBooking.isPending}
-              >
-                {intl.formatMessage({ id: 'booking.confirm' })}
-              </Button>
-            </div>
+            {!hasTelegramMainButton && (
+              <div className={styles.confirmBar}>
+                <Button
+                  fullWidth
+                  onClick={() => void handleConfirm()}
+                  disabled={!selectedSlot}
+                  loading={createBooking.isPending}
+                >
+                  {intl.formatMessage({ id: 'booking.confirm' })}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
