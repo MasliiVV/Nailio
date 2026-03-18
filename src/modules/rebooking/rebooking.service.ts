@@ -147,6 +147,7 @@ export class RebookingService {
       startTime: campaignType === 'slot_fill' ? dto.startTime : undefined,
       endTime: campaignType === 'slot_fill' ? dto.endTime : undefined,
       tone: dto.tone || 'friendly',
+      extraInstructions: dto.extraInstructions,
       recipientNames: names,
       slotOptions,
       timezone: tenant.timezone,
@@ -979,6 +980,7 @@ export class RebookingService {
     startTime?: string;
     endTime?: string;
     tone: 'soft' | 'friendly';
+    extraInstructions?: string;
     recipientNames: string[];
     slotOptions: CampaignSlotOption[];
     timezone: string;
@@ -1003,6 +1005,9 @@ export class RebookingService {
           : 'Без звернення по імені.',
         input.campaignType === 'cycle_followup' && input.slotOptions.length > 0
           ? `Найближчі вільні варіанти: ${this.describeSlotOptionsInline(input.slotOptions, input.timezone)}.`
+          : null,
+        input.extraInstructions?.trim()
+          ? `Побажання майстра щодо напряму повідомлення: ${input.extraInstructions.trim()}.`
           : null,
         'Довжина: 2-4 короткі абзаци, без лапок, без службових пояснень.',
       ]
@@ -1048,6 +1053,7 @@ export class RebookingService {
     startTime?: string;
     endTime?: string;
     tone: 'soft' | 'friendly';
+    extraInstructions?: string;
     recipientNames: string[];
     slotOptions: CampaignSlotOption[];
     timezone: string;
@@ -1063,7 +1069,9 @@ export class RebookingService {
       return `${greeting}\n\n${intro}\nВід останнього візиту вже минуло близько 3 тижнів, тож саме час обрати новий запис 🌷${summary ? `\n\nОсь найближчі вільні дати:\n${summary}` : ''}`;
     }
 
-    return `${greeting}\n\n${intro}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
+    const guidance = input.extraInstructions?.trim() ? ` ${input.extraInstructions.trim()}` : '';
+
+    return `${greeting}\n\n${intro}${guidance}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
   }
 
   private async filterAvailableCampaignSlotOptions(

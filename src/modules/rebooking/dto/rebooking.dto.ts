@@ -58,6 +58,11 @@ export class GenerateRebookingMessageDto {
   @ValidateNested({ each: true })
   @Type(() => RebookingSlotOptionDto)
   slotOptions?: RebookingSlotOptionDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  extraInstructions?: string;
 }
 
 export class SendRebookingCampaignDto extends GenerateRebookingMessageDto {

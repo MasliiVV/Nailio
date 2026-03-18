@@ -52,9 +52,22 @@ export function SchedulePage() {
   };
 
   const handleSave = () => {
-    updateHours.mutate({
-      days: serializeDays(),
-    });
+    updateHours.mutate(
+      {
+        days: serializeDays(),
+      },
+      {
+        onSuccess: () => {
+          const message = intl.formatMessage({ id: 'schedule.saved' });
+          const tg = getTelegram();
+          try {
+            tg?.showAlert(message);
+          } catch {
+            window.alert(message);
+          }
+        },
+      },
+    );
   };
 
   if (isLoading) {

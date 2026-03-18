@@ -341,6 +341,7 @@ export interface GenerateRebookingMessageDto {
   clientIds: string[];
   tone?: 'soft' | 'friendly';
   slotOptions?: RebookingSlotOption[];
+  extraInstructions?: string;
 }
 
 export interface GenerateRebookingMessageResponse {

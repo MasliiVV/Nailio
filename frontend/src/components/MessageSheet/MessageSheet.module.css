@@ -35,6 +35,10 @@
   line-height: 1.5;
 }
 
+.topicTextarea {
+  min-height: 88px;
+}
+
 .textarea::placeholder {
   color: var(--color-text-secondary);
   opacity: 0.6;

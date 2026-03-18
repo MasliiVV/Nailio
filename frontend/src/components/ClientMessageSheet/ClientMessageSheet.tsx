@@ -18,6 +18,7 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
   const [tone, setTone] = useState<'soft' | 'friendly'>('friendly');
+  const [topic, setTopic] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sendMessage = useSendClientMessage(clientId);
   const { data: rebookingOverview } = useRebookingOverview();
@@ -40,6 +41,7 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
         setMessage('');
         setSent(false);
         setTone('friendly');
+        setTopic('');
         sendMessage.reset();
         generatePromoMessage.reset();
       }, 300);
@@ -71,9 +73,18 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
         startTime: firstSlot?.startTime || '09:00',
         endTime: firstSlot?.endTime || '09:30',
         tone,
+        extraInstructions: topic.trim() || undefined,
         slotOptions: promoSlotOptions.length > 0 ? promoSlotOptions : undefined,
       });
-      setMessage(response.message);
+      setMessage((previous) => {
+        const trimmedPrevious = previous.trim();
+        const trimmedNext = response.message.trim();
+        if (!trimmedPrevious) {
+          return trimmedNext;
+        }
+
+        return `${trimmedPrevious}\n\n${trimmedNext}`;
+      });
     } catch {
       // Error state is shown in UI
     }
@@ -109,6 +120,14 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
               <div className={styles.helperText}>
                 {intl.formatMessage({ id: 'clients.aiPromoHint' })}
               </div>
+              <textarea
+                className={`${styles.textarea} ${styles.topicTextarea}`}
+                placeholder={intl.formatMessage({ id: 'clients.aiPromoTopicPlaceholder' })}
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                maxLength={300}
+                rows={3}
+              />
               <div className={styles.toneRow}>
                 <Button
                   size="sm"
@@ -129,6 +148,7 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
                 variant="ghost"
                 fullWidth
                 loading={generatePromoMessage.isPending}
+                disabled={!topic.trim()}
                 onClick={handleGeneratePromoMessage}
                 icon={<Wand2 size={18} />}
               >
