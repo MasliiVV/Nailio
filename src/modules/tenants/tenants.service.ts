@@ -3,14 +3,22 @@
 
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateBrandingDto, UpdateGeneralSettingsDto } from './dto/tenants.dto';
 
 @Injectable()
 export class TenantsService {
   private readonly logger = new Logger(TenantsService.name);
+  private readonly uploadsDir = join(process.cwd(), 'uploads', 'logos');
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    // Ensure uploads directory exists
+    if (!existsSync(this.uploadsDir)) {
+      mkdirSync(this.uploadsDir, { recursive: true });
+    }
+  }
 
   /**
    * Get tenant by ID
@@ -183,6 +191,77 @@ export class TenantsService {
             ? src.welcomeMessage
             : undefined,
     };
+  }
+
+  /**
+   * Upload tenant logo — save file, update DB, remove old file
+   * docs/api/endpoints.md — POST /api/v1/settings/logo
+   */
+  async uploadLogo(tenantId: string, file: Express.Multer.File) {
+    const tenant = await this.findById(tenantId);
+
+    // Delete previous logo file if exists
+    if (tenant.logoUrl) {
+      this.removeLogoFile(tenant.logoUrl);
+    }
+
+    const logoUrl = `/uploads/logos/${file.filename}`;
+
+    const updated = await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl },
+    });
+
+    this.logger.log(`Logo uploaded for tenant ${tenantId}: ${logoUrl}`);
+
+    return {
+      id: updated.id,
+      displayName: updated.displayName,
+      slug: updated.slug,
+      logoUrl: updated.logoUrl,
+      branding: this.mapBranding(updated.branding),
+    };
+  }
+
+  /**
+   * Delete tenant logo — remove file + clear DB field
+   * docs/api/endpoints.md — DELETE /api/v1/settings/logo
+   */
+  async deleteLogo(tenantId: string) {
+    const tenant = await this.findById(tenantId);
+
+    if (tenant.logoUrl) {
+      this.removeLogoFile(tenant.logoUrl);
+    }
+
+    const updated = await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { logoUrl: null },
+    });
+
+    this.logger.log(`Logo deleted for tenant ${tenantId}`);
+
+    return {
+      id: updated.id,
+      displayName: updated.displayName,
+      slug: updated.slug,
+      logoUrl: updated.logoUrl,
+      branding: this.mapBranding(updated.branding),
+    };
+  }
+
+  /**
+   * Remove a logo file from disk (best-effort, non-throwing)
+   */
+  private removeLogoFile(logoUrl: string) {
+    try {
+      const filePath = join(process.cwd(), logoUrl.replace(/^\//, ''));
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to remove logo file: ${logoUrl}`, err);
+    }
   }
 
   /**

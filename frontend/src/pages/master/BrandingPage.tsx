@@ -1,21 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useIntl } from 'react-intl';
-import { Check, Image, Trash2 } from 'lucide-react';
-import { useAuth, useSettings, useUpdateBranding } from '@/hooks';
+import { Check, Camera, Trash2, Upload } from 'lucide-react';
+import { useAuth, useSettings, useUpdateBranding, useUploadLogo, useDeleteLogo } from '@/hooks';
 import { Button, Input, Card, PageHeader } from '@/components/ui';
 import { getTelegram } from '@/lib/telegram';
 import styles from './BrandingPage.module.css';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function BrandingPage() {
   const intl = useIntl();
   const { tenant, updateTenant } = useAuth();
   const { data: settings } = useSettings();
   const updateBranding = useUpdateBranding();
+  const uploadLogo = useUploadLogo();
+  const deleteLogo = useDeleteLogo();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [fileError, setFileError] = useState('');
 
   // Populate from server data
   useEffect(() => {
@@ -32,16 +39,9 @@ export function BrandingPage() {
 
   const markDirty = useCallback(() => setIsDirty(true), []);
 
-  const handleSave = async () => {
-    getTelegram()?.HapticFeedback.impactOccurred('medium');
-    try {
-      const result = await updateBranding.mutateAsync({
-        displayName: displayName.trim() || undefined,
-        welcomeMessage: welcomeMessage.trim() || undefined,
-        logoUrl: logoUrl.trim() || undefined,
-      });
-
-      // Update auth context so client app sees changes immediately
+  /** Sync auth context after any logo/branding change */
+  const syncTenant = useCallback(
+    (result: { displayName: string; logoUrl: string | null; branding: unknown }) => {
       if (tenant) {
         updateTenant({
           ...tenant,
@@ -50,7 +50,71 @@ export function BrandingPage() {
           branding: result.branding as import('@/types').TenantBranding | null,
         });
       }
+    },
+    [tenant, updateTenant],
+  );
 
+  /** Open native file picker */
+  const handleLogoTap = () => {
+    setFileError('');
+    fileInputRef.current?.click();
+  };
+
+  /** Handle file selection — validate + upload immediately */
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so same file can be re-selected
+    e.target.value = '';
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setFileError(intl.formatMessage({ id: 'branding.upload.invalidType' }));
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError(intl.formatMessage({ id: 'branding.upload.tooLarge' }));
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+      return;
+    }
+
+    setFileError('');
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+
+    try {
+      const result = await uploadLogo.mutateAsync(file);
+      setLogoUrl(result.logoUrl || '');
+      syncTenant(result);
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+    } catch {
+      setFileError(intl.formatMessage({ id: 'branding.upload.failed' }));
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  /** Remove logo */
+  const handleRemoveLogo = async () => {
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+    try {
+      const result = await deleteLogo.mutateAsync();
+      setLogoUrl('');
+      syncTenant(result);
+      getTelegram()?.HapticFeedback.notificationOccurred('success');
+    } catch {
+      getTelegram()?.HapticFeedback.notificationOccurred('error');
+    }
+  };
+
+  /** Save display name + welcome message */
+  const handleSave = async () => {
+    getTelegram()?.HapticFeedback.impactOccurred('medium');
+    try {
+      const result = await updateBranding.mutateAsync({
+        displayName: displayName.trim() || undefined,
+        welcomeMessage: welcomeMessage.trim() || undefined,
+      });
+      syncTenant(result);
       setIsDirty(false);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
     } catch {
@@ -58,65 +122,79 @@ export function BrandingPage() {
     }
   };
 
-  const handleClearLogo = () => {
-    setLogoUrl('');
-    setIsDirty(true);
-  };
-
-  const logoPreviewUrl = logoUrl.trim();
+  const isUploading = uploadLogo.isPending;
+  const isDeleting = deleteLogo.isPending;
+  const hasLogo = !!logoUrl.trim();
 
   return (
     <div className="page animate-fade-in">
       <PageHeader title={intl.formatMessage({ id: 'settings.branding' })} />
 
       <div className={styles.form}>
-        {/* Logo section */}
+        {/* ── Logo upload section ── */}
         <Card className={styles.logoSection}>
           <div className={styles.logoHeader}>
-            <Image size={20} />
+            <Camera size={20} />
             <span className={styles.logoLabel}>
               {intl.formatMessage({ id: 'branding.logoUrl' })}
             </span>
           </div>
 
-          {/* Logo preview */}
-          <div className={styles.logoPreview}>
-            {logoPreviewUrl ? (
-              <img
-                src={logoPreviewUrl}
-                alt="Logo"
-                className={styles.logoImage}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className={styles.logoPlaceholder}>
-                <Image size={32} />
-                <span>{intl.formatMessage({ id: 'branding.noLogo' })}</span>
-              </div>
-            )}
-          </div>
-
-          <Input
-            placeholder={intl.formatMessage({ id: 'branding.logoUrlPlaceholder' })}
-            value={logoUrl}
-            onChange={(e) => {
-              setLogoUrl(e.target.value);
-              markDirty();
-            }}
-            hint={intl.formatMessage({ id: 'branding.logoUrlHint' })}
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
+            className={styles.fileInput}
           />
 
-          {logoPreviewUrl && (
-            <button className={styles.clearBtn} onClick={handleClearLogo}>
-              <Trash2 size={16} />
+          {/* Tappable preview area — like Telegram avatar picker */}
+          <button
+            type="button"
+            className={styles.logoPreview}
+            onClick={handleLogoTap}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <div className={styles.logoSpinner}>
+                <span className="spinner" />
+              </div>
+            ) : hasLogo ? (
+              <>
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className={styles.logoImage}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <div className={styles.logoOverlay}>
+                  <Camera size={20} />
+                </div>
+              </>
+            ) : (
+              <div className={styles.logoPlaceholder}>
+                <Upload size={28} />
+                <span>{intl.formatMessage({ id: 'branding.upload.tap' })}</span>
+              </div>
+            )}
+          </button>
+
+          <p className={styles.logoHint}>{intl.formatMessage({ id: 'branding.upload.hint' })}</p>
+
+          {fileError && <p className={styles.fileError}>{fileError}</p>}
+
+          {hasLogo && (
+            <button className={styles.clearBtn} onClick={handleRemoveLogo} disabled={isDeleting}>
+              {isDeleting ? <span className="spinner spinner-sm" /> : <Trash2 size={16} />}
               {intl.formatMessage({ id: 'branding.removeLogo' })}
             </button>
           )}
         </Card>
 
-        {/* Display name & welcome */}
+        {/* ── Display name & welcome ── */}
         <Card className={styles.fieldsCard}>
           <Input
             label={intl.formatMessage({ id: 'settings.displayName' })}
@@ -145,7 +223,7 @@ export function BrandingPage() {
           </div>
         </Card>
 
-        {/* Save button */}
+        {/* Save button (for name + welcome, logo is saved immediately on upload) */}
         <Button
           onClick={handleSave}
           disabled={!isDirty || updateBranding.isPending}

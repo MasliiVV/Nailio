@@ -4,8 +4,28 @@
 // PUT /api/v1/settings/general 🔑👑⚡
 // POST /api/v1/settings/logo 🔑👑⚡
 
-import { Controller, Get, Put, Body, HttpCode, HttpStatus, UseGuards, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Delete,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  Param,
+  BadRequestException,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { TenantsService } from './tenants.service';
 import {
   UpdateBrandingDto,
@@ -63,6 +83,62 @@ export class TenantsController {
     @Body() dto: UpdateGeneralSettingsDto,
   ) {
     return this.tenantsService.updateGeneralSettings(tenantId, dto);
+  }
+
+  /**
+   * Upload tenant logo (max 5 MB, JPG / PNG / WebP)
+   * docs/api/endpoints.md — POST /api/v1/settings/logo 🔑👑⚡
+   */
+  @Post('logo')
+  @Roles('master')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Upload tenant logo' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, type: TenantResponseDto })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/logos',
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+          cb(null, `${unique}${extname(file.originalname).toLowerCase()}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
+          return cb(new BadRequestException('Only JPG, PNG, WebP files are allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadLogo(
+    @CurrentTenant() tenantId: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|png|webp)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.tenantsService.uploadLogo(tenantId, file);
+  }
+
+  /**
+   * Delete tenant logo
+   * docs/api/endpoints.md — DELETE /api/v1/settings/logo 🔑👑⚡
+   */
+  @Delete('logo')
+  @Roles('master')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete tenant logo' })
+  @ApiResponse({ status: 200, type: TenantResponseDto })
+  async deleteLogo(@CurrentTenant() tenantId: string) {
+    return this.tenantsService.deleteLogo(tenantId);
   }
 }
 

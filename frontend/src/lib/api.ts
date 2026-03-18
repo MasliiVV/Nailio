@@ -205,4 +205,51 @@ export const api = {
 
   delete: <T>(endpoint: string, opts?: Omit<RequestOptions, 'method' | 'body'>) =>
     request<T>(endpoint, { ...opts, method: 'DELETE' }),
+
+  /** Upload a file via multipart/form-data (browser sets Content-Type with boundary) */
+  upload: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+    const token = await ensureValidAccessToken();
+    if (token) accessToken = token;
+
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+    let response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (response.status === 401 && onTokenExpired) {
+      const refreshResult = await onTokenExpired();
+      const newToken =
+        typeof refreshResult === 'string' ? refreshResult : (refreshResult?.accessToken ?? null);
+      if (newToken) {
+        accessToken = newToken;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        response = await fetch(`${API_BASE}${endpoint}`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+      }
+    }
+
+    if (!response.ok) {
+      let statusCode = response.status;
+      let errorCode = 'UNKNOWN';
+      let message = response.statusText;
+      try {
+        const payload = await response.json();
+        statusCode = payload.statusCode ?? statusCode;
+        errorCode = payload.errorCode ?? payload.error?.code ?? errorCode;
+        message = payload.message ?? payload.error?.message ?? message;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiRequestError(statusCode, errorCode, message);
+    }
+
+    return response.json();
+  },
 };

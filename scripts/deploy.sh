@@ -19,6 +19,9 @@ git push origin master
 echo "  📥 Pulling on server..."
 ssh "${SERVER}" "cd ${REMOTE_DIR} && git checkout -- frontend/package.json frontend/package-lock.json && git pull origin master"
 
+# 2.5. Ensure uploads directory exists
+ssh "${SERVER}" "mkdir -p ${REMOTE_DIR}/uploads/logos"
+
 # 3. Build frontend
 echo "  🏗️  Building frontend..."
 ssh "${SERVER}" "cd ${REMOTE_DIR}/frontend && npm install && npm run build 2>&1 | tail -3"

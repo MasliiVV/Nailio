@@ -378,8 +378,11 @@
   "settings.primaryColor": "Primary color",
 
   "branding.logoUrl": "Logo",
-  "branding.logoUrlPlaceholder": "https://example.com/logo.png",
-  "branding.logoUrlHint": "Paste a link to an image (PNG, JPG, SVG)",
+  "branding.upload.tap": "Tap to upload",
+  "branding.upload.hint": "JPG, PNG or WebP · up to 5 MB",
+  "branding.upload.invalidType": "Only JPG, PNG and WebP are supported",
+  "branding.upload.tooLarge": "File is too large — 5 MB max",
+  "branding.upload.failed": "Upload failed. Please try again",
   "branding.noLogo": "No logo set",
   "branding.removeLogo": "Remove logo",
   "branding.displayNamePlaceholder": "Your business name",
