@@ -176,6 +176,17 @@ export class RebookingService {
 
     const campaignId = randomUUID();
     const recipients: CampaignRecipient[] = [];
+    const slotFillOptions = this.normalizeSlotOptions(
+      dto.slotOptions?.length
+        ? dto.slotOptions
+        : [
+            {
+              date: dto.date,
+              startTime: dto.startTime,
+              endTime: dto.endTime,
+            },
+          ],
+    );
     const cycleSlotOptions =
       campaignType === 'cycle_followup'
         ? this.normalizeSlotOptions(
@@ -251,16 +262,7 @@ export class RebookingService {
       message: dto.message,
       createdAt: new Date().toISOString(),
       status: 'active',
-      slotOptions:
-        campaignType === 'cycle_followup'
-          ? cycleSlotOptions
-          : [
-              {
-                date: dto.date,
-                startTime: dto.startTime,
-                endTime: dto.endTime,
-              },
-            ],
+      slotOptions: campaignType === 'cycle_followup' ? cycleSlotOptions : slotFillOptions,
       recipients,
     });
 
@@ -310,43 +312,30 @@ export class RebookingService {
         continue;
       }
 
-      const alternatives = await this.findAlternativeSlots(
+      const promoAlternatives = await this.filterAvailableCampaignSlotOptions(
         tenantId,
-        campaign.date,
+        campaign.slotOptions || [],
         recipient.serviceId || serviceId,
-        campaign.startTime,
+      );
+
+      const alternatives = promoAlternatives.filter(
+        (slot) => !(slot.date === campaign.date && slot.startTime === campaign.startTime),
       );
 
       const alternativeLabel = alternatives
         .map((slot) => `${this.formatDateLabel(slot.date, tenant.timezone)} о ${slot.startTime}`)
         .join('\n');
-      const firstAlternative = alternatives[0];
-
-      const replyMarkup = firstAlternative
-        ? {
-            inline_keyboard: [
-              [
-                {
-                  text: '🔁 Обрати інший час',
-                  web_app: {
-                    url: this.buildQuickBookingUrl(
-                      tenant.slug,
-                      recipient.serviceId || serviceId,
-                      firstAlternative.date,
-                      firstAlternative.startTime,
-                      campaign.id,
-                    ),
-                  },
-                },
-              ],
-            ],
-          }
-        : undefined;
+      const replyMarkup = this.buildCampaignFollowUpReplyMarkup(
+        tenant.slug,
+        recipient.serviceId || serviceId,
+        alternatives,
+        campaign.id,
+      );
 
       await this.botService.sendMessage(
         bot.id,
         BigInt(recipient.telegramId),
-        `Привіт, ${this.escapeHtml(recipient.firstName)}!\n\nНа жаль, хтось був швидшим і вікно ${this.formatDateLabel(campaign.date, tenant.timezone)} о ${campaign.startTime} вже зайняте.\n${alternativeLabel ? `\nОсь найближчі альтернативи:\n${this.escapeHtml(alternativeLabel)}` : '\nЯкщо хочеш, я знайду інший зручний час 💜'}`,
+        `Привіт, ${this.escapeHtml(recipient.firstName)}!\n\nНа жаль, вікно ${this.formatDateLabel(campaign.date, tenant.timezone)} о ${campaign.startTime} вже зайняте.\n${alternativeLabel ? `\nМожеш вибрати інший час із цього промо:\n${this.escapeHtml(alternativeLabel)}` : '\nМожеш обрати інший зручний час у додатку 💜'}`,
         {
           parseMode: 'HTML',
           replyMarkup,
@@ -797,6 +786,45 @@ export class RebookingService {
     };
   }
 
+  private buildCampaignFollowUpReplyMarkup(
+    tenantSlug: string,
+    serviceId: string,
+    slotOptions: CampaignSlotOption[],
+    campaignId: string,
+  ) {
+    if (slotOptions.length > 0) {
+      return {
+        inline_keyboard: slotOptions.slice(0, 6).map((slot) => [
+          {
+            text: `${this.shortDateLabel(slot.date)} · ${slot.startTime}`,
+            web_app: {
+              url: this.buildQuickBookingUrl(
+                tenantSlug,
+                serviceId,
+                slot.date,
+                slot.startTime,
+                campaignId,
+              ),
+            },
+          },
+        ]),
+      };
+    }
+
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '📲 Відкрити запис у додатку',
+            web_app: {
+              url: this.buildBookingAppUrl(tenantSlug, serviceId),
+            },
+          },
+        ],
+      ],
+    };
+  }
+
   private async getTenantContext(tenantId: string): Promise<TenantContext> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -1038,29 +1066,24 @@ export class RebookingService {
     return `${greeting}\n\n${intro}\nУ ${input.tenantName} звільнилося вікно ${input.dateLabel} з ${input.startTime} до ${input.endTime}. Якщо тобі зручно — можеш швидко записатися прямо тут 🌷`;
   }
 
-  private async findAlternativeSlots(
+  private async filterAvailableCampaignSlotOptions(
     tenantId: string,
-    startDate: string,
+    slotOptions: CampaignSlotOption[],
     serviceId: string,
-    excludeTime: string,
   ) {
-    const result: Array<{ date: string; startTime: string }> = [];
-    const range = this.getDateRange(startDate, 7);
-
-    for (const date of range) {
-      const slots = await this.getAvailableServiceSlots(tenantId, date, serviceId);
-      for (const slot of slots) {
-        if (date === startDate && slot.startTime === excludeTime) {
-          continue;
-        }
-        result.push({ date, startTime: slot.startTime });
-        if (result.length >= 2) {
-          return result;
-        }
-      }
+    if (slotOptions.length === 0) {
+      return [] as CampaignSlotOption[];
     }
 
-    return result;
+    const uniqueDates = [...new Set(slotOptions.map((slot) => slot.date))];
+    const availableByDate = new Map<string, Set<string>>();
+
+    for (const date of uniqueDates) {
+      const slots = await this.getAvailableServiceSlots(tenantId, date, serviceId);
+      availableByDate.set(date, new Set(slots.map((slot) => slot.startTime)));
+    }
+
+    return slotOptions.filter((slot) => availableByDate.get(slot.date)?.has(slot.startTime));
   }
 
   private async getAvailableServiceSlots(tenantId: string, date: string, serviceId: string) {
@@ -1126,6 +1149,11 @@ export class RebookingService {
     const normalizedBase = this.appUrl.endsWith('/') ? this.appUrl.slice(0, -1) : this.appUrl;
     const campaignQuery = campaignId ? `&campaignId=${campaignId}` : '';
     return `${normalizedBase}/client/book/${serviceId}?startapp=${tenantSlug}&date=${date}&slot=${startTime}${campaignQuery}`;
+  }
+
+  private buildBookingAppUrl(tenantSlug: string, serviceId: string) {
+    const normalizedBase = this.appUrl.endsWith('/') ? this.appUrl.slice(0, -1) : this.appUrl;
+    return `${normalizedBase}/client/book/${serviceId}?startapp=${tenantSlug}`;
   }
 
   private buildPersonalizedCampaignMessage(firstName: string, rawMessage: string) {

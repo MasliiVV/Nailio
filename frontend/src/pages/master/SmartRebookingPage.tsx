@@ -114,6 +114,11 @@ export function SmartRebookingPage() {
     [selectedSlot, data?.recommendations, telegramClients],
   );
 
+  const slotCampaignOptions = useMemo(
+    () => buildSlotCampaignOptions(selectedSlot, data?.emptySlots || []),
+    [selectedSlot, data?.emptySlots],
+  );
+
   const slotSuggestedIds = useMemo(
     () => slotSuggestedRecipients.map((item) => item.clientId),
     [slotSuggestedRecipients],
@@ -395,6 +400,7 @@ export function SmartRebookingPage() {
       endTime: selectedSlot.endTime,
       clientIds: slotSelectedClientIds,
       tone: slotTone,
+      slotOptions: slotCampaignOptions,
       message: slotMessage.trim(),
     });
 
@@ -1114,6 +1120,25 @@ function groupSlotsByDate(slots: RebookingEmptySlot[]) {
 
 function buildDefaultSlotMessage(slot: RebookingEmptySlot) {
   return `Привіт! Звільнилося вікно ${formatDateLabel(slot.date)} з ${slot.startTime} до ${slot.endTime}. Якщо тобі зручно — можеш швидко записатися через кнопку нижче 💅`;
+}
+
+function buildSlotCampaignOptions(
+  selectedSlot: RebookingEmptySlot | null,
+  allSlots: RebookingEmptySlot[],
+) {
+  if (!selectedSlot) {
+    return [] as RebookingEmptySlot[];
+  }
+
+  const selectedKey = `${selectedSlot.date}-${selectedSlot.startTime}`;
+  const sameDayAlternatives = allSlots.filter(
+    (slot) => slot.date === selectedSlot.date && `${slot.date}-${slot.startTime}` !== selectedKey,
+  );
+  const crossDayAlternatives = allSlots.filter(
+    (slot) => slot.date !== selectedSlot.date && `${slot.date}-${slot.startTime}` !== selectedKey,
+  );
+
+  return [selectedSlot, ...sameDayAlternatives, ...crossDayAlternatives].slice(0, 4);
 }
 
 function buildDefaultCycleMessage({

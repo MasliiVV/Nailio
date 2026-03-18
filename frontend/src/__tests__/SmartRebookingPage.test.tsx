@@ -229,6 +229,9 @@ describe('SmartRebookingPage', () => {
         expect.objectContaining({
           campaignType: 'slot_fill',
           clientIds: expect.arrayContaining(['client-1', 'client-2']),
+          slotOptions: expect.arrayContaining([
+            expect.objectContaining({ date: '2026-03-17', startTime: '10:00' }),
+          ]),
         }),
       );
     });
