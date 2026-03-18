@@ -274,6 +274,9 @@
   font-size: 14px;
   font-weight: 700;
   align-self: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .clientJourneyCard {
@@ -427,6 +430,24 @@
   gap: 10px;
   margin-top: auto;
   padding-top: 16px;
+}
+
+.finalSlideActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.finalSlideBack {
+  align-self: flex-start;
+}
+
+.finalSlideCtas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .stepEmoji {
@@ -667,5 +688,9 @@
 
   .metricsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .finalSlideBack {
+    align-self: stretch;
   }
 }

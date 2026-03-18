@@ -1,16 +1,13 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
-import { BarChart3, Wallet, Crown, Clock, LogOut, Scissors, Sparkles } from 'lucide-react';
-import { useAuth } from '@/hooks';
+import { BarChart3, Wallet, Crown, Clock, Scissors, Sparkles } from 'lucide-react';
 import { Card, CardRow, PageHeader } from '@/components/ui';
-import { getTelegram } from '@/lib/telegram';
 import { prefetchMasterInsights } from '@/lib/prefetch';
 import styles from './SettingsPage.module.css';
 
 export function SettingsPage() {
   const intl = useIntl();
   const navigate = useNavigate();
-  const { logout } = useAuth();
 
   const prefetchInsights = () => {
     prefetchMasterInsights();
@@ -68,17 +65,6 @@ export function SettingsPage() {
               onClick={() => navigate('/master/showcase-preview')}
             />
           </>
-        </Card>
-
-        <Card padding="none" className={styles.cardGroup}>
-          <CardRow
-            icon={<LogOut size={20} />}
-            title={intl.formatMessage({ id: 'common.logout' })}
-            onClick={() => {
-              getTelegram()?.HapticFeedback.impactOccurred('medium');
-              logout();
-            }}
-          />
         </Card>
       </>
     </div>

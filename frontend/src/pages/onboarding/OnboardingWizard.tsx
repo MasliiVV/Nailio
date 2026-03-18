@@ -30,7 +30,7 @@ import styles from './OnboardingWizard.module.css';
 const SHOWCASE_STEPS = 4;
 const REGISTRATION_START_STEP = SHOWCASE_STEPS + 1;
 const TOTAL_STEPS = SHOWCASE_STEPS + 5;
-const DEVELOPER_CONTACT_URL = 'https://t.me/loony_5';
+const DEVELOPER_CONTACT_URL = 'https://t.me/MasliiVV';
 const NAILIO_BOT_URL = 'https://t.me/nailioapp_bot';
 
 interface AddedService {
@@ -565,21 +565,20 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
               {intl.formatMessage({ id: 'onboarding.showcase4.finalText' })}
             </div>
           </div>
-          <div className={styles.navButtonsStack}>
-            <Button variant="ghost" onClick={prev}>
+          <div className={styles.finalSlideActions}>
+            <Button variant="ghost" className={styles.finalSlideBack} onClick={prev}>
               <ChevronLeft size={16} />
               {intl.formatMessage({ id: 'common.back' })}
             </Button>
-            <Button variant="secondary" fullWidth onClick={handleSignIn}>
-              {intl.formatMessage({ id: 'onboarding.signIn' })}
-            </Button>
-            <Button fullWidth onClick={handleStartRegistration}>
-              {intl.formatMessage({ id: previewMode ? 'onboarding.returnToApp' : 'onboarding.start' })}
-              <ArrowRight size={16} />
-            </Button>
-            <Button variant="ghost" fullWidth onClick={handleCloseMiniApp}>
-              {intl.formatMessage({ id: 'onboarding.exitMiniApp' })}
-            </Button>
+            <div className={styles.finalSlideCtas}>
+              <Button variant="secondary" fullWidth onClick={handleSignIn}>
+                {intl.formatMessage({ id: 'onboarding.signIn' })}
+              </Button>
+              <Button fullWidth onClick={handleStartRegistration}>
+                {intl.formatMessage({ id: previewMode ? 'onboarding.returnToApp' : 'onboarding.start' })}
+                <ArrowRight size={16} />
+              </Button>
+            </div>
           </div>
           <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
             {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
