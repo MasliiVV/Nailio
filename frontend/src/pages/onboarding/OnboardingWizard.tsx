@@ -2,16 +2,21 @@ import { useState, useCallback } from 'react';
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import {
+  ArrowRight,
+  BadgeCheck,
   Sparkles,
   Bot,
   KeyRound,
   CheckCircle,
+  ChevronLeft,
   Scissors,
   Calendar,
+  Gem,
+  MessageCircle,
   PartyPopper,
   Copy,
   Smartphone,
-  Video,
+  Users,
 } from 'lucide-react';
 import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
@@ -22,7 +27,11 @@ import { useWeeklyScheduleDraft } from '@/hooks';
 import type { CreateServiceDto, ApiResponse } from '@/types';
 import styles from './OnboardingWizard.module.css';
 
-const TOTAL_STEPS = 6;
+const SHOWCASE_STEPS = 4;
+const REGISTRATION_START_STEP = SHOWCASE_STEPS + 1;
+const TOTAL_STEPS = SHOWCASE_STEPS + 5;
+const DEVELOPER_CONTACT_URL = 'https://t.me/loony_5';
+const NAILIO_BOT_URL = 'https://t.me/nailioapp_bot';
 
 interface AddedService {
   name: string;
@@ -194,6 +203,34 @@ export function OnboardingWizard() {
 
   const progressPct = (step / TOTAL_STEPS) * 100;
 
+  const openTelegramTarget = useCallback((url: string) => {
+    const telegram = getTelegram();
+    if (url.includes('t.me/')) {
+      telegram?.openTelegramLink?.(url);
+    } else {
+      telegram?.openLink?.(url);
+    }
+
+    if (!telegram) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }, []);
+
+  const handleContactDeveloper = useCallback(() => {
+    getTelegram()?.HapticFeedback.impactOccurred('light');
+    openTelegramTarget(DEVELOPER_CONTACT_URL);
+  }, [openTelegramTarget]);
+
+  const handleSignIn = useCallback(() => {
+    getTelegram()?.HapticFeedback.impactOccurred('light');
+    openTelegramTarget(NAILIO_BOT_URL);
+  }, [openTelegramTarget]);
+
+  const handleStartRegistration = useCallback(() => {
+    getTelegram()?.HapticFeedback.notificationOccurred('success');
+    setStep(REGISTRATION_START_STEP);
+  }, []);
+
   return (
     <div className={styles.wizard}>
       {/* Progress bar */}
@@ -204,40 +241,317 @@ export function OnboardingWizard() {
         {step} / {TOTAL_STEPS}
       </div>
 
-      {/* Step 1: Welcome */}
+      {/* Step 1: Showcase hero */}
       {step === 1 && (
         <div className={styles.stepContent}>
-          <div className={styles.stepEmoji}>
-            <Sparkles size={48} />
+          <div className={styles.showcaseHeader}>
+            <div className={styles.showcaseEyebrow}>
+              <Gem size={14} />
+              {intl.formatMessage({ id: 'onboarding.showcaseEyebrow' })}
+            </div>
+            <h1 className={styles.showcaseTitle}>
+              {intl.formatMessage({ id: 'onboarding.showcase1.title' })}
+            </h1>
+            <p className={styles.showcaseDescription}>
+              {intl.formatMessage({ id: 'onboarding.showcase1.description' })}
+            </p>
           </div>
-          <h1 className={styles.stepTitle}>{intl.formatMessage({ id: 'onboarding.welcome' })}</h1>
-          <p className={styles.stepDescription}>
-            {intl.formatMessage({ id: 'onboarding.welcomeDesc' })}
-          </p>
-          <a
-            href="https://youtube.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.videoLink}
-            onClick={(e) => {
-              e.preventDefault();
-              getTelegram()?.openLink?.('https://youtube.com');
-            }}
-          >
-            <Video
-              size={16}
-              style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}
-            />
-            {intl.formatMessage({ id: 'onboarding.watchVideo' })}
-          </a>
-          <Button fullWidth onClick={next}>
-            {intl.formatMessage({ id: 'onboarding.start' })} →
-          </Button>
+          <div className={styles.showcasePhone}>
+            <div className={styles.phoneGlow} />
+            <div className={styles.phoneFrame}>
+              <div className={styles.phoneTopBar}>
+                <div>
+                  <div className={styles.phoneBrand}>Nailio</div>
+                  <div className={styles.phoneLabel}>Beauty booking mini app</div>
+                </div>
+                <span className={styles.liveBadge}>
+                  {intl.formatMessage({ id: 'onboarding.showcaseLive' })}
+                </span>
+              </div>
+              <div className={styles.phoneHeroCard}>
+                <div className={styles.phoneHeroIcon}>
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <div className={styles.phoneHeroTitle}>
+                    {intl.formatMessage({ id: 'onboarding.showcase1.cardTitle' })}
+                  </div>
+                  <div className={styles.phoneHeroText}>
+                    {intl.formatMessage({ id: 'onboarding.showcase1.cardText' })}
+                  </div>
+                </div>
+              </div>
+              <div className={styles.phoneServiceRow}>
+                <span className={styles.phoneChip}>Манікюр</span>
+                <span className={styles.phoneChip}>Покриття</span>
+                <span className={styles.phoneChip}>Дизайн</span>
+              </div>
+              <div className={styles.phoneSurface}>
+                <div className={styles.surfaceHeader}>
+                  <span>{intl.formatMessage({ id: 'onboarding.showcase1.surfaceTitle' })}</span>
+                  <BadgeCheck size={16} />
+                </div>
+                <div className={styles.timeGrid}>
+                  <span className={styles.timePill}>10:00</span>
+                  <span className={styles.timePill}>11:30</span>
+                  <span className={styles.timePillActive}>13:00</span>
+                  <span className={styles.timePill}>15:30</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.showcaseFooterCard}>
+            <MessageCircle size={18} />
+            <div>
+              <div className={styles.showcaseFooterTitle}>
+                {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
+              </div>
+              <div className={styles.showcaseFooterText}>
+                {intl.formatMessage({ id: 'onboarding.showcaseSupport' })}
+              </div>
+            </div>
+          </div>
+          <div className={styles.showcaseActions}>
+            <Button variant="secondary" fullWidth onClick={handleSignIn}>
+              {intl.formatMessage({ id: 'onboarding.signIn' })}
+            </Button>
+            <Button fullWidth onClick={next}>
+              {intl.formatMessage({ id: 'common.next' })}
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+          <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
+            {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
+          </button>
         </div>
       )}
 
-      {/* Step 2: BotFather instructions */}
+      {/* Step 2: Showcase booking flow */}
       {step === 2 && (
+        <div className={styles.stepContent}>
+          <div className={styles.showcaseHeader}>
+            <div className={styles.showcaseEyebrow}>
+              <Smartphone size={14} />
+              {intl.formatMessage({ id: 'onboarding.showcaseSectionClient' })}
+            </div>
+            <h1 className={styles.showcaseTitle}>
+              {intl.formatMessage({ id: 'onboarding.showcase2.title' })}
+            </h1>
+            <p className={styles.showcaseDescription}>
+              {intl.formatMessage({ id: 'onboarding.showcase2.description' })}
+            </p>
+          </div>
+          <div className={styles.clientJourneyCard}>
+            <div className={styles.clientJourneyStep}>
+              <span className={styles.clientJourneyIndex}>1</span>
+              <div>
+                <div className={styles.clientJourneyTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step1Title' })}
+                </div>
+                <div className={styles.clientJourneyText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step1Text' })}
+                </div>
+              </div>
+            </div>
+            <div className={styles.clientJourneyStep}>
+              <span className={styles.clientJourneyIndex}>2</span>
+              <div>
+                <div className={styles.clientJourneyTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step2Title' })}
+                </div>
+                <div className={styles.clientJourneyText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step2Text' })}
+                </div>
+              </div>
+            </div>
+            <div className={styles.clientJourneyStep}>
+              <span className={styles.clientJourneyIndex}>3</span>
+              <div>
+                <div className={styles.clientJourneyTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step3Title' })}
+                </div>
+                <div className={styles.clientJourneyText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase2.step3Text' })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.showcaseChips}>
+            <span className={styles.showcaseStatChip}>2 tap booking</span>
+            <span className={styles.showcaseStatChip}>Telegram reminders</span>
+            <span className={styles.showcaseStatChip}>24/7</span>
+          </div>
+          <div className={styles.navButtons}>
+            <Button variant="ghost" onClick={prev}>
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="secondary" fullWidth onClick={handleSignIn}>
+              {intl.formatMessage({ id: 'onboarding.signIn' })}
+            </Button>
+            <Button fullWidth onClick={next}>
+              {intl.formatMessage({ id: 'common.next' })}
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Showcase control */}
+      {step === 3 && (
+        <div className={styles.stepContent}>
+          <div className={styles.showcaseHeader}>
+            <div className={styles.showcaseEyebrow}>
+              <Users size={14} />
+              {intl.formatMessage({ id: 'onboarding.showcaseSectionMaster' })}
+            </div>
+            <h1 className={styles.showcaseTitle}>
+              {intl.formatMessage({ id: 'onboarding.showcase3.title' })}
+            </h1>
+            <p className={styles.showcaseDescription}>
+              {intl.formatMessage({ id: 'onboarding.showcase3.description' })}
+            </p>
+          </div>
+          <div className={styles.metricsGrid}>
+            <div className={styles.metricCardPrimary}>
+              <div className={styles.metricLabel}>
+                {intl.formatMessage({ id: 'onboarding.showcase3.metric1Label' })}
+              </div>
+              <div className={styles.metricValue}>36</div>
+              <div className={styles.metricTrend}>+12% this week</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>
+                {intl.formatMessage({ id: 'onboarding.showcase3.metric2Label' })}
+              </div>
+              <div className={styles.metricValueDark}>18 400 ₴</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>
+                {intl.formatMessage({ id: 'onboarding.showcase3.metric3Label' })}
+              </div>
+              <div className={styles.metricValueDark}>92%</div>
+            </div>
+          </div>
+          <div className={styles.showcasePanel}>
+            <div className={styles.surfaceHeader}>
+              <span>{intl.formatMessage({ id: 'onboarding.showcase3.panelTitle' })}</span>
+              <BadgeCheck size={16} />
+            </div>
+            <div className={styles.timelineItem}>
+              <span className={styles.timelineDot} />
+              <span>{intl.formatMessage({ id: 'onboarding.showcase3.panelItem1' })}</span>
+            </div>
+            <div className={styles.timelineItem}>
+              <span className={styles.timelineDot} />
+              <span>{intl.formatMessage({ id: 'onboarding.showcase3.panelItem2' })}</span>
+            </div>
+            <div className={styles.timelineItem}>
+              <span className={styles.timelineDot} />
+              <span>{intl.formatMessage({ id: 'onboarding.showcase3.panelItem3' })}</span>
+            </div>
+          </div>
+          <div className={styles.navButtons}>
+            <Button variant="ghost" onClick={prev}>
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="secondary" fullWidth onClick={handleContactDeveloper}>
+              {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
+            </Button>
+            <Button fullWidth onClick={next}>
+              {intl.formatMessage({ id: 'common.next' })}
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Showcase final */}
+      {step === 4 && (
+        <div className={styles.stepContent}>
+          <div className={styles.showcaseHeader}>
+            <div className={styles.showcaseEyebrow}>
+              <Sparkles size={14} />
+              {intl.formatMessage({ id: 'onboarding.showcaseSectionGrowth' })}
+            </div>
+            <h1 className={styles.showcaseTitle}>
+              {intl.formatMessage({ id: 'onboarding.showcase4.title' })}
+            </h1>
+            <p className={styles.showcaseDescription}>
+              {intl.formatMessage({ id: 'onboarding.showcase4.description' })}
+            </p>
+          </div>
+          <div className={styles.flowCard}>
+            <div className={styles.flowItem}>
+              <div className={styles.flowIconWrap}>
+                <Calendar size={18} />
+              </div>
+              <div>
+                <div className={styles.flowTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow1Title' })}
+                </div>
+                <div className={styles.flowText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow1Text' })}
+                </div>
+              </div>
+            </div>
+            <div className={styles.flowArrow}>→</div>
+            <div className={styles.flowItem}>
+              <div className={styles.flowIconWrap}>
+                <Bot size={18} />
+              </div>
+              <div>
+                <div className={styles.flowTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow2Title' })}
+                </div>
+                <div className={styles.flowText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow2Text' })}
+                </div>
+              </div>
+            </div>
+            <div className={styles.flowArrow}>→</div>
+            <div className={styles.flowItem}>
+              <div className={styles.flowIconWrap}>
+                <BadgeCheck size={18} />
+              </div>
+              <div>
+                <div className={styles.flowTitle}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow3Title' })}
+                </div>
+                <div className={styles.flowText}>
+                  {intl.formatMessage({ id: 'onboarding.showcase4.flow3Text' })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.showcaseFinalCard}>
+            <div className={styles.showcaseFinalTitle}>
+              {intl.formatMessage({ id: 'onboarding.showcase4.finalTitle' })}
+            </div>
+            <div className={styles.showcaseFinalText}>
+              {intl.formatMessage({ id: 'onboarding.showcase4.finalText' })}
+            </div>
+          </div>
+          <div className={styles.navButtonsStack}>
+            <Button variant="ghost" onClick={prev}>
+              <ChevronLeft size={16} />
+              {intl.formatMessage({ id: 'common.back' })}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={handleSignIn}>
+              {intl.formatMessage({ id: 'onboarding.signIn' })}
+            </Button>
+            <Button fullWidth onClick={handleStartRegistration}>
+              {intl.formatMessage({ id: 'onboarding.start' })}
+              <ArrowRight size={16} />
+            </Button>
+          </div>
+          <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
+            {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
+          </button>
+        </div>
+      )}
+
+      {/* Step 5: BotFather instructions */}
+      {step === 5 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Bot size={48} />
@@ -270,17 +584,18 @@ export function OnboardingWizard() {
           </div>
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
-              ←
+              <ChevronLeft size={16} />
             </Button>
             <Button fullWidth onClick={next}>
-              {intl.formatMessage({ id: 'onboarding.copied' })} →
+              {intl.formatMessage({ id: 'onboarding.copied' })}
+              <ArrowRight size={16} />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Step 3: Enter token */}
-      {step === 3 && (
+      {/* Step 6: Enter token */}
+      {step === 6 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <KeyRound size={48} />
@@ -320,17 +635,18 @@ export function OnboardingWizard() {
           )}
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
-              ←
+              <ChevronLeft size={16} />
             </Button>
             <Button fullWidth onClick={next} disabled={!botInfo}>
-              {intl.formatMessage({ id: 'common.next' })} →
+              {intl.formatMessage({ id: 'common.next' })}
+              <ArrowRight size={16} />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Step 4: Services */}
-      {step === 4 && (
+      {/* Step 7: Services */}
+      {step === 7 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Scissors size={48} />
@@ -389,7 +705,7 @@ export function OnboardingWizard() {
 
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
-              ←
+              <ChevronLeft size={16} />
             </Button>
             <Button variant="secondary" fullWidth onClick={next} disabled={createService.isPending}>
               {intl.formatMessage({ id: 'common.skip' })}
@@ -401,8 +717,8 @@ export function OnboardingWizard() {
         </div>
       )}
 
-      {/* Step 5: Schedule */}
-      {step === 5 && (
+      {/* Step 8: Schedule */}
+      {step === 8 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <Calendar size={48} />
@@ -487,7 +803,7 @@ export function OnboardingWizard() {
 
           <div className={styles.navButtons}>
             <Button variant="ghost" onClick={prev}>
-              ←
+              <ChevronLeft size={16} />
             </Button>
             <Button fullWidth loading={loading} onClick={handleSaveSchedule}>
               {intl.formatMessage({ id: 'common.save' })}
@@ -496,8 +812,8 @@ export function OnboardingWizard() {
         </div>
       )}
 
-      {/* Step 6: Done */}
-      {step === 6 && (
+      {/* Step 9: Done */}
+      {step === 9 && (
         <div className={styles.stepContent}>
           <div className={styles.stepEmoji}>
             <PartyPopper size={48} />
@@ -541,7 +857,8 @@ export function OnboardingWizard() {
           </div>
 
           <Button fullWidth onClick={handleFinish}>
-            {intl.formatMessage({ id: 'onboarding.goToDashboard' })} →
+            {intl.formatMessage({ id: 'onboarding.goToDashboard' })}
+            <ArrowRight size={16} />
           </Button>
         </div>
       )}
