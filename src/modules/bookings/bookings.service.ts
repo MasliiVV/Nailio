@@ -964,7 +964,7 @@ export class BookingsService {
 
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
     const clientName = `${client.firstName} ${client.lastName || ''}`.trim();
-    const clientTelegramLink = `<a href="tg://user?id=${client.user.telegramId}">Написати в ТГ</a>`;
+    const clientTelegramLink = `<a href="tg://user?id=${client.user.telegramId}">Зв’язатися в Telegram</a>`;
 
     let text: string;
     let replyMarkup: Record<string, unknown> | undefined;

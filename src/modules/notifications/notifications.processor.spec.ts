@@ -45,6 +45,7 @@ describe('NotificationsProcessor', () => {
 
     configService = {
       getOrThrow: jest.fn().mockReturnValue('platform-bot-token'),
+      get: jest.fn().mockReturnValue('https://app.platform.com'),
     };
 
     processor = new NotificationsProcessor(
@@ -81,6 +82,7 @@ describe('NotificationsProcessor', () => {
     prisma.bot.findFirst.mockResolvedValue({ botTokenEncrypted: 'encrypted', isActive: true });
     prisma.tenant.findUnique.mockResolvedValue({
       id: 'tenant-1',
+      slug: 'test-master',
       timezone: 'Europe/Kyiv',
       settings: {},
     });
@@ -106,7 +108,15 @@ describe('NotificationsProcessor', () => {
 
     expect(payload.text).toContain('❌ Запис скасовано');
     expect(payload.reply_markup).toEqual({
-      inline_keyboard: [[{ text: '✍️ Написати майстру', callback_data: 'writem:booking-1' }]],
+      inline_keyboard: [
+        [
+          {
+            text: '📅 Записатися знову',
+            web_app: { url: 'https://app.platform.com?startapp=test-master' },
+          },
+        ],
+        [{ text: '✍️ Написати майстру', callback_data: 'writem:booking-1' }],
+      ],
     });
   });
 });

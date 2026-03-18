@@ -3,7 +3,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntl } from 'react-intl';
 import { CheckCircle, CalendarOff } from 'lucide-react';
-import { useService, useSlots, useCreateBooking } from '@/hooks';
+import { bookingKeys, useService, useSlots, useCreateBooking } from '@/hooks';
 import { Button, DatePicker, EmptyState } from '@/components/ui';
 import { ApiRequestError, api } from '@/lib/api';
 import { getTelegram, isTelegramEnv } from '@/lib/telegram';
@@ -52,7 +52,7 @@ export function BookingPage() {
 
   const calendarAvailabilityQueries = useQueries({
     queries: calendarDates.map((date) => ({
-      queryKey: ['bookings', 'slots-calendar', date, serviceId || ''],
+      queryKey: bookingKeys.slotsCalendar(date, serviceId || ''),
       queryFn: async () => {
         const res = await api.get<ApiResponse<SlotsResponse>>(
           `/bookings/slots?date=${date}&serviceId=${serviceId}`,

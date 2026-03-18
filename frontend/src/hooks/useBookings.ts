@@ -23,7 +23,15 @@ export const bookingKeys = {
   slotsRoot: () => [...bookingKeys.all, 'slots'] as const,
   slots: (date: string, serviceId: string) =>
     [...bookingKeys.all, 'slots', date, serviceId] as const,
+  slotsCalendarRoot: () => [...bookingKeys.all, 'slots-calendar'] as const,
+  slotsCalendar: (date: string, serviceId: string) =>
+    [...bookingKeys.all, 'slots-calendar', date, serviceId] as const,
 };
+
+function invalidateBookingAvailability(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+  queryClient.invalidateQueries({ queryKey: bookingKeys.slotsCalendarRoot() });
+}
 
 // ---- Fetch slots ----
 export function useSlots(date: string, serviceId: string, options?: { enabled?: boolean }) {
@@ -96,7 +104,7 @@ export function useCreateBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      invalidateBookingAvailability(queryClient);
     },
     onError: () => {
       const tg = getTelegram();
@@ -119,7 +127,7 @@ export function useCancelBooking() {
       tg?.HapticFeedback.notificationOccurred('warning');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      invalidateBookingAvailability(queryClient);
     },
     onError: () => {
       const tg = getTelegram();
@@ -175,7 +183,7 @@ export function useDeleteBooking() {
       const tg = getTelegram();
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      invalidateBookingAvailability(queryClient);
     },
     onError: () => {
       const tg = getTelegram();
@@ -198,7 +206,7 @@ export function useRescheduleBooking() {
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      invalidateBookingAvailability(queryClient);
     },
     onError: () => {
       const tg = getTelegram();
@@ -221,7 +229,7 @@ export function useUpdateBooking() {
       tg?.HapticFeedback.notificationOccurred('success');
       queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      invalidateBookingAvailability(queryClient);
     },
     onError: () => {
       const tg = getTelegram();

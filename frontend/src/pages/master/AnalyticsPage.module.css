@@ -1,61 +1,299 @@
-.serviceRow {
+.heroCard {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  margin-bottom: var(--space-lg);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 20%, transparent), transparent 36%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, var(--color-card-bg)) 0%, var(--color-card-bg) 60%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-separator));
+}
+
+.heroTopRow {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.heroEyebrow {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 0.5px solid var(--color-separator);
-}
-
-.serviceRow:last-child {
-  border-bottom: none;
-}
-
-.serviceRank {
-  font-size: 13px;
-  font-weight: 700;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
   color: var(--color-primary);
-  width: 28px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
 }
 
-.serviceName {
-  flex: 1;
-  font-size: 15px;
-  font-weight: 500;
+.heroTitle {
+  margin: 0 0 6px;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
-.serviceCount {
-  font-size: 15px;
-  font-weight: 600;
+.heroSubtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.heroBadge {
+  min-width: 132px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-card-bg) 82%, white 18%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-separator));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.heroBadge span,
+.heroStatLabel,
+.focusLabel,
+.focusMetrics span,
+.statLabel,
+.statHelper,
+.progressRingInner span {
   color: var(--color-text-secondary);
 }
 
-/* Booking outcomes chart */
+.heroBadge span {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.heroBadge strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.heroStatCard,
+.focusCard,
+.statCard,
+.legendItemCard,
+.servicesCard {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-separator));
+}
+
+.heroStatCard {
+  padding: 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-card-bg) 88%, white 12%);
+}
+
+.heroStatValue,
+.heroStatValueSmall,
+.statValue,
+.outcomesHeadline,
+.focusValue {
+  display: block;
+  color: var(--color-text);
+}
+
+.heroStatValue {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.heroStatValueSmall {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.tabWrap {
+  padding: 6px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-card-bg) 86%, white 14%);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: var(--space-lg);
+}
+
+.statCard {
+  position: relative;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--color-card-bg);
+  overflow: hidden;
+}
+
+.tonePrimary {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneSuccess {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-success) 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneAccent {
+  background: linear-gradient(135deg, color-mix(in srgb, #7c3aed 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneNeutral {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-text) 4%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.statIcon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+}
+
+.statLabel {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.statHelper {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.insightsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.outcomesCard,
+.focusCard,
+.servicesCard {
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--color-card-bg);
+}
+
+.outcomesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.outcomesTitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.outcomesHeadline {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.outcomesHint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.progressRing {
+  width: 122px;
+  height: 122px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.progressRingInner {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-card-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.progressRingInner strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.progressRingInner span {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
 .chartBar {
   display: flex;
-  height: 24px;
-  border-radius: 12px;
+  height: 14px;
+  border-radius: 999px;
   overflow: hidden;
   background: var(--color-secondary-bg);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .chartSegment {
   height: 100%;
-  min-width: 4px;
+  min-width: 6px;
   transition: width 600ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .chartLegend {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  gap: 10px;
 }
 
-.legendItem {
+.legendItemCard {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-card-bg) 90%, white 10%);
+}
+
+.legendItemCard div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.legendItemCard strong {
+  font-size: 15px;
 }
 
 .legendDot {
@@ -67,7 +305,175 @@
 
 .legendValue {
   margin-left: auto;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 700;
+  color: var(--color-text);
   font-size: 13px;
+}
+
+.focusRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.focusIconWrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.focusValue {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.focusMetrics {
+  display: grid;
+  gap: 10px;
+}
+
+.focusMetrics div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-separator);
+}
+
+.focusMetrics div:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.focusMetrics strong {
+  font-size: 15px;
+}
+
+.emptyState {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: left;
+  color: var(--color-text-secondary);
+}
+
+.emptyState strong {
+  display: block;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+.serviceRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 0.5px solid var(--color-separator);
+}
+
+.serviceRow:last-child {
+  border-bottom: none;
+}
+
+.serviceRank {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.serviceInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.serviceRowTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.serviceName {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.serviceCount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.serviceBarTrack {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-secondary-bg);
+}
+
+.serviceBarFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 65%, white));
+}
+
+@media (max-width: 900px) {
+  .insightsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroTopRow {
+    flex-direction: column;
+  }
+
+  .heroBadge {
+    width: 100%;
+  }
+
+  .heroStats,
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .outcomesHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progressRing {
+    width: 108px;
+    height: 108px;
+  }
+
+  .progressRingInner {
+    width: 78px;
+    height: 78px;
+  }
 }

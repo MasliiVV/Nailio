@@ -61,6 +61,7 @@ export function useUpdateWorkingHours() {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
       queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsCalendarRoot() });
     },
   });
 }
@@ -78,6 +79,7 @@ export function useCreateOverride() {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
       queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsCalendarRoot() });
     },
   });
 }
@@ -107,6 +109,7 @@ export function useUpdateDaySchedule(date: string) {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.day(date) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsCalendarRoot() });
     },
     onError: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('error');
@@ -125,6 +128,7 @@ export function useDeleteOverride() {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.weekly() });
       queryClient.invalidateQueries({ queryKey: scheduleKeys.days() });
       queryClient.invalidateQueries({ queryKey: bookingKeys.slotsRoot() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.slotsCalendarRoot() });
     },
   });
 }

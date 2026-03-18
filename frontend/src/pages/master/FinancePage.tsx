@@ -1,6 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Landmark,
+  Plus,
+  Receipt,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
 import { useTransactions, useFinanceSummary, useCreateTransaction } from '@/hooks';
 import {
   Card,
@@ -28,6 +38,25 @@ export function FinancePage() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(intl.locale === 'en' ? 'en-US' : 'uk-UA', {
+        maximumFractionDigits: 0,
+      }),
+    [intl.locale],
+  );
+
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(intl.locale === 'en' ? 'en-GB' : 'uk-UA', {
+        day: 'numeric',
+        month: 'short',
+      }),
+    [intl.locale],
+  );
+
+  const formatMoney = (value: number) => `${currencyFormatter.format(value / 100)} ₴`;
+
   const handleAdd = () => {
     const numAmount = Number(amount);
     if (!numAmount || numAmount <= 0 || isNaN(numAmount)) {
@@ -50,6 +79,65 @@ export function FinancePage() {
   };
 
   const isLoading = loadingTx || loadingSummary;
+  const items = transactions?.items || [];
+  const totalEntries = items.length;
+  const net = summary?.net ?? 0;
+  const averageTransaction =
+    totalEntries > 0
+      ? Math.round(items.reduce((acc, tx) => acc + Math.abs(tx.amount), 0) / totalEntries)
+      : 0;
+  const latestTransaction = items[0] ?? null;
+  const cashflowTone = net > 0 ? 'positive' : net < 0 ? 'negative' : 'neutral';
+  const cashflowLabel =
+    cashflowTone === 'positive'
+      ? intl.formatMessage({ id: 'finance.cashflowPositive' })
+      : cashflowTone === 'negative'
+        ? intl.formatMessage({ id: 'finance.cashflowNegative' })
+        : intl.formatMessage({ id: 'finance.cashflowNeutral' });
+  const balanceToneClass =
+    cashflowTone === 'positive'
+      ? styles.balancePositive
+      : cashflowTone === 'negative'
+        ? styles.balanceNegative
+        : styles.balanceNeutral;
+
+  const summaryCards = [
+    {
+      key: 'income',
+      label: intl.formatMessage({ id: 'finance.income' }),
+      value: `+${formatMoney(summary?.income ?? 0)}`,
+      helper: intl.formatMessage({ id: 'finance.incomeHint' }),
+      icon: <ArrowUpRight size={18} />,
+      toneClass: styles.toneIncome,
+    },
+    {
+      key: 'expense',
+      label: intl.formatMessage({ id: 'finance.expenses' }),
+      value: `-${formatMoney(summary?.expense ?? 0)}`,
+      helper: intl.formatMessage({ id: 'finance.expenseHint' }),
+      icon: <ArrowDownLeft size={18} />,
+      toneClass: styles.toneExpense,
+    },
+    {
+      key: 'net',
+      label: intl.formatMessage({ id: 'finance.net' }),
+      value: formatMoney(net),
+      helper: cashflowLabel,
+      icon: <Landmark size={18} />,
+      toneClass: styles.toneNet,
+    },
+    {
+      key: 'count',
+      label: intl.formatMessage({ id: 'finance.transactionCount' }),
+      value: totalEntries,
+      helper: intl.formatMessage(
+        { id: 'finance.averageTransaction' },
+        { value: averageTransaction },
+      ),
+      icon: <Receipt size={18} />,
+      toneClass: styles.toneCount,
+    },
+  ] as const;
 
   if (isLoading) {
     return (
@@ -63,41 +151,90 @@ export function FinancePage() {
     <div className="page animate-fade-in">
       <PageHeader
         title={intl.formatMessage({ id: 'finance.title' })}
-        action={
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            + {intl.formatMessage({ id: 'common.add' })}
-          </Button>
-        }
+        subtitle={intl.formatMessage({ id: 'finance.subtitle' })}
       />
 
-      {summary && (
-        <div className={styles.summaryGrid}>
-          <div className={styles.summaryCard} data-type="income">
-            <span className={styles.summaryLabel}>
-              {intl.formatMessage({ id: 'finance.income' })}
-            </span>
-            <span className={styles.summaryValue}>+{(summary.income / 100).toFixed(0)} ₴</span>
+      <Card className={styles.heroCard}>
+        <div className={styles.heroTopRow}>
+          <div>
+            <div className={styles.heroEyebrow}>
+              <Sparkles size={14} />
+              {intl.formatMessage({ id: 'finance.cashflowOverview' })}
+            </div>
+            <h2 className={styles.heroTitle}>{intl.formatMessage({ id: 'finance.heroTitle' })}</h2>
+            <p className={styles.heroSubtitle}>
+              {intl.formatMessage({ id: 'finance.heroSubtitle' })}
+            </p>
           </div>
-          <div className={styles.summaryCard} data-type="expense">
-            <span className={styles.summaryLabel}>
-              {intl.formatMessage({ id: 'finance.expenses' })}
+
+          <Button className={styles.heroAction} onClick={() => setShowForm(true)}>
+            <>
+              <Plus size={18} />
+              {intl.formatMessage({ id: 'finance.addTransaction' })}
+            </>
+          </Button>
+        </div>
+
+        <div className={styles.heroMetrics}>
+          <div className={`${styles.balanceCard} ${balanceToneClass}`}>
+            <span className={styles.balanceLabel}>
+              {intl.formatMessage({ id: 'finance.currentBalance' })}
             </span>
-            <span className={styles.summaryValue}>-{(summary.expense / 100).toFixed(0)} ₴</span>
+            <strong className={styles.balanceValue}>{formatMoney(net)}</strong>
+            <span className={styles.balanceHint}>{cashflowLabel}</span>
           </div>
-          <div className={styles.summaryCard} data-type="net">
-            <span className={styles.summaryLabel}>{intl.formatMessage({ id: 'finance.net' })}</span>
-            <span className={styles.summaryValue}>{(summary.net / 100).toFixed(0)} ₴</span>
+
+          <div className={styles.snapshotCard}>
+            <span className={styles.snapshotLabel}>
+              {intl.formatMessage({ id: 'finance.latestEntry' })}
+            </span>
+            <strong className={styles.snapshotValue}>
+              {latestTransaction?.description ||
+                intl.formatMessage({ id: 'finance.noRecentActivity' })}
+            </strong>
+            <span className={styles.snapshotHint}>
+              {latestTransaction
+                ? `${dateFormatter.format(new Date(latestTransaction.createdAt))} · ${
+                    latestTransaction.type === 'income'
+                      ? `+${formatMoney(latestTransaction.amount)}`
+                      : `-${formatMoney(latestTransaction.amount)}`
+                  }`
+                : intl.formatMessage({ id: 'finance.emptyHint' })}
+            </span>
           </div>
         </div>
-      )}
+      </Card>
 
-      <h2 className={styles.sectionTitle}>{intl.formatMessage({ id: 'finance.transactions' })}</h2>
+      <div className={styles.summaryGrid}>
+        {summaryCards.map((item) => (
+          <Card key={item.key} className={`${styles.summaryCard} ${item.toneClass}`}>
+            <div className={styles.summaryIcon}>{item.icon}</div>
+            <span className={styles.summaryLabel}>{item.label}</span>
+            <span className={styles.summaryValue}>{item.value}</span>
+            <span className={styles.summaryHelper}>{item.helper}</span>
+          </Card>
+        ))}
+      </div>
+
+      <div className={styles.sectionHeader}>
+        <div>
+          <h2 className={styles.sectionTitle}>
+            {intl.formatMessage({ id: 'finance.transactions' })}
+          </h2>
+          <p className={styles.sectionSubtitle}>
+            {intl.formatMessage({ id: 'finance.transactionsSubtitle' }, { count: totalEntries })}
+          </p>
+        </div>
+      </div>
 
       {transactions && transactions.items.length === 0 && (
-        <EmptyState
-          icon={<Wallet size={40} />}
-          title={intl.formatMessage({ id: 'finance.noTransactions' })}
-        />
+        <Card className={styles.emptyWrap}>
+          <EmptyState
+            icon={<Wallet size={40} />}
+            title={intl.formatMessage({ id: 'finance.noTransactions' })}
+            description={intl.formatMessage({ id: 'finance.emptyHint' })}
+          />
+        </Card>
       )}
 
       {transactions &&
@@ -113,13 +250,20 @@ export function FinancePage() {
               </div>
               <div className={styles.txInfo}>
                 <span className={styles.txDesc}>{tx.description}</span>
-                <span className={styles.txDate}>
-                  {new Date(tx.createdAt).toLocaleDateString('uk-UA')}
-                </span>
+                <div className={styles.txMeta}>
+                  <span className={styles.txDate}>
+                    {dateFormatter.format(new Date(tx.createdAt))}
+                  </span>
+                  <span className={styles.txTypePill} data-type={tx.type}>
+                    {intl.formatMessage({
+                      id: tx.type === 'income' ? 'finance.income' : 'finance.expenses',
+                    })}
+                  </span>
+                </div>
               </div>
               <span className={styles.txAmount} data-type={tx.type}>
                 {tx.type === 'income' ? '+' : '-'}
-                {(tx.amount / 100).toFixed(0)} ₴
+                {formatMoney(tx.amount)}
               </span>
             </div>
           </Card>

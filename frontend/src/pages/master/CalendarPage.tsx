@@ -445,18 +445,17 @@ export function CalendarPage() {
 
   return (
     <div className="page animate-fade-in">
-      <PageHeader
-        title={intl.formatMessage({ id: 'master.calendar' })}
-        action={
-          <button
-            className={styles.addBtn}
-            onClick={handleOpenAddForm}
-            aria-label={intl.formatMessage({ id: 'calendar.recordAction' })}
-          >
-            {intl.formatMessage({ id: 'calendar.recordAction' })}
-          </button>
-        }
-      />
+      <PageHeader title={intl.formatMessage({ id: 'master.calendar' })} />
+
+      <div className={styles.headerActionWrap}>
+        <button
+          className={styles.addBtn}
+          onClick={handleOpenAddForm}
+          aria-label={intl.formatMessage({ id: 'calendar.recordAction' })}
+        >
+          {intl.formatMessage({ id: 'calendar.recordAction' })}
+        </button>
+      </div>
 
       <div className={styles.datePickerWrap}>
         <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={60} />

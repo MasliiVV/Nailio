@@ -45,6 +45,7 @@
 .slotActions {
   display: flex;
   gap: 8px;
+  align-items: stretch;
 }
 
 .iconButton {
@@ -56,6 +57,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .addSlotButton {
@@ -63,24 +68,44 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+  flex: 1;
   height: 40px;
+  padding: 0 14px;
   border-radius: var(--radius-sm);
   border: 1px dashed var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   color: var(--color-primary);
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .secondarySlotButton {
   flex: 1;
   min-height: 40px;
+  padding: 0 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-separator);
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconButton:focus-visible,
+.addSlotButton:focus-visible,
+.secondarySlotButton:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .dayOffText {

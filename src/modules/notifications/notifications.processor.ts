@@ -220,10 +220,33 @@ export class NotificationsProcessor extends WorkerHost {
               ],
             ],
           };
-        } else if (type === 'reminder_24h' || type === 'cancellation') {
-          // Client gets "write to master" button on 24h reminder and cancellation
+        } else if (type === 'reminder_24h') {
+          // Client gets "write to master" button on 24h reminder
           replyMarkup = {
             inline_keyboard: [
+              [
+                {
+                  text: '✍️ Написати майстру',
+                  callback_data: `writem:${bookingId}`,
+                },
+              ],
+            ],
+          };
+        } else if (type === 'cancellation') {
+          const miniAppUrl = this.configService.get<string>(
+            'MINI_APP_URL',
+            'https://app.platform.com',
+          );
+          const rebookUrl = `${miniAppUrl}?startapp=${tenant.slug}`;
+
+          replyMarkup = {
+            inline_keyboard: [
+              [
+                {
+                  text: '📅 Записатися знову',
+                  web_app: { url: rebookUrl },
+                },
+              ],
               [
                 {
                   text: '✍️ Написати майстру',

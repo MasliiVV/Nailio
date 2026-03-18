@@ -1,62 +1,230 @@
+.heroCard {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  margin-bottom: 18px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 18%, transparent), transparent 36%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 8%, var(--color-card-bg)) 0%, var(--color-card-bg) 65%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-separator));
+}
+
+.heroTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.heroEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.heroTitle {
+  margin: 0 0 6px;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.heroSubtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.heroAction {
+  flex-shrink: 0;
+  border-radius: 16px;
+  min-height: 48px;
+  padding-inline: 18px;
+}
+
+.heroMetrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.balanceCard,
+.snapshotCard,
+.summaryCard,
+.txCard,
+.emptyWrap {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-separator));
+}
+
+.balanceCard,
+.snapshotCard {
+  padding: 18px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--color-card-bg) 90%, white 10%);
+}
+
+.balancePositive {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-success) 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.balanceNegative {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-destructive) 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.balanceNeutral {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-text) 5%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.balanceLabel,
+.snapshotLabel,
+.summaryLabel,
+.summaryHelper,
+.sectionSubtitle,
+.txDate {
+  color: var(--color-text-secondary);
+}
+
+.balanceLabel,
+.snapshotLabel {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.balanceValue {
+  display: block;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+}
+
+.balanceHint,
+.snapshotHint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.snapshotValue {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
   margin-bottom: 24px;
 }
 
 .summaryCard {
-  background: var(--color-secondary-bg);
-  border-radius: var(--radius-md);
-  padding: 12px;
-  text-align: center;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--color-card-bg);
+}
+
+.toneIncome {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-success) 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneExpense {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-destructive) 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneNet {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 12%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.toneCount {
+  background: linear-gradient(135deg, color-mix(in srgb, #7c3aed 10%, var(--color-card-bg)), var(--color-card-bg));
+}
+
+.summaryIcon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
 }
 
 .summaryLabel {
   display: block;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
+  font-size: 13px;
+  margin-bottom: 8px;
 }
 
 .summaryValue {
   display: block;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
 }
 
-.summaryCard[data-type='income'] .summaryValue {
-  color: var(--color-success);
+.summaryHelper {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.summaryCard[data-type='expense'] .summaryValue {
-  color: var(--color-destructive);
+.sectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .sectionTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.sectionSubtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
 }
 
 .txRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 14px;
+  padding: 14px 16px;
 }
 
 .txCard {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+  background: var(--color-card-bg);
 }
 
 .txIcon {
-  font-size: 20px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--color-secondary-bg);
   flex-shrink: 0;
 }
 
@@ -69,20 +237,46 @@
 
 .txDesc {
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-bottom: 6px;
+}
+
+.txMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .txDate {
   font-size: 12px;
-  color: var(--color-text-secondary);
+}
+
+.txTypePill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--color-secondary-bg);
+}
+
+.txTypePill[data-type='income'] {
+  color: var(--color-success);
+}
+
+.txTypePill[data-type='expense'] {
+  color: var(--color-destructive);
 }
 
 .txAmount {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
   flex-shrink: 0;
 }
 
@@ -92,4 +286,33 @@
 
 .txAmount[data-type='expense'] {
   color: var(--color-destructive);
+}
+
+.emptyWrap {
+  border-radius: 20px;
+  background: var(--color-card-bg);
+}
+
+@media (max-width: 640px) {
+  .heroTopRow {
+    flex-direction: column;
+  }
+
+  .heroAction {
+    width: 100%;
+  }
+
+  .heroMetrics,
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .balanceValue,
+  .summaryValue {
+    font-size: 28px;
+  }
+
+  .txRow {
+    padding: 14px;
+  }
 }
