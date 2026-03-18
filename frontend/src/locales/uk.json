@@ -35,6 +35,7 @@
   "booking.confirmed": "✅ Запис підтверджено!",
   "booking.cancelled": "Запис скасовано",
   "booking.noSlots": "Немає вільних слотів на цей день",
+  "booking.slotTaken": "Упс, хтось був швидше — цей час уже зайнято.",
   "booking.cancelBooking": "Скасувати запис",
   "booking.cancelConfirm": "Ви впевнені, що хочете скасувати запис?",
   "booking.details": "Деталі запису",

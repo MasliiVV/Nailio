@@ -273,8 +273,7 @@ export class BookingsService {
     } catch (error: unknown) {
       // Re-throw our own exceptions
       if (error instanceof ConflictException) throw error;
-      // Handle DB constraint violation (concurrent booking)
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (this.isTimeSlotConflictError(error)) {
         throw new ConflictException('Time slot is already booked');
       }
       throw error;
@@ -902,6 +901,34 @@ export class BookingsService {
     }
 
     return false;
+  }
+
+  private isTimeSlotConflictError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const prismaError = error as Error & {
+      code?: string;
+      meta?: { target?: unknown; constraint?: string };
+    };
+
+    if (
+      prismaError.code === 'P2002' ||
+      prismaError.code === 'P2004' ||
+      prismaError.code === 'P2034'
+    ) {
+      return true;
+    }
+
+    const message = error.message.toLowerCase();
+
+    return (
+      message.includes('bookings_no_overlap') ||
+      message.includes('exclusion constraint') ||
+      message.includes('time slot is already booked') ||
+      message.includes('could not serialize access')
+    );
   }
 
   // ──────────────────────────────────────────────

@@ -10,7 +10,7 @@ import { FinanceService } from '../finance/finance.service';
 import { RebookingService } from '../rebooking/rebooking.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { SlotsQueryDto } from './dto/bookings.dto';
 import { BookingStatus } from '@prisma/client';
 import { buildDateTimeInTimezone } from '../../common/utils/date-time.util';
@@ -292,6 +292,50 @@ describe('BookingsService', () => {
         expectedStartTime,
         'client',
       );
+    });
+
+    it('should map concurrent slot conflicts to ConflictException', async () => {
+      const user: JwtPayload = {
+        sub: 'user-1',
+        telegramId: 123456,
+        role: 'client',
+        tenantId,
+        clientId: 'client-1',
+      };
+
+      prisma.tenantClient.client.findFirst.mockResolvedValue({
+        id: 'client-1',
+        tenantId,
+        isBlocked: false,
+      });
+
+      prisma.tenantClient.service.findFirst.mockResolvedValue({
+        id: 'service-uuid-1',
+        name: 'Манікюр',
+        price: 1200,
+        durationMinutes: 60,
+        isActive: true,
+      });
+
+      prisma.tenant.findUnique.mockResolvedValue({
+        id: tenantId,
+        timezone: 'Europe/Kyiv',
+      });
+
+      scheduleService.getSlotTimesForDate.mockResolvedValue(['09:00']);
+
+      prisma.$transaction.mockRejectedValue(
+        Object.assign(new Error('could not serialize access due to concurrent update'), {
+          code: 'P2034',
+        }),
+      );
+
+      await expect(
+        service.create(tenantId, user, {
+          serviceId: 'service-uuid-1',
+          startTime: '2026-12-15T09:00:00',
+        }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 

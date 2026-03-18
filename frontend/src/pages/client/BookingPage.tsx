@@ -5,7 +5,7 @@ import { useIntl } from 'react-intl';
 import { CheckCircle, CalendarOff } from 'lucide-react';
 import { useService, useSlots, useCreateBooking } from '@/hooks';
 import { Button, DatePicker, EmptyState } from '@/components/ui';
-import { api } from '@/lib/api';
+import { ApiRequestError, api } from '@/lib/api';
 import { getTelegram, isTelegramEnv } from '@/lib/telegram';
 import type { ApiResponse, SlotsResponse } from '@/types';
 import styles from './BookingPage.module.css';
@@ -136,10 +136,16 @@ export function BookingPage() {
       setTimeout(() => {
         navigate('/client/bookings');
       }, 2000);
-    } catch {
+    } catch (error) {
       tg?.MainButton.hideProgress();
       tg?.HapticFeedback.notificationOccurred('error');
-      tg?.showAlert(intl.formatMessage({ id: 'common.error' }));
+
+      const isSlotTaken =
+        error instanceof ApiRequestError &&
+        error.statusCode === 409 &&
+        error.message.toLowerCase().includes('time slot is already booked');
+
+      tg?.showAlert(intl.formatMessage({ id: isSlotTaken ? 'booking.slotTaken' : 'common.error' }));
     }
   }, [serviceId, selectedSlot, selectedDate, createBooking, navigate, promoCampaignId, intl]);
 
