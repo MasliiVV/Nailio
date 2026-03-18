@@ -105,9 +105,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 96px;
-  height: 36px;
-  padding: 0 14px;
+  min-width: 124px;
+  height: 40px;
+  padding: 0 18px;
   border-radius: 999px;
   background: var(--color-primary);
   color: var(--color-primary-text);
@@ -115,7 +115,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: opacity var(--transition-fast);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
 }

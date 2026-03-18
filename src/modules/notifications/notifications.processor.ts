@@ -220,8 +220,8 @@ export class NotificationsProcessor extends WorkerHost {
               ],
             ],
           };
-        } else if (type === 'reminder_24h') {
-          // Client gets "write to master" button on 24h reminder
+        } else if (type === 'reminder_24h' || type === 'cancellation') {
+          // Client gets "write to master" button on 24h reminder and cancellation
           replyMarkup = {
             inline_keyboard: [
               [
