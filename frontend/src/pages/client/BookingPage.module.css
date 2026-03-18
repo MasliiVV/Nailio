@@ -55,6 +55,10 @@
   font-weight: 600;
 }
 
+.confirmBar {
+  margin-top: var(--space-lg);
+}
+
 .confirmed {
   flex: 1;
   display: flex;

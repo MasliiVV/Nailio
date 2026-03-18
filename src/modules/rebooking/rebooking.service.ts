@@ -190,14 +190,17 @@ export class RebookingService {
         continue;
       }
 
+      const campaignMessage = this.buildPersonalizedCampaignMessage(
+        client.firstName,
+        campaignType === 'slot_fill'
+          ? dto.message
+          : this.appendSlotOptionsToMessage(dto.message, cycleSlotOptions, tenant.timezone),
+      );
+
       const sent = await this.botService.sendMessage(
         bot.id,
         BigInt(client.telegramId),
-        `Привіт, ${this.escapeHtml(client.firstName)}!\n\n${this.escapeHtml(
-          campaignType === 'slot_fill'
-            ? dto.message
-            : this.appendSlotOptionsToMessage(dto.message, cycleSlotOptions, tenant.timezone),
-        )}`,
+        campaignMessage,
         {
           parseMode: 'HTML',
           replyMarkup:
@@ -1123,6 +1126,18 @@ export class RebookingService {
     const normalizedBase = this.appUrl.endsWith('/') ? this.appUrl.slice(0, -1) : this.appUrl;
     const campaignQuery = campaignId ? `&campaignId=${campaignId}` : '';
     return `${normalizedBase}/client/book/${serviceId}?startapp=${tenantSlug}&date=${date}&slot=${startTime}${campaignQuery}`;
+  }
+
+  private buildPersonalizedCampaignMessage(firstName: string, rawMessage: string) {
+    const normalizedMessage = rawMessage.trim();
+    const withoutGreeting = normalizedMessage
+      .replace(/^привіт(?:,?\s*[\p{L}'’-]+)?!?\s*/iu, '')
+      .replace(/^доброго\s+дня(?:,?\s*[\p{L}'’-]+)?!?\s*/iu, '')
+      .trimStart();
+
+    const escapedBody = this.escapeHtml(withoutGreeting || normalizedMessage);
+
+    return `Привіт, ${this.escapeHtml(firstName)}!${escapedBody ? `\n\n${escapedBody}` : ''}`;
   }
 
   private shortDateLabel(date: string) {

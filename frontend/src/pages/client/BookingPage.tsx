@@ -4,7 +4,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIntl } from 'react-intl';
 import { CheckCircle, CalendarOff } from 'lucide-react';
 import { useService, useSlots, useCreateBooking } from '@/hooks';
-import { DatePicker, EmptyState } from '@/components/ui';
+import { Button, DatePicker, EmptyState } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import type { ApiResponse, SlotsResponse } from '@/types';
@@ -110,8 +110,14 @@ export function BookingPage() {
   const handleConfirm = useCallback(async () => {
     if (!serviceId || !selectedSlot) return;
 
-    const tg = getTelegram();
-    tg?.MainButton.showProgress();
+    let tg: ReturnType<typeof getTelegram> | null = null;
+
+    try {
+      tg = getTelegram();
+      tg.MainButton.showProgress();
+    } catch {
+      tg = null;
+    }
 
     try {
       await createBooking.mutateAsync({
@@ -132,8 +138,9 @@ export function BookingPage() {
     } catch {
       tg?.MainButton.hideProgress();
       tg?.HapticFeedback.notificationOccurred('error');
+      tg?.showAlert(intl.formatMessage({ id: 'common.error' }));
     }
-  }, [serviceId, selectedSlot, selectedDate, createBooking, navigate]);
+  }, [serviceId, selectedSlot, selectedDate, createBooking, navigate, promoCampaignId, intl]);
 
   // Setup MainButton
   useEffect(() => {
@@ -222,20 +229,37 @@ export function BookingPage() {
         )}
 
         {!slotsLoading && availableSlots.length > 0 && (
-          <div className={styles.slotsGrid}>
-            {availableSlots.map((slot) => (
-              <button
-                key={slot.startTime}
-                className={`${styles.slot} ${selectedSlot === slot.startTime ? styles.slotSelected : ''}`}
-                onClick={() => {
-                  getTelegram()?.HapticFeedback.selectionChanged();
-                  setSelectedSlot(slot.startTime);
-                }}
+          <>
+            <div className={styles.slotsGrid}>
+              {availableSlots.map((slot) => (
+                <button
+                  key={slot.startTime}
+                  className={`${styles.slot} ${selectedSlot === slot.startTime ? styles.slotSelected : ''}`}
+                  onClick={() => {
+                    try {
+                      getTelegram().HapticFeedback.selectionChanged();
+                    } catch {
+                      // noop outside Telegram
+                    }
+                    setSelectedSlot(slot.startTime);
+                  }}
+                >
+                  {slot.startTime}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.confirmBar}>
+              <Button
+                fullWidth
+                onClick={() => void handleConfirm()}
+                disabled={!selectedSlot}
+                loading={createBooking.isPending}
               >
-                {slot.startTime}
-              </button>
-            ))}
-          </div>
+                {intl.formatMessage({ id: 'booking.confirm' })}
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </div>
