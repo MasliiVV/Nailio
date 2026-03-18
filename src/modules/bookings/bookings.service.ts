@@ -164,19 +164,22 @@ export class BookingsService {
     });
     if (!service) throw new NotFoundException('Service not found or inactive');
 
-    const startTime = new Date(dto.startTime);
-    const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
-
-    if (startTime <= new Date()) {
-      throw new BadRequestException('Cannot book in the past');
-    }
-
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
     const timezone = tenant.timezone || 'Europe/Kyiv';
+    const startTime = this.parseBookingDateTime(dto.startTime, timezone);
+    if (isNaN(startTime.getTime())) {
+      throw new BadRequestException('Invalid start time');
+    }
+
+    const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
+
+    if (startTime <= new Date()) {
+      throw new BadRequestException('Cannot book in the past');
+    }
 
     const localDateStr = startTime
       .toLocaleDateString('en-CA', { timeZone: timezone })
@@ -650,15 +653,19 @@ export class BookingsService {
       throw new BadRequestException(`Cannot reschedule booking with status "${booking.status}"`);
     }
 
-    const newStartTime = new Date(dto.startTime);
-    if (newStartTime <= new Date()) {
-      throw new BadRequestException('Cannot reschedule to a past time');
-    }
-
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
     const timezone = tenant.timezone || 'Europe/Kyiv';
+    const newStartTime = this.parseBookingDateTime(dto.startTime, timezone);
+    if (isNaN(newStartTime.getTime())) {
+      throw new BadRequestException('Invalid start time');
+    }
+
+    if (newStartTime <= new Date()) {
+      throw new BadRequestException('Cannot reschedule to a past time');
+    }
+
     const localDateStr = newStartTime.toLocaleDateString('en-CA', { timeZone: timezone });
     const localTimeStr = formatTimeInTimezone(newStartTime, timezone);
     const allowedSlots = await this.scheduleService.getSlotTimesForDate(tenantId, localDateStr);
@@ -846,6 +853,20 @@ export class BookingsService {
 
   private formatBookingDateTimeForTimezone(startTime: Date, timezone: string) {
     return formatBookingDateTime(startTime, timezone);
+  }
+
+  private parseBookingDateTime(value: string, timezone: string) {
+    const hasExplicitTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value);
+    if (hasExplicitTimezone) {
+      return new Date(value);
+    }
+
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::\d{2}(?:\.\d{1,3})?)?$/);
+    if (match) {
+      return buildDateTimeInTimezone(match[1], match[2], timezone);
+    }
+
+    return new Date(value);
   }
 
   private hasOverlappingInterval(slotStart: Date, slotEnd: Date, bookings: Booking[]): boolean {

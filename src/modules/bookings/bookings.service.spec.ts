@@ -7,11 +7,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ScheduleService } from '../schedule/schedule.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FinanceService } from '../finance/finance.service';
+import { RebookingService } from '../rebooking/rebooking.service';
 import { JwtPayload } from '../../common/decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SlotsQueryDto } from './dto/bookings.dto';
 import { BookingStatus } from '@prisma/client';
+import { buildDateTimeInTimezone } from '../../common/utils/date-time.util';
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -20,6 +22,7 @@ describe('BookingsService', () => {
   let scheduleService: any;
   let notificationsService: any;
   let financeService: any;
+  let rebookingService: any;
   let configService: any;
   let fetchMock: jest.Mock;
   /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -31,6 +34,7 @@ describe('BookingsService', () => {
     global.fetch = fetchMock as typeof fetch;
 
     prisma = {
+      $transaction: jest.fn(),
       client: { findFirst: jest.fn() },
       master: { findFirst: jest.fn() },
       booking: { findUnique: jest.fn(), findFirst: jest.fn() },
@@ -60,6 +64,10 @@ describe('BookingsService', () => {
       createBookingTransaction: jest.fn(),
     };
 
+    rebookingService = {
+      handleCampaignBooking: jest.fn(),
+    };
+
     configService = {
       getOrThrow: jest.fn().mockReturnValue('test-token'),
     };
@@ -71,6 +79,7 @@ describe('BookingsService', () => {
         { provide: ScheduleService, useValue: scheduleService },
         { provide: NotificationsService, useValue: notificationsService },
         { provide: FinanceService, useValue: financeService },
+        { provide: RebookingService, useValue: rebookingService },
         { provide: ConfigService, useValue: configService },
       ],
     }).compile();
@@ -207,6 +216,84 @@ describe('BookingsService', () => {
   // ──────────────────────────────────────────────
   // Status Transition Tests
   // ──────────────────────────────────────────────
+
+  describe('create()', () => {
+    it('should interpret timezone-less startTime in tenant timezone', async () => {
+      const user: JwtPayload = {
+        sub: 'user-1',
+        telegramId: 123456,
+        role: 'client',
+        tenantId,
+        clientId: 'client-1',
+      };
+
+      prisma.tenantClient.client.findFirst.mockResolvedValue({
+        id: 'client-1',
+        tenantId,
+        isBlocked: false,
+      });
+
+      prisma.tenantClient.service.findFirst.mockResolvedValue({
+        id: 'service-uuid-1',
+        name: 'Манікюр',
+        price: 1200,
+        durationMinutes: 60,
+        isActive: true,
+      });
+
+      prisma.tenant.findUnique.mockResolvedValue({
+        id: tenantId,
+        timezone: 'Pacific/Auckland',
+      });
+
+      scheduleService.getSlotTimesForDate.mockResolvedValue(['09:00']);
+
+      prisma.$transaction.mockImplementation(
+        async (callback: (tx: { booking: Record<string, jest.Mock> }) => Promise<unknown>) => {
+          const tx = {
+            booking: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest
+                .fn()
+                .mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+                  id: 'booking-1',
+                  ...data,
+                  createdAt: new Date('2026-01-01T00:00:00.000Z'),
+                  client: {
+                    id: 'client-1',
+                    firstName: 'Іра',
+                    lastName: null,
+                    phone: '+380501112233',
+                    user: {
+                      telegramId: BigInt(777000111),
+                    },
+                  },
+                })),
+            },
+          };
+
+          return callback(tx);
+        },
+      );
+
+      const result = await service.create(tenantId, user, {
+        serviceId: 'service-uuid-1',
+        startTime: '2026-12-15T09:00:00',
+      });
+
+      const expectedStartTime = buildDateTimeInTimezone('2026-12-15', '09:00', 'Pacific/Auckland');
+
+      expect(result.startTime).toBe(expectedStartTime.toISOString());
+      expect(scheduleService.getSlotTimesForDate).toHaveBeenCalledWith(tenantId, '2026-12-15');
+      expect(notificationsService.scheduleBookingNotifications).toHaveBeenCalledWith(
+        tenantId,
+        'booking-1',
+        'client-1',
+        expectedStartTime,
+        'client',
+      );
+    });
+  });
 
   describe('complete()', () => {
     it('should request only upcoming active bookings when upcoming=true', async () => {
