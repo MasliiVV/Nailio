@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useCreateService } from '@/hooks';
 import { Button, Input, Card } from '@/components/ui';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { api, ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import { WEEK_DAY_KEYS } from '@/lib/schedule';
@@ -271,7 +272,7 @@ export function OnboardingWizard({ previewMode = false }: OnboardingWizardProps)
             <div className={styles.phoneFrame}>
               <div className={styles.phoneTopBar}>
                 <div>
-                  <div className={styles.phoneBrand}>Nailio</div>
+                  <BrandLogo variant="wordmark" className={styles.phoneBrandLogo} />
                   <div className={styles.phoneLabel}>
                     {intl.formatMessage({ id: 'onboarding.showcasePhoneLabel' })}
                   </div>

@@ -123,6 +123,14 @@
   color: var(--color-primary);
 }
 
+.phoneBrandLogo {
+  display: block;
+  width: 136px;
+  height: auto;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 8px 18px rgba(46, 26, 89, 0.14));
+}
+
 .phoneLabel {
   font-size: 14px;
   color: var(--color-text);

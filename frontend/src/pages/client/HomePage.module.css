@@ -12,6 +12,14 @@
   box-shadow: var(--shadow-md);
 }
 
+.brandMark {
+  width: 76px;
+  height: 76px;
+  display: block;
+  margin: 0 auto var(--space-md);
+  filter: drop-shadow(0 18px 24px rgba(70, 49, 141, 0.2));
+}
+
 .title {
   font-size: var(--font-size-3xl);
   font-weight: 800;

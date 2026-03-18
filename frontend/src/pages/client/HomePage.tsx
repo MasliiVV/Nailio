@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Scissors, MessageCircle } from 'lucide-react';
 import { useServices } from '@/hooks';
 import { useAuth } from '@/hooks/useAuth';
+import { BrandLogo } from '@/components/brand/BrandLogo';
 import { Card, EmptyState, SkeletonList } from '@/components/ui';
 import { MessageSheet } from '@/components/MessageSheet/MessageSheet';
 import { getTelegram } from '@/lib/telegram';
@@ -30,8 +31,10 @@ export function ClientHomePage() {
     <div className="page animate-fade-in">
       {/* Welcome header */}
       <div className={styles.header}>
-        {tenant?.logoUrl && (
+        {tenant?.logoUrl ? (
           <img src={tenant.logoUrl} alt={tenant.displayName} className={styles.logo} />
+        ) : (
+          <BrandLogo variant="mark" className={styles.brandMark} />
         )}
         <h1 className={styles.title}>{tenant?.displayName || 'Nailio'}</h1>
         {tenant?.branding?.welcomeMessage && (

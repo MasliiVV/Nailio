@@ -1,0 +1,22 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A183C"/>
+      <stop offset="0.52" stop-color="#5F3DC4"/>
+      <stop offset="1" stop-color="#171125"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="18" y1="15" x2="44" y2="48" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7D4"/>
+      <stop offset="0.34" stop-color="#F4D881"/>
+      <stop offset="0.72" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D9C2FF"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="44" y1="6" x2="52" y2="16" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF4C2"/>
+      <stop offset="1" stop-color="#F2C66D"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#bg)"/>
+  <path d="M18 46V21C18 18.791 19.791 17 22 17C23.346 17 24.604 17.676 25.344 18.799L38.855 39.366V21C38.855 18.791 40.646 17 42.855 17C45.064 17 46.855 18.791 46.855 21V46C46.855 48.209 45.064 50 42.855 50C41.509 50 40.251 49.324 39.511 48.201L26 27.634V46C26 48.209 24.209 50 22 50C19.791 50 18 48.209 18 46Z" fill="url(#ribbon)"/>
+  <path d="M49 7L50.402 10.598L54 12L50.402 13.402L49 17L47.598 13.402L44 12L47.598 10.598L49 7Z" fill="url(#spark)"/>
+</svg>
