@@ -59,6 +59,17 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
     [rebookingOverview?.emptySlots],
   );
 
+  const focusTextareaToEnd = () => {
+    setTimeout(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      textarea.focus();
+      const cursorPosition = textarea.value.length;
+      textarea.setSelectionRange(cursorPosition, cursorPosition);
+    }, 0);
+  };
+
   const handleGeneratePromoMessage = async () => {
     if (mode !== 'promo') return;
 
@@ -85,6 +96,7 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
 
         return `${trimmedPrevious}\n\n${trimmedNext}`;
       });
+      focusTextareaToEnd();
     } catch {
       // Error state is shown in UI
     }
