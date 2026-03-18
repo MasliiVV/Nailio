@@ -1,13 +1,18 @@
 import { useIntl } from 'react-intl';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, Wallet, Crown, Clock, Scissors, Sparkles } from 'lucide-react';
+import { useAuth } from '@/hooks';
 import { Card, CardRow, PageHeader } from '@/components/ui';
 import { prefetchMasterInsights } from '@/lib/prefetch';
 import styles from './SettingsPage.module.css';
 
+const DEVELOPER_TELEGRAM_ID = '422552831';
+
 export function SettingsPage() {
   const intl = useIntl();
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const canPreviewShowcase = profile?.telegramId === DEVELOPER_TELEGRAM_ID;
 
   const prefetchInsights = () => {
     prefetchMasterInsights();
@@ -59,11 +64,13 @@ export function SettingsPage() {
               title={intl.formatMessage({ id: 'services.title' })}
               onClick={() => navigate('/master/services')}
             />
-            <CardRow
-              icon={<Sparkles size={20} />}
-              title={intl.formatMessage({ id: 'onboarding.previewShowcase' })}
-              onClick={() => navigate('/master/showcase-preview')}
-            />
+            {canPreviewShowcase && (
+              <CardRow
+                icon={<Sparkles size={20} />}
+                title={intl.formatMessage({ id: 'onboarding.previewShowcase' })}
+                onClick={() => navigate('/master/showcase-preview')}
+              />
+            )}
           </>
         </Card>
       </>

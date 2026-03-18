@@ -63,6 +63,42 @@ export class OnboardingService {
       has_bot: true,
     });
 
+    const master = await this.prisma.master.findUnique({
+      where: { tenantId },
+      include: {
+        user: {
+          select: {
+            telegramId: true,
+          },
+        },
+      },
+    });
+
+    if (master?.user?.telegramId) {
+      const messageSent = await this.botService
+        .sendMessage(
+          result.id,
+          master.user.telegramId,
+          [
+            `✅ Бот @${result.botUsername} підключено до Nailio.`,
+            'Це тестове повідомлення, щоб ви швидко знайшли чат бота.',
+            `Посилання на бота: https://t.me/${result.botUsername}`,
+          ].join('\n'),
+        )
+        .catch((error: unknown) => {
+          this.logger.warn(
+            `Failed to send post-connect test message for tenant ${tenantId}: ${String(error)}`,
+          );
+          return false;
+        });
+
+      if (!messageSent) {
+        this.logger.warn(
+          `Post-connect test message was not delivered for tenant ${tenantId} (bot may not be started yet)`,
+        );
+      }
+    }
+
     return result;
   }
 
