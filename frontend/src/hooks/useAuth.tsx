@@ -144,9 +144,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const tg = getTelegram();
     if (!tg) return;
 
-    // Close the Mini App on back button if at root
+    const shouldCloseMiniApp = (pathname: string) => {
+      if (pathname === '/onboarding' || pathname === '/master' || pathname === '/client') {
+        return true;
+      }
+
+      return false;
+    };
+
     const handleBack = () => {
-      if (window.history.length <= 1) {
+      if (shouldCloseMiniApp(window.location.pathname)) {
         tg.close();
       } else {
         window.history.back();

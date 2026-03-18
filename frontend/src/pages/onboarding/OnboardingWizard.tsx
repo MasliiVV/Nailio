@@ -226,6 +226,11 @@ export function OnboardingWizard() {
     openTelegramTarget(NAILIO_BOT_URL);
   }, [openTelegramTarget]);
 
+  const handleCloseMiniApp = useCallback(() => {
+    getTelegram()?.HapticFeedback.impactOccurred('light');
+    getTelegram()?.close();
+  }, []);
+
   const handleStartRegistration = useCallback(() => {
     getTelegram()?.HapticFeedback.notificationOccurred('success');
     setStep(REGISTRATION_START_STEP);
@@ -322,6 +327,9 @@ export function OnboardingWizard() {
               <ArrowRight size={16} />
             </Button>
           </div>
+          <Button variant="ghost" fullWidth onClick={handleCloseMiniApp}>
+            {intl.formatMessage({ id: 'onboarding.exitMiniApp' })}
+          </Button>
           <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
             {intl.formatMessage({ id: 'onboarding.contactDeveloper' })}
           </button>
@@ -552,6 +560,9 @@ export function OnboardingWizard() {
             <Button fullWidth onClick={handleStartRegistration}>
               {intl.formatMessage({ id: 'onboarding.start' })}
               <ArrowRight size={16} />
+            </Button>
+            <Button variant="ghost" fullWidth onClick={handleCloseMiniApp}>
+              {intl.formatMessage({ id: 'onboarding.exitMiniApp' })}
             </Button>
           </div>
           <button type="button" className={styles.showcaseLinkButton} onClick={handleContactDeveloper}>
