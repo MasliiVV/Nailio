@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { CheckCircle, Send } from 'lucide-react';
+import { CheckCircle, Send, Wand2 } from 'lucide-react';
 import { BottomSheet, Button } from '@/components/ui';
 import { useSendClientMessage } from '@/hooks';
+import { useGenerateRebookingMessage, useRebookingOverview } from '@/hooks/useRebooking';
 import styles from '@/components/MessageSheet/MessageSheet.module.css';
 
 interface ClientMessageSheetProps {
@@ -16,8 +17,11 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
   const intl = useIntl();
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [tone, setTone] = useState<'soft' | 'friendly'>('friendly');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const sendMessage = useSendClientMessage(clientId);
+  const { data: rebookingOverview } = useRebookingOverview();
+  const generatePromoMessage = useGenerateRebookingMessage();
 
   const titleId = mode === 'promo' ? 'clients.reminderPromoTitle' : 'clients.messageClientTitle';
   const placeholderId =
@@ -35,11 +39,45 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
       const timer = setTimeout(() => {
         setMessage('');
         setSent(false);
+        setTone('friendly');
         sendMessage.reset();
+        generatePromoMessage.reset();
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [open, sendMessage]);
+  }, [generatePromoMessage, open, sendMessage]);
+
+  const promoSlotOptions = useMemo(
+    () =>
+      (rebookingOverview?.emptySlots || []).slice(0, 3).map((slot) => ({
+        date: slot.date,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })),
+    [rebookingOverview?.emptySlots],
+  );
+
+  const handleGeneratePromoMessage = async () => {
+    if (mode !== 'promo') return;
+
+    const fallbackDate = new Date().toLocaleDateString('en-CA');
+    const firstSlot = promoSlotOptions[0];
+
+    try {
+      const response = await generatePromoMessage.mutateAsync({
+        campaignType: 'cycle_followup',
+        clientIds: [clientId],
+        date: rebookingOverview?.selectedDate || firstSlot?.date || fallbackDate,
+        startTime: firstSlot?.startTime || '09:00',
+        endTime: firstSlot?.endTime || '09:30',
+        tone,
+        slotOptions: promoSlotOptions.length > 0 ? promoSlotOptions : undefined,
+      });
+      setMessage(response.message);
+    } catch {
+      // Error state is shown in UI
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -66,6 +104,40 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
         </div>
       ) : (
         <div className={styles.form}>
+          {mode === 'promo' && (
+            <>
+              <div className={styles.helperText}>
+                {intl.formatMessage({ id: 'clients.aiPromoHint' })}
+              </div>
+              <div className={styles.toneRow}>
+                <Button
+                  size="sm"
+                  variant={tone === 'soft' ? 'primary' : 'secondary'}
+                  onClick={() => setTone('soft')}
+                >
+                  {intl.formatMessage({ id: 'rebooking.toneSoft' })}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={tone === 'friendly' ? 'primary' : 'secondary'}
+                  onClick={() => setTone('friendly')}
+                >
+                  {intl.formatMessage({ id: 'rebooking.toneFriendly' })}
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                fullWidth
+                loading={generatePromoMessage.isPending}
+                onClick={handleGeneratePromoMessage}
+                icon={<Wand2 size={18} />}
+              >
+                {intl.formatMessage({
+                  id: message.trim() ? 'clients.aiPromoRegenerate' : 'clients.aiPromoGenerate',
+                })}
+              </Button>
+            </>
+          )}
           <textarea
             ref={textareaRef}
             className={styles.textarea}
@@ -78,6 +150,11 @@ export function ClientMessageSheet({ clientId, mode, open, onClose }: ClientMess
           {sendMessage.isError && (
             <span className={styles.errorText}>
               {intl.formatMessage({ id: 'client.messageError' })}
+            </span>
+          )}
+          {generatePromoMessage.isError && mode === 'promo' && (
+            <span className={styles.errorText}>
+              {intl.formatMessage({ id: 'clients.aiPromoError' })}
             </span>
           )}
           <Button

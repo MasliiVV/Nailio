@@ -280,6 +280,10 @@
   "clients.reminderPromoTitle": "Send reminder / promo",
   "clients.reminderPromoPlaceholder": "Type a reminder or promo message...",
   "clients.reminderPromoSent": "Reminder / promo sent!",
+  "clients.aiPromoHint": "AI can help draft a polished reminder or promo for this client.",
+  "clients.aiPromoGenerate": "Create text with AI",
+  "clients.aiPromoRegenerate": "Refresh text with AI",
+  "clients.aiPromoError": "Could not generate the text. Please try again.",
   "clients.unblock": "Unblock client",
   "clients.block": "Block client",
 

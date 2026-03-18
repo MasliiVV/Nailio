@@ -280,6 +280,10 @@
   "clients.reminderPromoTitle": "Надіслати нагадування / промо",
   "clients.reminderPromoPlaceholder": "Напишіть нагадування або промо-пропозицію...",
   "clients.reminderPromoSent": "Нагадування / промо надіслано!",
+  "clients.aiPromoHint": "AI допоможе швидко скласти гарне нагадування або промо для цього клієнта.",
+  "clients.aiPromoGenerate": "Створити текст з AI",
+  "clients.aiPromoRegenerate": "Оновити текст з AI",
+  "clients.aiPromoError": "Не вдалося згенерувати текст. Спробуйте ще раз.",
   "clients.unblock": "Розблокувати клієнта",
   "clients.block": "Заблокувати клієнта",
 

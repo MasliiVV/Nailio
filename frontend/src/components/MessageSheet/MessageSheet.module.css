@@ -5,6 +5,21 @@
   padding-top: var(--space-sm);
 }
 
+.helperText {
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.toneRow {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.toneRow > * {
+  flex: 1;
+}
+
 .textarea {
   width: 100%;
   min-height: 120px;
