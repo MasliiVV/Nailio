@@ -27,20 +27,6 @@ interface CampaignRecipient {
   status: 'sent' | 'booked' | 'closed';
 }
 
-interface StoredCampaign {
-  id: string;
-  type?: RebookingCampaignType;
-  date: string;
-  startTime: string;
-  endTime: string;
-  message: string;
-  createdAt: string;
-  status: 'active' | 'filled';
-  bookedByClientId?: string;
-  slotOptions?: CampaignSlotOption[];
-  recipients: CampaignRecipient[];
-}
-
 export interface CampaignLogItem {
   id: string;
   type: RebookingCampaignType;
@@ -74,7 +60,6 @@ interface TenantContext {
 @Injectable()
 export class RebookingService {
   private readonly logger = new Logger(RebookingService.name);
-  private readonly campaignsKey = 'smart_rebooking_campaigns';
   private readonly defaultCycleDays = 21;
   private readonly appUrl: string;
   private readonly aiApiKey?: string;
@@ -95,13 +80,14 @@ export class RebookingService {
     const tenant = await this.getTenantContext(tenantId);
     const selectedDate = requestedDate || this.getTodayKey(tenant.timezone);
     const rangeDates = this.getDateRange(selectedDate, 14);
-    const [heatmap, emptySlots, recommendations, kpis] = await Promise.all([
-      this.buildHeatmap(tenant, rangeDates),
-      this.buildEmptySlots(tenant, rangeDates.slice(0, 7)),
+    const slotTimesByDate = await this.getSlotTimesByDate(tenant.id, rangeDates);
+    const [heatmap, emptySlots, recommendations, kpis, sendLog] = await Promise.all([
+      this.buildHeatmap(tenant, rangeDates, slotTimesByDate),
+      this.buildEmptySlots(tenant, rangeDates.slice(0, 7), slotTimesByDate),
       this.buildRecommendations(tenant, selectedDate),
-      this.buildKpis(tenant, rangeDates),
+      this.buildKpis(tenant, rangeDates, slotTimesByDate),
+      this.buildCampaignLog(tenant.id),
     ]);
-    const sendLog = this.buildCampaignLog(tenant.settings);
 
     return {
       selectedDate,
@@ -253,24 +239,30 @@ export class RebookingService {
       });
     }
 
-    const campaigns = this.extractCampaigns(tenant.settings);
-    campaigns.push({
-      id: campaignId,
-      type: campaignType,
-      date: dto.date,
-      startTime: dto.startTime,
-      endTime: dto.endTime,
-      message: dto.message,
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      slotOptions: campaignType === 'cycle_followup' ? cycleSlotOptions : slotFillOptions,
-      recipients,
-    });
-
-    await this.prisma.tenant.update({
-      where: { id: tenantId },
+    await this.prisma.rebookingCampaign.create({
       data: {
-        settings: this.withCampaigns(tenant.settings, campaigns),
+        id: campaignId,
+        tenantId,
+        type: campaignType,
+        date: new Date(`${dto.date}T00:00:00.000Z`),
+        startTime: dto.startTime,
+        endTime: dto.endTime,
+        message: dto.message,
+        status: 'active',
+        slotOptions: (campaignType === 'cycle_followup'
+          ? cycleSlotOptions
+          : slotFillOptions) as unknown as Prisma.InputJsonValue,
+        recipients: {
+          create: recipients.map((recipient) => ({
+            tenantId,
+            clientId: recipient.clientId,
+            firstName: recipient.firstName,
+            telegramId: recipient.telegramId,
+            serviceId: recipient.serviceId,
+            serviceName: recipient.serviceName,
+            status: recipient.status,
+          })),
+        },
       },
     });
 
@@ -293,18 +285,23 @@ export class RebookingService {
       return;
     }
 
-    const campaigns = this.extractCampaigns(tenant.settings);
-    const campaign = campaigns.find((item) => item.id === campaignId);
+    const campaign = await this.prisma.tenantClient.rebookingCampaign.findFirst({
+      where: { id: campaignId, tenantId },
+      include: { recipients: true },
+    });
+
     if (!campaign || campaign.status === 'filled') {
       return;
     }
 
     let changed = false;
+    const recipientUpdates: Array<{ id: string; status: 'booked' | 'closed' }> = [];
+    const slotOptions = this.parseCampaignSlotOptions(campaign.slotOptions);
+    const campaignDate = campaign.date.toISOString().split('T')[0];
+
     for (const recipient of campaign.recipients) {
       if (recipient.clientId === clientId && recipient.status !== 'booked') {
-        recipient.status = 'booked';
-        campaign.bookedByClientId = clientId;
-        campaign.status = 'filled';
+        recipientUpdates.push({ id: recipient.id, status: 'booked' });
         changed = true;
         continue;
       }
@@ -315,12 +312,12 @@ export class RebookingService {
 
       const promoAlternatives = await this.filterAvailableCampaignSlotOptions(
         tenantId,
-        campaign.slotOptions || [],
+        slotOptions,
         recipient.serviceId || serviceId,
       );
 
       const alternatives = promoAlternatives.filter(
-        (slot) => !(slot.date === campaign.date && slot.startTime === campaign.startTime),
+        (slot) => !(slot.date === campaignDate && slot.startTime === campaign.startTime),
       );
 
       const alternativeLabel = alternatives
@@ -336,14 +333,14 @@ export class RebookingService {
       await this.botService.sendMessage(
         bot.id,
         BigInt(recipient.telegramId),
-        `Привіт, ${this.escapeHtml(recipient.firstName)}!\n\nНа жаль, вікно ${this.formatDateLabel(campaign.date, tenant.timezone)} о ${campaign.startTime} вже зайняте.\n${alternativeLabel ? `\nМожеш вибрати інший час із цього промо:\n${this.escapeHtml(alternativeLabel)}` : '\nМожеш обрати інший зручний час у додатку 💜'}`,
+        `Привіт, ${this.escapeHtml(recipient.firstName)}!\n\nНа жаль, вікно ${this.formatDateLabel(campaignDate, tenant.timezone)} о ${campaign.startTime} вже зайняте.\n${alternativeLabel ? `\nМожеш вибрати інший час із цього промо:\n${this.escapeHtml(alternativeLabel)}` : '\nМожеш обрати інший зручний час у додатку 💜'}`,
         {
           parseMode: 'HTML',
           replyMarkup,
         },
       );
 
-      recipient.status = 'closed';
+      recipientUpdates.push({ id: recipient.id, status: 'closed' });
       changed = true;
     }
 
@@ -351,15 +348,34 @@ export class RebookingService {
       return;
     }
 
-    await this.prisma.tenant.update({
-      where: { id: tenantId },
-      data: {
-        settings: this.withCampaigns(tenant.settings, campaigns),
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await Promise.all(
+        recipientUpdates.map((recipient) =>
+          tx.rebookingCampaignRecipient.update({
+            where: { id: recipient.id },
+            data: { status: recipient.status },
+          }),
+        ),
+      );
+
+      const bookedRecipient = recipientUpdates.find((recipient) => recipient.status === 'booked');
+      if (bookedRecipient) {
+        await tx.rebookingCampaign.update({
+          where: { id: campaign.id },
+          data: {
+            bookedByClientId: clientId,
+            status: 'filled',
+          },
+        });
+      }
     });
   }
 
-  private async buildHeatmap(tenant: TenantContext, dates: string[]) {
+  private async buildHeatmap(
+    tenant: TenantContext,
+    dates: string[],
+    slotTimesByDate: Map<string, string[]>,
+  ) {
     const step = this.getSlotStepMinutes(tenant.settings);
     const bookings = await this.getBookingsInRange(tenant.id, dates[0], dates[dates.length - 1]);
     const bookingsByDate = new Map<string, CompletedBookingRecord[]>();
@@ -380,7 +396,7 @@ export class RebookingService {
     }>;
 
     for (const date of dates) {
-      const slots = await this.scheduleService.getSlotTimesForDate(tenant.id, date);
+      const slots = slotTimesByDate.get(date) || [];
       const bookingsForDate = bookingsByDate.get(date) || [];
       const bookedSlots = Math.min(
         slots.length,
@@ -398,7 +414,11 @@ export class RebookingService {
     return result;
   }
 
-  private async buildEmptySlots(tenant: TenantContext, dates: string[]) {
+  private async buildEmptySlots(
+    tenant: TenantContext,
+    dates: string[],
+    slotTimesByDate: Map<string, string[]>,
+  ) {
     const bookings = await this.getBookingsInRange(tenant.id, dates[0], dates[dates.length - 1]);
     const bookingsByDate = new Map<string, Set<string>>();
 
@@ -418,7 +438,7 @@ export class RebookingService {
     }>;
 
     for (const date of dates) {
-      const slots = await this.scheduleService.getSlotTimesForDate(tenant.id, date);
+      const slots = slotTimesByDate.get(date) || [];
       const busy = bookingsByDate.get(date) || new Set<string>();
       const freeSlots = slots.filter((slot) => !busy.has(slot));
       const grouped = this.groupAdjacentSlots(freeSlots);
@@ -578,7 +598,11 @@ export class RebookingService {
     return recommendations;
   }
 
-  private async buildKpis(tenant: TenantContext, dates: string[]) {
+  private async buildKpis(
+    tenant: TenantContext,
+    dates: string[],
+    slotTimesByDate: Map<string, string[]>,
+  ) {
     const [bookingCounts, revenueByClient, heatmap] = await Promise.all([
       this.prisma.tenantClient.booking.groupBy({
         by: ['clientId'],
@@ -590,7 +614,7 @@ export class RebookingService {
         where: { tenantId: tenant.id, status: 'completed' },
         _sum: { priceAtBooking: true },
       }),
-      this.buildHeatmap(tenant, dates),
+      this.buildHeatmap(tenant, dates, slotTimesByDate),
     ]);
 
     const totalClients = bookingCounts.length;
@@ -706,7 +730,9 @@ export class RebookingService {
 
   private async getDefaultCampaignSlotOptions(tenant: TenantContext, requestedDate?: string) {
     const startDate = requestedDate || this.getTodayKey(tenant.timezone);
-    const emptySlots = await this.buildEmptySlots(tenant, this.getDateRange(startDate, 7));
+    const dates = this.getDateRange(startDate, 7);
+    const slotTimesByDate = await this.getSlotTimesByDate(tenant.id, dates);
+    const emptySlots = await this.buildEmptySlots(tenant, dates, slotTimesByDate);
     return emptySlots.slice(0, 6).map((slot) => ({
       date: slot.date,
       startTime: slot.startTime,
@@ -872,6 +898,17 @@ export class RebookingService {
     });
   }
 
+  private async getSlotTimesByDate(tenantId: string, dates: string[]) {
+    const entries = await Promise.all(
+      [...new Set(dates)].map(
+        async (date) =>
+          [date, await this.scheduleService.getSlotTimesForDate(tenantId, date)] as const,
+      ),
+    );
+
+    return new Map(entries);
+  }
+
   private calculateAverageCycleDays(bookings: CompletedBookingRecord[]) {
     if (bookings.length < 3) return null;
 
@@ -952,25 +989,26 @@ export class RebookingService {
       : 'Хороший кандидат для м’якого нагадування';
   }
 
-  private buildCampaignLog(settings: Prisma.JsonValue | null): CampaignLogItem[] {
-    return this.extractCampaigns(settings)
-      .slice()
-      .reverse()
-      .slice(0, 8)
-      .map((campaign) => ({
-        id: campaign.id,
-        type: campaign.type || 'slot_fill',
-        date: campaign.date,
-        startTime: campaign.startTime,
-        endTime: campaign.endTime,
-        createdAt: campaign.createdAt,
-        status: campaign.status,
-        sentCount: campaign.recipients.filter((recipient) => recipient.status === 'sent').length,
-        bookedCount: campaign.recipients.filter((recipient) => recipient.status === 'booked')
-          .length,
-        closedCount: campaign.recipients.filter((recipient) => recipient.status === 'closed')
-          .length,
-      }));
+  private async buildCampaignLog(tenantId: string): Promise<CampaignLogItem[]> {
+    const campaigns = await this.prisma.tenantClient.rebookingCampaign.findMany({
+      where: { tenantId },
+      include: { recipients: true },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    });
+
+    return campaigns.map((campaign) => ({
+      id: campaign.id,
+      type: campaign.type,
+      date: campaign.date.toISOString().split('T')[0],
+      startTime: campaign.startTime,
+      endTime: campaign.endTime,
+      createdAt: campaign.createdAt.toISOString(),
+      status: campaign.status,
+      sentCount: campaign.recipients.filter((recipient) => recipient.status === 'sent').length,
+      bookedCount: campaign.recipients.filter((recipient) => recipient.status === 'booked').length,
+      closedCount: campaign.recipients.filter((recipient) => recipient.status === 'closed').length,
+    }));
   }
 
   private async generateAiMessage(input: {
@@ -1284,18 +1322,26 @@ export class RebookingService {
     return 30;
   }
 
-  private extractCampaigns(settings: Prisma.JsonValue | null) {
-    const object = this.asObject(settings);
-    const campaigns = object[this.campaignsKey];
-    return Array.isArray(campaigns) ? (campaigns as StoredCampaign[]) : [];
-  }
+  private parseCampaignSlotOptions(value: Prisma.JsonValue | null) {
+    if (!Array.isArray(value)) {
+      return [] as CampaignSlotOption[];
+    }
 
-  private withCampaigns(settings: Prisma.JsonValue | null, campaigns: StoredCampaign[]) {
-    const object = this.asObject(settings);
-    return {
-      ...object,
-      [this.campaignsKey]: campaigns.slice(-25),
-    } as unknown as Prisma.InputJsonValue;
+    return this.normalizeSlotOptions(
+      value
+        .map((slot) => this.asObject(slot))
+        .filter(
+          (slot) =>
+            typeof slot.date === 'string' &&
+            typeof slot.startTime === 'string' &&
+            typeof slot.endTime === 'string',
+        )
+        .map((slot) => ({
+          date: slot.date as string,
+          startTime: slot.startTime as string,
+          endTime: slot.endTime as string,
+        })),
+    );
   }
 
   private asObject(value: Prisma.JsonValue | null) {

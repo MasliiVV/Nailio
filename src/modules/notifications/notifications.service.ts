@@ -5,6 +5,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { randomUUID } from 'crypto';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QUEUE_NAMES, NotificationJobData } from '../../common/bullmq/tenant-context';
@@ -173,16 +174,20 @@ export class NotificationsService {
     delay: number,
   ) {
     const scheduledAt = new Date(Date.now() + delay);
+    const notificationId = randomUUID();
+    const jobId = `notif-${notificationId}`;
 
     // Create notification record in DB
     const notification = await this.prisma.tenantClient.notification.create({
       data: {
+        id: notificationId,
         tenantId,
         bookingId,
         clientId,
         type: type as string as NotificationType,
         channel: 'telegram',
         status: 'pending',
+        jobId,
         scheduledAt,
       },
     });
@@ -197,7 +202,7 @@ export class NotificationsService {
 
     const job = await this.notifQueue.add(`notify:${type}`, jobData, {
       delay: Math.max(0, delay),
-      jobId: `notif-${notification.id}`,
+      jobId,
       attempts: 3,
       backoff: {
         type: 'exponential',
@@ -207,12 +212,6 @@ export class NotificationsService {
       removeOnFail: { count: 5000 },
     });
 
-    // Update notification with job ID
-    await this.prisma.tenantClient.notification.update({
-      where: { id: notification.id },
-      data: { jobId: job.id },
-    });
-
-    return notification;
+    return { ...notification, jobId: job.id?.toString() || jobId };
   }
 }

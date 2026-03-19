@@ -26,6 +26,8 @@ const TENANT_SCOPED_MODELS: string[] = [
   'paymentSetting',
   'analyticsDaily',
   'auditLog',
+  'rebookingCampaign',
+  'rebookingCampaignRecipient',
 ];
 
 @Injectable()
@@ -61,7 +63,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const tenantId = this.cls.get<string>(TENANT_ID_KEY);
 
     if (!tenantId) {
-      return this; // No tenant context — return unscoped client (for global operations)
+      throw new Error('Tenant context is required when using tenantClient');
     }
 
     /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */

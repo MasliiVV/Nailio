@@ -25,11 +25,11 @@ describe('PrismaService — Cross-Tenant Isolation', () => {
   });
 
   describe('tenantClient', () => {
-    it('should return unscoped client when no tenant context', () => {
+    it('should throw when no tenant context is set', () => {
       cls.get.mockReturnValue(undefined);
-      const client = prisma.tenantClient;
-      // Without tenant, should return self (unscoped)
-      expect(client).toBeDefined();
+      expect(() => prisma.tenantClient).toThrow(
+        'Tenant context is required when using tenantClient',
+      );
     });
 
     it('should return extended client when tenant context is set', () => {

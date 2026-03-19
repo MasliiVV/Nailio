@@ -5,6 +5,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+interface PeriodStats {
+  totalBookings: number;
+  completed: number;
+  cancelled: number;
+  noShows: number;
+  revenue: number;
+  newClients: number;
+}
+
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
@@ -214,6 +223,74 @@ export class AnalyticsService {
   // ──────────────────────────────────────────────
 
   private async getPeriodStats(tenantId: string, from: Date, to: Date) {
+    const todayStart = new Date(to);
+    todayStart.setHours(0, 0, 0, 0);
+
+    if (from >= todayStart) {
+      return this.getRealtimePeriodStats(tenantId, from, to);
+    }
+
+    const historicalTo = todayStart;
+    const [historicalStats, todayStats] = await Promise.all([
+      this.getAggregatedDailyPeriodStats(tenantId, from, historicalTo),
+      this.getRealtimePeriodStats(tenantId, todayStart, to),
+    ]);
+
+    return this.mergePeriodStats(historicalStats, todayStats);
+  }
+
+  private async getAggregatedDailyPeriodStats(
+    tenantId: string,
+    from: Date,
+    toExclusive: Date,
+  ): Promise<PeriodStats> {
+    const expectedDays = this.diffDays(from, toExclusive);
+    if (expectedDays <= 0) {
+      return this.emptyPeriodStats();
+    }
+
+    const dayBeforeTo = new Date(toExclusive.getTime() - 24 * 60 * 60 * 1000);
+    const coverage = await this.prisma.tenantClient.analyticsDaily.count({
+      where: {
+        tenantId,
+        date: { gte: from, lte: dayBeforeTo },
+      },
+    });
+
+    if (coverage < expectedDays) {
+      return this.getRealtimePeriodStats(tenantId, from, toExclusive);
+    }
+
+    const aggregate = await this.prisma.tenantClient.analyticsDaily.aggregate({
+      where: {
+        tenantId,
+        date: { gte: from, lte: dayBeforeTo },
+      },
+      _sum: {
+        totalBookings: true,
+        completed: true,
+        cancelled: true,
+        noShows: true,
+        revenue: true,
+        newClients: true,
+      },
+    });
+
+    return {
+      totalBookings: aggregate._sum.totalBookings || 0,
+      completed: aggregate._sum.completed || 0,
+      cancelled: aggregate._sum.cancelled || 0,
+      noShows: aggregate._sum.noShows || 0,
+      revenue: aggregate._sum.revenue || 0,
+      newClients: aggregate._sum.newClients || 0,
+    };
+  }
+
+  private async getRealtimePeriodStats(
+    tenantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<PeriodStats> {
     const [totalBookings, completed, cancelled, noShows, revenue, newClients] = await Promise.all([
       this.prisma.tenantClient.booking.count({
         where: {
@@ -266,6 +343,32 @@ export class AnalyticsService {
       noShows,
       revenue: revenue._sum.priceAtBooking || 0,
       newClients,
+    };
+  }
+
+  private mergePeriodStats(left: PeriodStats, right: PeriodStats): PeriodStats {
+    return {
+      totalBookings: left.totalBookings + right.totalBookings,
+      completed: left.completed + right.completed,
+      cancelled: left.cancelled + right.cancelled,
+      noShows: left.noShows + right.noShows,
+      revenue: left.revenue + right.revenue,
+      newClients: left.newClients + right.newClients,
+    };
+  }
+
+  private diffDays(from: Date, toExclusive: Date) {
+    return Math.max(0, Math.round((toExclusive.getTime() - from.getTime()) / 86400000));
+  }
+
+  private emptyPeriodStats(): PeriodStats {
+    return {
+      totalBookings: 0,
+      completed: 0,
+      cancelled: 0,
+      noShows: 0,
+      revenue: 0,
+      newClients: 0,
     };
   }
 

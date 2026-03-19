@@ -373,16 +373,47 @@ describe('BookingsService', () => {
         tenantId,
         status: 'confirmed',
         clientId: 'client-1',
+        priceAtBooking: 1500,
+        serviceNameSnapshot: 'Манікюр',
         startTime: new Date(),
         endTime: new Date(),
       };
 
       prisma.tenantClient.booking.findFirst.mockResolvedValue(booking);
-      prisma.tenantClient.booking.update.mockResolvedValue({
-        ...booking,
-        status: 'completed',
-      });
-      prisma.tenantClient.client.update.mockResolvedValue({});
+      prisma.$transaction.mockImplementation(
+        async (
+          callback: (tx: {
+            booking: {
+              updateMany: jest.Mock;
+              findUniqueOrThrow: jest.Mock;
+            };
+            client: {
+              update: jest.Mock;
+            };
+            transaction: {
+              findFirst: jest.Mock;
+              create: jest.Mock;
+            };
+          }) => Promise<unknown>,
+        ) =>
+          callback({
+            booking: {
+              updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+              findUniqueOrThrow: jest.fn().mockResolvedValue({
+                ...booking,
+                status: 'completed',
+                client: { id: 'client-1', firstName: 'Іра', lastName: 'К.' },
+              }),
+            },
+            client: {
+              update: jest.fn().mockResolvedValue({}),
+            },
+            transaction: {
+              findFirst: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue({ id: 'txn-1' }),
+            },
+          }),
+      );
 
       const result = await service.complete(tenantId, 'booking-1');
       expect(result.status).toBe('completed');

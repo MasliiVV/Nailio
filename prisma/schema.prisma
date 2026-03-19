@@ -98,6 +98,22 @@ enum ActorType {
   admin
 }
 
+enum RebookingCampaignType {
+  slot_fill
+  cycle_followup
+}
+
+enum RebookingCampaignStatus {
+  active
+  filled
+}
+
+enum RebookingRecipientStatus {
+  sent
+  booked
+  closed
+}
+
 // ──────────────────────────────────────────────
 // 1. users — Глобальна таблиця аутентифікації (БЕЗ tenant_id)
 // ──────────────────────────────────────────────
@@ -148,6 +164,8 @@ model Tenant {
   paymentSettings     PaymentSetting?
   analyticsDailies    AnalyticsDaily[]
   auditLogs           AuditLog[]
+  rebookingCampaigns  RebookingCampaign[]
+  rebookingRecipients RebookingCampaignRecipient[]
 
   @@map("tenants")
 }
@@ -215,6 +233,8 @@ model Client {
   bookings     Booking[]
   transactions Transaction[]
   notifications Notification[]
+  bookedCampaigns RebookingCampaign[]          @relation("BookedCampaigns")
+  rebookingRecipients RebookingCampaignRecipient[]
 
   @@unique([tenantId, userId])
   @@index([tenantId, phone])
@@ -341,6 +361,7 @@ model Transaction {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, bookingId])
+  @@unique([bookingId, type], map: "transactions_booking_id_type_key")
   @@map("transactions")
 }
 
@@ -482,4 +503,49 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+model RebookingCampaign {
+  id               String                  @id @default(uuid()) @db.Uuid
+  tenantId         String                  @map("tenant_id") @db.Uuid
+  type             RebookingCampaignType
+  date             DateTime                @db.Date
+  startTime        String                  @map("start_time") @db.VarChar(5)
+  endTime          String                  @map("end_time") @db.VarChar(5)
+  message          String                  @db.Text
+  status           RebookingCampaignStatus @default(active)
+  bookedByClientId String?                 @map("booked_by_client_id") @db.Uuid
+  slotOptions      Json                    @default("[]") @map("slot_options")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz()
+
+  tenant         Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bookedByClient Client?                     @relation("BookedCampaigns", fields: [bookedByClientId], references: [id], onDelete: SetNull)
+  recipients     RebookingCampaignRecipient[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, date])
+  @@map("rebooking_campaigns")
+}
+
+model RebookingCampaignRecipient {
+  id          String                   @id @default(uuid()) @db.Uuid
+  campaignId  String                   @map("campaign_id") @db.Uuid
+  tenantId    String                   @map("tenant_id") @db.Uuid
+  clientId    String                   @map("client_id") @db.Uuid
+  firstName   String                   @map("first_name") @db.VarChar(100)
+  telegramId  String                   @map("telegram_id") @db.VarChar(32)
+  serviceId   String                   @map("service_id") @db.Uuid
+  serviceName String                   @map("service_name") @db.VarChar(200)
+  status      RebookingRecipientStatus @default(sent)
+  createdAt   DateTime                 @default(now()) @map("created_at") @db.Timestamptz()
+
+  campaign RebookingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client   Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, clientId])
+  @@index([tenantId, status])
+  @@index([tenantId, clientId])
+  @@map("rebooking_campaign_recipients")
 }

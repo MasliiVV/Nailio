@@ -6,6 +6,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, Transaction } from '@prisma/client';
 import { CreateTransactionDto, TransactionListQueryDto } from './dto/finance.dto';
 
+type FinanceDbClient = PrismaService | Prisma.TransactionClient;
+
 @Injectable()
 export class FinanceService {
   private readonly logger = new Logger(FinanceService.name);
@@ -175,9 +177,12 @@ export class FinanceService {
     clientId: string,
     amount: number,
     description: string,
+    db: FinanceDbClient = this.prisma,
   ) {
+    const transactions = db.transaction;
+
     // Avoid duplicate transaction for same booking
-    const existing = await this.prisma.tenantClient.transaction.findFirst({
+    const existing = await transactions.findFirst({
       where: { tenantId, bookingId },
     });
     if (existing) {
@@ -185,24 +190,39 @@ export class FinanceService {
       return existing;
     }
 
-    const transaction = await this.prisma.tenantClient.transaction.create({
-      data: {
-        tenantId,
-        type: 'income',
-        bookingId,
-        clientId,
-        amount,
-        description,
-        currency: 'UAH',
-        paymentMethod: 'cash',
-        status: 'completed',
-      },
-    });
+    try {
+      const transaction = await transactions.create({
+        data: {
+          tenantId,
+          type: 'income',
+          bookingId,
+          clientId,
+          amount,
+          description,
+          currency: 'UAH',
+          paymentMethod: 'cash',
+          status: 'completed',
+        },
+      });
 
-    this.logger.log(
-      `Auto-transaction created: ${transaction.id} for booking ${bookingId} (${amount} kopiykas)`,
-    );
+      this.logger.log(
+        `Auto-transaction created: ${transaction.id} for booking ${bookingId} (${amount} kopiykas)`,
+      );
 
-    return transaction;
+      return transaction;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const duplicate = await transactions.findFirst({
+          where: { tenantId, bookingId, type: 'income' },
+        });
+
+        if (duplicate) {
+          this.logger.warn(`Transaction already exists for booking ${bookingId}`);
+          return duplicate;
+        }
+      }
+
+      throw error;
+    }
   }
 }

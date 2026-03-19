@@ -562,21 +562,6 @@ export class BookingsService {
         updateData.cancelledAt = new Date();
         updateData.cancelReason = 'Changed by master';
       }
-
-      if (dto.status === 'completed' && booking.status !== 'completed') {
-        // Auto-create income transaction
-        try {
-          await this.financeService.createBookingTransaction(
-            tenantId,
-            bookingId,
-            booking.clientId,
-            booking.priceAtBooking,
-            booking.serviceNameSnapshot,
-          );
-        } catch (err) {
-          this.logger.error(`Failed to create transaction for booking ${bookingId}: ${err}`);
-        }
-      }
     }
 
     // Update notes
@@ -616,17 +601,37 @@ export class BookingsService {
       updateData.endTime = newEndTime;
     }
 
-    const updated = await this.prisma.tenantClient.booking.update({
-      where: { id: bookingId },
-      data: updateData,
-      include: {
-        client: {
-          select: { id: true, firstName: true, lastName: true, phone: true },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const savedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: updateData,
+        include: {
+          client: {
+            select: { id: true, firstName: true, lastName: true, phone: true },
+          },
+          service: {
+            select: { id: true, name: true, color: true },
+          },
         },
-        service: {
-          select: { id: true, name: true, color: true },
-        },
-      },
+      });
+
+      if (dto.status === 'completed' && booking.status !== 'completed') {
+        await tx.client.update({
+          where: { id: booking.clientId },
+          data: { lastVisitAt: new Date() },
+        });
+
+        await this.financeService.createBookingTransaction(
+          tenantId,
+          bookingId,
+          booking.clientId,
+          booking.priceAtBooking,
+          booking.serviceNameSnapshot,
+          tx,
+        );
+      }
+
+      return savedBooking;
     });
 
     this.logger.log(`Booking updated: ${bookingId} in tenant ${tenantId}`);
@@ -756,34 +761,45 @@ export class BookingsService {
       throw new BadRequestException(`Cannot complete booking with status "${booking.status}"`);
     }
 
-    const updated = await this.prisma.tenantClient.booking.update({
-      where: { id: bookingId },
-      data: { status: 'completed' },
-      include: {
-        client: {
-          select: { id: true, firstName: true, lastName: true },
+    const completedAt = new Date();
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.booking.updateMany({
+        where: {
+          id: bookingId,
+          tenantId,
+          status: { in: ['pending', 'confirmed'] },
         },
-      },
-    });
+        data: { status: 'completed' },
+      });
 
-    // Update client's lastVisitAt
-    await this.prisma.tenantClient.client.update({
-      where: { id: booking.clientId },
-      data: { lastVisitAt: new Date() },
-    });
+      if (updateResult.count === 0) {
+        throw new BadRequestException(`Cannot complete booking with status "${booking.status}"`);
+      }
 
-    // Auto-create income transaction for completed booking
-    try {
+      await tx.client.update({
+        where: { id: booking.clientId },
+        data: { lastVisitAt: completedAt },
+      });
+
       await this.financeService.createBookingTransaction(
         tenantId,
         bookingId,
         booking.clientId,
         booking.priceAtBooking,
         booking.serviceNameSnapshot,
+        tx,
       );
-    } catch (err) {
-      this.logger.error(`Failed to create transaction for booking ${bookingId}: ${err}`);
-    }
+
+      return tx.booking.findUniqueOrThrow({
+        where: { id: bookingId },
+        include: {
+          client: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+      });
+    });
 
     this.logger.log(`Booking completed: ${bookingId} in tenant ${tenantId}`);
 
