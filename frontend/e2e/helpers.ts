@@ -182,6 +182,7 @@ function installTelegramMock() {
 export const test = base.extend<{ tgPage: Page }>({
   tgPage: async ({ context, page }: { context: BrowserContext; page: Page }, use) => {
     await context.addInitScript(installTelegramMock);
+    await mockMasterBackgroundRequests(page);
     await use(page);
   },
 });
@@ -203,6 +204,13 @@ export async function mockAPI(page: Page, route: string, data: unknown, status =
 
 export async function mockMasterBackgroundRequests(page: Page) {
   const context = page.context();
+  const defaultWeeklySchedule = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    isDayOff: dayOfWeek === 0,
+    slots: dayOfWeek === 0 ? [] : ['09:00', '10:00', '11:00'],
+  }));
+  const defaultDaySlots = defaultWeeklySchedule[1]?.slots ?? ['09:00', '10:00', '11:00'];
+
   const routeApi = async (route: string, data: unknown, status = 200) => {
     await context.route(`**/api/v1${route}`, (request) =>
       request.fulfill({
@@ -227,6 +235,167 @@ export async function mockMasterBackgroundRequests(page: Page) {
           items: [],
           nextCursor: null,
           hasMore: false,
+        },
+        meta: {},
+      }),
+    });
+  });
+
+  await context.route('**/api/v1/bookings/slots*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    const url = new URL(route.request().url());
+    const date = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          date,
+          timezone: 'Europe/Kyiv',
+          slots: [],
+        },
+        meta: {},
+      }),
+    });
+  });
+
+  await context.route('**/api/v1/services', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [], meta: {} }),
+    });
+  });
+
+  await context.route('**/api/v1/services/*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    const id = route.request().url().split('/').pop() || 'service-1';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id,
+          name: 'Манікюр',
+          description: null,
+          durationMinutes: 60,
+          price: 50000,
+          currency: 'UAH',
+          category: null,
+          color: '#E84393',
+          sortOrder: 0,
+          isActive: true,
+        },
+        meta: {},
+      }),
+    });
+  });
+
+  await context.route('**/api/v1/clients', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          items: [],
+          nextCursor: null,
+          hasMore: false,
+        },
+        meta: {},
+      }),
+    });
+  });
+
+  await context.route('**/api/v1/clients/*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    const id = route.request().url().split('/').pop() || 'client-1';
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id,
+          firstName: 'Тест',
+          lastName: 'Клієнт',
+          phone: null,
+          telegramId: '111',
+          notes: null,
+          tags: [],
+          isBlocked: false,
+          lastVisitAt: null,
+          stats: {
+            totalBookings: 0,
+            completed: 0,
+            cancelled: 0,
+            noShows: 0,
+            totalSpent: 0,
+          },
+          recentBookings: [],
+        },
+        meta: {},
+      }),
+    });
+  });
+
+  await routeApi('/settings', {
+    id: 'tenant-1',
+    displayName: 'Test Salon',
+    logoUrl: null,
+    branding: { primaryColor: '#6C5CE7', welcomeMessage: 'Welcome!' },
+    settings: {},
+  });
+
+  await routeApi('/schedule', {
+    weekly: defaultWeeklySchedule,
+    overrides: [],
+  });
+
+  await context.route('**/api/v1/schedule/date/*', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+
+    const date = route.request().url().split('/').pop() || new Date().toISOString().split('T')[0];
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          date,
+          isDayOff: false,
+          source: 'template',
+          slots: defaultDaySlots.map((time) => ({
+            time,
+            isBooked: false,
+            locked: false,
+          })),
         },
         meta: {},
       }),

@@ -69,7 +69,7 @@ test.describe('Manual booking flow', () => {
     await openMiniApp(page, '/master');
     const sheet = page.locator('div[class*="sheetVisible"]').last();
 
-    await page.getByRole('button', { name: 'Додати' }).click();
+    await page.getByRole('button', { name: 'Записати' }).click();
     await sheet.locator('select').nth(0).selectOption('service-1');
     await sheet.getByRole('button', { name: '10:00', exact: true }).click();
 
@@ -133,7 +133,7 @@ test.describe('Manual booking flow', () => {
     await openMiniApp(page, '/master');
     const sheet = page.locator('div[class*="sheetVisible"]').last();
 
-    await page.getByRole('button', { name: 'Додати' }).click();
+    await page.getByRole('button', { name: 'Записати' }).click();
     await sheet.locator('select').nth(0).selectOption('service-1');
     await sheet.locator('select').nth(1).selectOption('client-1');
     await sheet.getByRole('button', { name: '10:00', exact: true }).click();

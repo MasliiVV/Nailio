@@ -1,4 +1,4 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAuth, mockAPI, openMiniApp } from './helpers';
 
 test.describe('Subscription Page', () => {
   test('active subscription shows status and cancel button', async ({ tgPage: page }) => {
@@ -11,7 +11,7 @@ test.describe('Subscription Page', () => {
     });
     await mockAPI(page, '/subscription/payments', []);
 
-    await page.goto('/master/subscription');
+    await openMiniApp(page, '/master/subscription');
     await expect(page.locator('[class*="statusText"]')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('button[class*="destructive"]')).toBeVisible();
   });
@@ -26,19 +26,21 @@ test.describe('Subscription Page', () => {
     });
     await mockAPI(page, '/subscription/payments', []);
 
-    await page.goto('/master/subscription');
+    await openMiniApp(page, '/master/subscription');
     await expect(page.locator('button[class*="primary"]')).toBeVisible({ timeout: 10_000 });
   });
 
   test('no subscription shows empty state with CTA', async ({ tgPage: page }) => {
     await mockAuth(page);
-    await page.route('**/api/subscription', (r) =>
+    await page.route('**/api/v1/subscription', (r) =>
       r.fulfill({ status: 404, contentType: 'application/json', body: '{"error":"Not found"}' }),
     );
     await mockAPI(page, '/subscription/payments', []);
 
-    await page.goto('/master/subscription');
-    await expect(page.locator('[class*="container"]')).toBeVisible({ timeout: 10_000 });
+    await openMiniApp(page, '/master/subscription');
+    await expect(page.getByRole('button', { name: /Оформити підписку|Subscribe/i })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('payment history displays', async ({ tgPage: page }) => {
@@ -54,8 +56,8 @@ test.describe('Subscription Page', () => {
       { id: 'p2', amount: 29900, status: 'success', createdAt: '2026-02-01T00:00:00Z' },
     ]);
 
-    await page.goto('/master/subscription');
-    await expect(page.locator('.badge--success')).toHaveCount(2, { timeout: 10_000 });
+    await openMiniApp(page, '/master/subscription');
+    await expect(page.getByText('success')).toHaveCount(2, { timeout: 10_000 });
   });
 });
 
@@ -86,27 +88,25 @@ test.describe('Clients Page', () => {
   });
 
   test('displays clients list with avatars', async ({ tgPage: page }) => {
-    await page.goto('/master/clients');
+    await openMiniApp(page, '/master/clients');
     await expect(page.getByText('Олена Коваль')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Марія Іванова')).toBeVisible();
   });
 
   test('blocked client shows badge', async ({ tgPage: page }) => {
-    await page.goto('/master/clients');
-    await expect(page.locator('.badge--destructive')).toBeVisible({ timeout: 10_000 });
+    await openMiniApp(page, '/master/clients');
+    await expect(page.getByText('Заблоковано')).toBeVisible({ timeout: 10_000 });
   });
 
   test('search input filters clients', async ({ tgPage: page }) => {
-    await page.goto('/master/clients');
-    const searchInput = page.locator(
-      'input[placeholder*="search" i], input[placeholder*="пошук" i]',
-    );
+    await openMiniApp(page, '/master/clients');
+    const searchInput = page.getByRole('textbox', { name: 'Пошук' });
     await searchInput.fill('Олена');
     // Search triggers API call with new param
   });
 
   test('clicking client navigates to detail', async ({ tgPage: page }) => {
-    await page.goto('/master/clients');
+    await openMiniApp(page, '/master/clients');
     await page.getByText('Олена Коваль').click();
     await expect(page).toHaveURL(/\/master\/clients\/c1/);
   });
@@ -114,7 +114,7 @@ test.describe('Clients Page', () => {
 
 test.describe('My Bookings (Client)', () => {
   test.beforeEach(async ({ tgPage: page }) => {
-    await page.route('**/api/auth/telegram', (r) =>
+    await page.route('**/api/v1/auth/telegram', (r) =>
       r.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -163,18 +163,18 @@ test.describe('My Bookings (Client)', () => {
   });
 
   test('shows upcoming/history tabs', async ({ tgPage: page }) => {
-    await page.goto('/client/bookings');
+    await openMiniApp(page, '/client/bookings');
     await expect(page.locator('[class*="tabs"]')).toBeVisible({ timeout: 10_000 });
   });
 
   test('clicking booking opens detail sheet', async ({ tgPage: page }) => {
-    await page.goto('/client/bookings');
+    await openMiniApp(page, '/client/bookings');
     await page.getByText('Манікюр').click();
     await expect(page.locator('[class*="sheet"]')).toBeVisible({ timeout: 5_000 });
   });
 
   test('cancel button shows in detail sheet for pending/confirmed', async ({ tgPage: page }) => {
-    await page.goto('/client/bookings');
+    await openMiniApp(page, '/client/bookings');
     await page.getByText('Манікюр').click();
     await expect(page.locator('[class*="sheet"] button[class*="destructive"]')).toBeVisible({
       timeout: 5_000,

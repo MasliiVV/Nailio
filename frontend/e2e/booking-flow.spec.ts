@@ -1,9 +1,9 @@
-import { test, expect, mockAPI } from './helpers';
+import { test, expect, mockAPI, openMiniApp } from './helpers';
 
 test.describe('Client Booking Flow', () => {
   test.beforeEach(async ({ tgPage: page }) => {
     // Mock as client user
-    await page.route('**/api/auth/telegram', (r) =>
+    await page.route('**/api/v1/auth/telegram', (r) =>
       r.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -63,13 +63,13 @@ test.describe('Client Booking Flow', () => {
   });
 
   test('home page shows services list', async ({ tgPage: page }) => {
-    await page.goto('/client');
+    await openMiniApp(page, '/client');
     await expect(page.getByText('Манікюр класичний')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Педикюр')).toBeVisible();
   });
 
   test('clicking service navigates to booking page', async ({ tgPage: page }) => {
-    await page.goto('/client');
+    await openMiniApp(page, '/client');
     await page.getByText('Манікюр класичний').click();
     await expect(page).toHaveURL(/\/client\/book\/s1/);
   });
@@ -84,7 +84,7 @@ test.describe('Client Booking Flow', () => {
       ],
     });
 
-    await page.goto('/client/book/s1');
+    await openMiniApp(page, '/client/book/s1');
     await expect(page.locator('[class*="dateItem"]').first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -97,7 +97,7 @@ test.describe('Client Booking Flow', () => {
       ],
     });
 
-    await page.goto('/client/book/s1');
+    await openMiniApp(page, '/client/book/s1');
     // Wait for slots to load
     await expect(page.getByText('10:00')).toBeVisible({ timeout: 10_000 });
     await page.getByText('10:00').click();

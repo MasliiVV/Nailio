@@ -88,7 +88,7 @@ test.describe('Rebooking Page', () => {
       ],
     });
 
-    await mockAPI(page, '/clients*', {
+    await mockAPI(page, '/clients', {
       items: [
         {
           id: 'client-1',
@@ -116,6 +116,49 @@ test.describe('Rebooking Page', () => {
       nextCursor: null,
       hasMore: false,
     });
+
+    await mockAPI(page, '/clients/return-reminders', [
+      {
+        id: 'client-1',
+        firstName: 'Анна',
+        lastName: 'Коваль',
+        phone: null,
+        telegramId: '111',
+        notes: null,
+        tags: [],
+        isBlocked: false,
+        lastVisitAt: '2026-02-20T10:00:00.000Z',
+        expectedReturnDate: '2026-03-17T10:00:00.000Z',
+        daysUntilReturn: 1,
+        stats: {
+          totalBookings: 4,
+          completed: 4,
+          cancelled: 0,
+          noShows: 0,
+          totalSpent: 400000,
+        },
+      },
+      {
+        id: 'client-2',
+        firstName: 'Оля',
+        lastName: null,
+        phone: null,
+        telegramId: '222',
+        notes: null,
+        tags: [],
+        isBlocked: false,
+        lastVisitAt: '2026-02-21T10:00:00.000Z',
+        expectedReturnDate: '2026-03-18T10:00:00.000Z',
+        daysUntilReturn: 2,
+        stats: {
+          totalBookings: 3,
+          completed: 3,
+          cancelled: 0,
+          noShows: 0,
+          totalSpent: 220000,
+        },
+      },
+    ]);
   });
 
   test('renders redesigned Rebooking layout', async ({ tgPage: page }) => {
@@ -162,9 +205,12 @@ test.describe('Rebooking Page', () => {
 
     await openMiniApp(page, '/master/rebooking?date=2026-03-17&slot=10:00');
 
+    await expect(page.getByRole('button', { name: 'Покращити текст' }).first()).toBeEnabled();
     await page.getByRole('button', { name: 'Покращити текст' }).click();
     await page.getByRole('button', { name: 'Розіслати промо по слоту' }).click();
     await page.getByText('Нагадати клієнтам').click();
+    await expect(page.getByText('Вибрано: 2')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Покращити текст' }).first()).toBeEnabled();
     await page.getByRole('button', { name: 'Покращити текст' }).click();
 
     await expect.poll(() => generateBodies.length).toBe(2);

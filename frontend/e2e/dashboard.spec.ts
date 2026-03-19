@@ -1,6 +1,6 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAuth, mockAPI, openMiniApp } from './helpers';
 
-test.describe('Master Dashboard', () => {
+test.describe('Master Landing', () => {
   test.beforeEach(async ({ tgPage: page }) => {
     await mockAuth(page);
     await mockAPI(page, '/analytics/dashboard*', {
@@ -25,27 +25,26 @@ test.describe('Master Dashboard', () => {
     });
   });
 
-  test('displays dashboard stats', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
-    await expect(page.locator('.stat-card__value').first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('.stat-card')).toHaveCount(4);
+  test('opens calendar landing page', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master');
+    await expect(page.getByRole('heading', { name: 'Календар' })).toBeVisible({ timeout: 10_000 });
   });
 
-  test('shows today bookings list', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
+  test('shows booking cards on landing page', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master');
     await expect(page.getByText('Manікюр')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/Олена/)).toBeVisible();
   });
 
-  test('"View All" button navigates to calendar', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
-    await page.getByText(/viewAll|Усі/i).click();
-    await expect(page).toHaveURL(/\/master\/calendar/);
+  test('record action opens booking sheet', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master');
+    await page.getByRole('button', { name: 'Записати' }).click();
+    await expect(page.locator('div[class*="sheetVisible"]').last()).toBeVisible();
   });
 
-  test('clicking booking card navigates to calendar', async ({ tgPage: page }) => {
-    await page.goto('/master/dashboard');
+  test('clicking booking card opens details', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master');
     await page.getByText('Manікюр').click();
-    await expect(page).toHaveURL(/\/master\/calendar/);
+    await expect(page.getByText('Деталі запису')).toBeVisible();
   });
 });

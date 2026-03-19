@@ -1,4 +1,4 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAuth, mockAPI, openMiniApp } from './helpers';
 
 test.describe('Settings & Navigation', () => {
   test.beforeEach(async ({ tgPage: page }) => {
@@ -11,55 +11,39 @@ test.describe('Settings & Navigation', () => {
   });
 
   test('settings page renders all nav items', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
+    await openMiniApp(page, '/master/settings');
     await expect(page.locator('[class*="rowTitle"]')).toHaveCount(6, { timeout: 10_000 });
   });
 
   test('analytics card navigates to analytics', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
-    await page
-      .locator('[class*="row"]')
-      .filter({ hasText: /analytics|Аналітика/i })
-      .click();
+    await openMiniApp(page, '/master/settings');
+    await page.getByRole('button', { name: /Аналітика|Analytics/i }).click();
     await expect(page).toHaveURL(/\/master\/analytics/);
   });
 
   test('finance card navigates to finance', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
-    await page
-      .locator('[class*="row"]')
-      .filter({ hasText: /finance|Фінанси/i })
-      .click();
+    await openMiniApp(page, '/master/settings');
+    await page.getByRole('button', { name: /Фінанси|Finance/i }).click();
     await expect(page).toHaveURL(/\/master\/finance/);
   });
 
   test('subscription card navigates to subscription', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
-    await page
-      .locator('[class*="row"]')
-      .filter({ hasText: /subscription|Підписка/i })
-      .click();
+    await openMiniApp(page, '/master/settings');
+    await page.getByRole('button', { name: /Підписка|Subscription/i }).click();
     await expect(page).toHaveURL(/\/master\/subscription/);
   });
 
-  test('branding card opens bottom sheet', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
-    await page
-      .locator('[class*="row"]')
-      .filter({ hasText: /branding|Брендинг/i })
-      .click();
-    await expect(page.locator('[class*="sheet"]')).toBeVisible();
+  test('branding card navigates to branding page', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master/settings');
+    await page.getByRole('button', { name: /Брендінг|Branding/i }).click();
+    await expect(page).toHaveURL(/\/master\/branding/);
   });
 
-  test('branding form has color presets', async ({ tgPage: page }) => {
-    await page.goto('/master/settings');
-    await page
-      .locator('[class*="row"]')
-      .filter({ hasText: /branding|Брендинг/i })
-      .click();
-    // 12 color preset buttons
-    const presets = page.locator('[class*="sheet"] button[style*="background"]');
-    await expect(presets).toHaveCount(12, { timeout: 5_000 });
+  test('branding page shows editable fields', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master/settings');
+    await page.getByRole('button', { name: /Брендінг|Branding/i }).click();
+    await expect(page.getByPlaceholder(/Назва вашого салону|Your business name/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Зберегти|Save/i })).toBeVisible();
   });
 });
 
@@ -77,25 +61,25 @@ test.describe('Bottom Navigation', () => {
   });
 
   test('master layout has bottom nav bar', async ({ tgPage: page }) => {
-    await page.goto('/master');
-    await expect(page.locator('[class*="nav"]')).toBeVisible({ timeout: 10_000 });
+    await openMiniApp(page, '/master');
+    await expect(page.locator('nav').last()).toBeVisible({ timeout: 10_000 });
   });
 
   test('nav items navigate between pages', async ({ tgPage: page }) => {
-    await page.goto('/master');
+    await openMiniApp(page, '/master');
     const navItems = page.locator('[class*="navItem"]');
     await navItems.nth(1).click();
     await expect(page).toHaveURL(/\/master\/clients/);
   });
 
   test('bottom nav hides analytics entry', async ({ tgPage: page }) => {
-    await page.goto('/master');
+    await openMiniApp(page, '/master');
     await expect(page.locator('[class*="navItem"]')).toHaveCount(4, { timeout: 10_000 });
     await expect(page.getByRole('link', { name: /analytics|аналітика/i })).toHaveCount(0);
   });
 
   test('active nav item is highlighted', async ({ tgPage: page }) => {
-    await page.goto('/master');
+    await openMiniApp(page, '/master');
     const activeItem = page.locator('[class*="active"]').first();
     await expect(activeItem).toBeVisible({ timeout: 10_000 });
   });
@@ -124,18 +108,18 @@ test.describe('Finance Page', () => {
   });
 
   test('shows income/expense/net summary', async ({ tgPage: page }) => {
-    await page.goto('/master/finance');
-    await expect(page.locator('[class*="summaryCard"]')).toHaveCount(3, { timeout: 10_000 });
+    await openMiniApp(page, '/master/finance');
+    await expect(page.locator('[class*="summaryCard"]')).toHaveCount(4, { timeout: 10_000 });
   });
 
   test('add button opens transaction form', async ({ tgPage: page }) => {
-    await page.goto('/master/finance');
+    await openMiniApp(page, '/master/finance');
     await page.getByRole('button', { name: /add|додати/i }).click();
     await expect(page.locator('[class*="sheet"]')).toBeVisible();
   });
 
   test('transaction form has income/expense tabs', async ({ tgPage: page }) => {
-    await page.goto('/master/finance');
+    await openMiniApp(page, '/master/finance');
     await page.getByRole('button', { name: /add|додати/i }).click();
     await expect(page.locator('[class*="tabs"]')).toBeVisible();
   });
@@ -159,19 +143,18 @@ test.describe('Schedule Page', () => {
   });
 
   test('displays 7 day rows', async ({ tgPage: page }) => {
-    await page.goto('/master/schedule');
+    await openMiniApp(page, '/master/schedule');
     await expect(page.locator('[class*="dayRow"]')).toHaveCount(7, { timeout: 10_000 });
   });
 
   test('toggle switches day on/off', async ({ tgPage: page }) => {
-    await page.goto('/master/schedule');
+    await openMiniApp(page, '/master/schedule');
     const toggles = page.locator('[class*="toggle"] input');
     await expect(toggles).toHaveCount(7, { timeout: 10_000 });
   });
 
-  test('add override button opens form', async ({ tgPage: page }) => {
-    await page.goto('/master/schedule');
-    await page.getByRole('button', { name: /add|додати/i }).click();
-    await expect(page.locator('[class*="sheet"]')).toBeVisible();
+  test('schedule page shows save action', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master/schedule');
+    await expect(page.getByRole('button', { name: /Зберегти|Save/i })).toBeVisible();
   });
 });

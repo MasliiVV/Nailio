@@ -1,4 +1,4 @@
-import { test, expect, mockAuth, mockAPI } from './helpers';
+import { test, expect, mockAuth, mockAPI, openMiniApp } from './helpers';
 
 test.describe('Calendar Page', () => {
   test.beforeEach(async ({ tgPage: page }) => {
@@ -33,23 +33,27 @@ test.describe('Calendar Page', () => {
   });
 
   test('displays bookings grouped by date', async ({ tgPage: page }) => {
-    await page.goto('/master/calendar');
+    await openMiniApp(page, '/master/calendar');
     await expect(page.getByText('Манікюр')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Педикюр')).toBeVisible();
   });
 
-  test('complete button exists for confirmed bookings', async ({ tgPage: page }) => {
-    await page.goto('/master/calendar');
-    await expect(page.getByTitle('Complete').first()).toBeVisible({ timeout: 10_000 });
+  test('clicking booking opens detail sheet', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master/calendar');
+    await page.getByText('Манікюр').click();
+    await expect(page.getByText('Деталі запису')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('no-show button exists for confirmed bookings', async ({ tgPage: page }) => {
-    await page.goto('/master/calendar');
-    await expect(page.getByTitle('No show').first()).toBeVisible({ timeout: 10_000 });
+  test('detail sheet shows edit action for confirmed booking', async ({ tgPage: page }) => {
+    await openMiniApp(page, '/master/calendar');
+    await page.getByText('Манікюр').click();
+    await expect(page.getByRole('button', { name: 'Редагувати', exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('completed booking shows success badge', async ({ tgPage: page }) => {
-    await page.goto('/master/calendar');
-    await expect(page.locator('.badge--success')).toBeVisible({ timeout: 10_000 });
+    await openMiniApp(page, '/master/calendar');
+    await expect(page.getByText(/Завершено|Completed/i)).toBeVisible({ timeout: 10_000 });
   });
 });
