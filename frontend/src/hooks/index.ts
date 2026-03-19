@@ -36,6 +36,7 @@ export {
   useBlockClient,
   useUnblockClient,
   useSendClientMessage,
+  useReturnReminders,
   clientKeys,
 } from './useClients';
 export { useDashboard, analyticsKeys } from './useAnalytics';

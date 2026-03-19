@@ -199,6 +199,80 @@ export class ClientsService {
   }
 
   // ──────────────────────────────────────────────
+  // Return reminders — clients due for a visit within 3-week cycle
+  // Shows clients whose lastVisitAt + 21 days is 0–4 days from now
+  // ──────────────────────────────────────────────
+
+  async getReturnReminders(tenantId: string) {
+    const now = new Date();
+    // Clients whose expected return (lastVisitAt + 21 days) is in 0–4 days
+    // So lastVisitAt was 17–21 days ago
+    const minLastVisit = new Date(now.getTime() - 21 * 86400000); // 21 days ago
+    const maxLastVisit = new Date(now.getTime() - 17 * 86400000); // 17 days ago
+
+    const clients = await this.prisma.tenantClient.client.findMany({
+      where: {
+        tenantId,
+        isBlocked: false,
+        botBlocked: false,
+        lastVisitAt: {
+          gte: minLastVisit,
+          lte: maxLastVisit,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            telegramId: true,
+          },
+        },
+        _count: { select: { bookings: true } },
+      },
+      orderBy: { lastVisitAt: 'asc' },
+    });
+
+    // Also check they don't already have an upcoming booking
+    const clientIds = clients.map((c) => c.id);
+    const upcomingBookings = clientIds.length
+      ? await this.prisma.tenantClient.booking.findMany({
+          where: {
+            tenantId,
+            clientId: { in: clientIds },
+            startTime: { gte: now },
+            status: { in: ['pending', 'confirmed'] },
+          },
+          select: { clientId: true },
+        })
+      : [];
+
+    const clientsWithUpcoming = new Set(upcomingBookings.map((b) => b.clientId));
+
+    return clients
+      .filter((c) => !clientsWithUpcoming.has(c.id))
+      .map(
+        (
+          c: Client & {
+            user?: { telegramId?: bigint | null } | null;
+            _count?: { bookings: number };
+          },
+        ) => {
+          const lastVisit = c.lastVisitAt!;
+          const expectedReturn = new Date(lastVisit.getTime() + 21 * 86400000);
+          const daysUntilReturn = Math.round((expectedReturn.getTime() - now.getTime()) / 86400000);
+
+          return {
+            ...this.formatClientListItem(c),
+            stats: {
+              totalBookings: c._count?.bookings ?? 0,
+            },
+            expectedReturnDate: expectedReturn.toISOString(),
+            daysUntilReturn,
+          };
+        },
+      );
+  }
+
+  // ──────────────────────────────────────────────
   // Block / Unblock client
   // docs/api/endpoints.md — POST /api/v1/clients/:id/block, /unblock
   // ──────────────────────────────────────────────

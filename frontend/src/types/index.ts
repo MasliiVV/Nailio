@@ -383,6 +383,11 @@ export interface ClientDetail extends Client {
   recentBookings: Booking[];
 }
 
+export interface ReturnReminderClient extends Client {
+  expectedReturnDate: string;
+  daysUntilReturn: number;
+}
+
 // ---- Analytics ----
 export interface DashboardData {
   today: {

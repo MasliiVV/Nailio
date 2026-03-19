@@ -5,6 +5,7 @@ import type {
   Client,
   ClientDetail,
   PaginatedResponse,
+  ReturnReminderClient,
   SendClientMessageDto,
 } from '@/types';
 import { getTelegram } from '@/lib/telegram';
@@ -13,6 +14,7 @@ export const clientKeys = {
   all: ['clients'] as const,
   list: (search?: string) => [...clientKeys.all, 'list', search] as const,
   detail: (id: string) => [...clientKeys.all, id] as const,
+  returnReminders: () => [...clientKeys.all, 'return-reminders'] as const,
 };
 
 export function useClients(search?: string, options?: { enabled?: boolean }) {
@@ -83,5 +85,16 @@ export function useSendClientMessage(id: string) {
     onError: () => {
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     },
+  });
+}
+
+export function useReturnReminders() {
+  return useQuery({
+    queryKey: clientKeys.returnReminders(),
+    queryFn: async () => {
+      const res = await api.get<ApiResponse<ReturnReminderClient[]>>('/clients/return-reminders');
+      return res.data;
+    },
+    staleTime: 5 * 60_000,
   });
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SmartRebookingPage } from '../pages/master/SmartRebookingPage';
-import { useClients } from '@/hooks';
+import { useClients, useReturnReminders } from '@/hooks';
 import {
   useGenerateRebookingMessage,
   useRebookingOverview,
@@ -11,6 +11,7 @@ import {
 
 vi.mock('@/hooks', () => ({
   useClients: vi.fn(),
+  useReturnReminders: vi.fn(),
 }));
 
 vi.mock('@/hooks/useRebooking', () => ({
@@ -126,6 +127,22 @@ const mockClients = {
   hasMore: false,
 };
 
+const mockReturnReminders = [
+  {
+    id: 'client-1',
+    firstName: 'Anna',
+    lastName: 'K',
+    phone: null,
+    telegramId: '111',
+    notes: null,
+    tags: [],
+    isBlocked: false,
+    lastVisitAt: '2026-02-20T10:00:00.000Z',
+    expectedReturnDate: '2026-03-17T10:00:00.000Z',
+    daysUntilReturn: 1,
+  },
+];
+
 const mockGenerateMessage = vi.fn();
 const mockSendCampaign = vi.fn();
 
@@ -152,6 +169,11 @@ describe('SmartRebookingPage', () => {
       data: mockClients,
       isLoading: false,
     } as unknown as ReturnType<typeof useClients>);
+
+    vi.mocked(useReturnReminders).mockReturnValue({
+      data: mockReturnReminders,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useReturnReminders>);
 
     mockGenerateMessage.mockResolvedValue({ message: 'generated message' });
     mockSendCampaign.mockResolvedValue({ success: true, sentCount: 2 });

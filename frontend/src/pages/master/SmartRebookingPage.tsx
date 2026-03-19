@@ -1,8 +1,9 @@
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CalendarClock, Clock3, History, Send, Sparkles, Users, Wand2 } from 'lucide-react';
 import {
+  Avatar,
   Badge,
   BottomSheet,
   Button,
@@ -13,7 +14,7 @@ import {
   SkeletonList,
   Tabs,
 } from '@/components/ui';
-import { useClients } from '@/hooks';
+import { useClients, useReturnReminders } from '@/hooks';
 import { ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import {
@@ -26,6 +27,7 @@ import type {
   RebookingCampaignType,
   RebookingEmptySlot,
   RebookingRecommendation,
+  ReturnReminderClient,
 } from '@/types';
 import styles from './SmartRebookingPage.module.css';
 
@@ -37,8 +39,11 @@ const MAX_CYCLE_SLOT_OPTIONS = 3;
 type CycleFilterKey = (typeof CYCLE_FILTERS)[number];
 type PickerMode = 'slot' | 'cycle' | null;
 
+type ActiveFlow = RebookingCampaignType | 'reminders';
+
 export function SmartRebookingPage() {
   const intl = useIntl();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedMode = searchParams.get('mode');
   const requestedSlot = searchParams.get('slot');
@@ -46,8 +51,12 @@ export function SmartRebookingPage() {
   const [selectedDate, setSelectedDate] = useState(
     searchParams.get('date') || formatDateKey(new Date()),
   );
-  const [activeFlow, setActiveFlow] = useState<RebookingCampaignType>(
-    requestedMode === 'cycle' ? 'cycle_followup' : 'slot_fill',
+  const [activeFlow, setActiveFlow] = useState<ActiveFlow>(
+    requestedMode === 'reminders'
+      ? 'reminders'
+      : requestedMode === 'cycle'
+        ? 'cycle_followup'
+        : 'slot_fill',
   );
   const [selectedSlotKey, setSelectedSlotKey] = useState('');
   const [cycleFilter, setCycleFilter] = useState<CycleFilterKey>('all');
@@ -68,6 +77,7 @@ export function SmartRebookingPage() {
 
   const { data, isLoading } = useRebookingOverview(selectedDate);
   const { data: clientsData, isLoading: clientsLoading } = useClients();
+  const { data: remindersData, isLoading: remindersLoading } = useReturnReminders();
   const generateSlotMessage = useGenerateRebookingMessage();
   const generateCycleMessage = useGenerateRebookingMessage();
   const sendSlotCampaign = useSendRebookingCampaign();
@@ -259,7 +269,10 @@ export function SmartRebookingPage() {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('date', selectedDate);
-      next.set('mode', activeFlow === 'slot_fill' ? 'slot' : 'cycle');
+      next.set(
+        'mode',
+        activeFlow === 'reminders' ? 'reminders' : activeFlow === 'slot_fill' ? 'slot' : 'cycle',
+      );
       if (selectedSlotKey) {
         next.set('slot', selectedSlotKey.split('-').slice(1).join('-'));
       } else {
@@ -466,9 +479,10 @@ export function SmartRebookingPage() {
         tabs={[
           { id: 'slot_fill', label: intl.formatMessage({ id: 'rebooking.flow.slot' }) },
           { id: 'cycle_followup', label: intl.formatMessage({ id: 'rebooking.flow.cycle' }) },
+          { id: 'reminders', label: intl.formatMessage({ id: 'rebooking.flow.reminders' }) },
         ]}
         activeId={activeFlow}
-        onChange={(id) => setActiveFlow(id as RebookingCampaignType)}
+        onChange={(id) => setActiveFlow(id as ActiveFlow)}
       />
 
       {isLoading && <SkeletonList count={4} />}
@@ -856,6 +870,72 @@ export function SmartRebookingPage() {
                 </Card>
               </section>
             </>
+          )}
+
+          {activeFlow === 'reminders' && (
+            <section className={styles.section}>
+              <Card className={styles.stepCard}>
+                <div className={styles.sectionHeader}>
+                  <div>
+                    <h2>{intl.formatMessage({ id: 'master.returnReminders' })}</h2>
+                    <p className={styles.helperText}>
+                      {intl.formatMessage({ id: 'rebooking.remindersHint' })}
+                    </p>
+                  </div>
+                </div>
+
+                {remindersLoading && <SkeletonList count={3} />}
+
+                {!remindersLoading && (remindersData || []).length === 0 && (
+                  <EmptyState
+                    icon={<History size={40} />}
+                    title={intl.formatMessage({ id: 'master.returnRemindersEmpty' })}
+                  />
+                )}
+
+                {!remindersLoading && (remindersData || []).length > 0 && (
+                  <div className={styles.reminderList}>
+                    {(remindersData || []).map((client: ReturnReminderClient) => (
+                      <Card
+                        key={client.id}
+                        className={styles.reminderCard}
+                        onClick={() => {
+                          getTelegram()?.HapticFeedback.impactOccurred('light');
+                          navigate(`/master/clients/${client.id}`);
+                        }}
+                      >
+                        <Avatar name={`${client.firstName} ${client.lastName || ''}`} size="md" />
+                        <div className={styles.reminderInfo}>
+                          <div className={styles.clientName}>
+                            {client.firstName} {client.lastName || ''}
+                          </div>
+                          <div className={styles.metaLine}>
+                            {client.lastVisitAt &&
+                              intl.formatMessage(
+                                { id: 'clients.lastVisit' },
+                                {
+                                  date: new Date(client.lastVisitAt).toLocaleDateString('uk-UA', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                  }),
+                                },
+                              )}
+                          </div>
+                        </div>
+                        <Badge variant={client.daysUntilReturn <= 1 ? 'destructive' : 'warning'}>
+                          {client.daysUntilReturn <= 0
+                            ? intl.formatMessage({ id: 'master.returnOverdue' })
+                            : intl.formatMessage(
+                                { id: 'master.returnDaysLeft' },
+                                { days: client.daysUntilReturn },
+                              )}
+                        </Badge>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </section>
           )}
 
           <section className={styles.section}>

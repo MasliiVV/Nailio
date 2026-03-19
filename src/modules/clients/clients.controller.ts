@@ -43,6 +43,17 @@ export class ClientsController {
   }
 
   /**
+   * GET /api/v1/clients/return-reminders — Clients due for return visit 🔑👑
+   * Returns clients whose 3-week cycle from last visit ends in 0–4 days,
+   * excluding those who already have an upcoming booking.
+   */
+  @Get('return-reminders')
+  @Roles('master')
+  async returnReminders(@CurrentTenant() tenantId: string) {
+    return this.clientsService.getReturnReminders(tenantId);
+  }
+
+  /**
    * GET /api/v1/clients/:id — Client profile 🔑👑
    * docs/api/endpoints.md — with stats + recent bookings
    */

@@ -88,6 +88,13 @@
   "master.noBookingsToday": "No bookings today",
   "master.viewAll": "View all",
 
+  "master.returnReminders": "Return reminders",
+  "master.returnRemindersEmpty": "No clients due for return right now",
+  "master.returnDaysLeft": "{days, plural, =0 {today} =1 {in 1 day} other {in {days} days}}",
+  "master.returnOverdue": "overdue",
+  "master.returnSendReminder": "Remind",
+  "master.returnManualSelect": "Select manually",
+
   "calendar.addBooking": "Add booking",
   "calendar.recordAction": "Book",
   "calendar.selectClient": "Client",
@@ -154,6 +161,8 @@
   "rebooking.sendCyclePromo": "Send reminder",
   "rebooking.flow.slot": "Fill a free window",
   "rebooking.flow.cycle": "Remind clients",
+  "rebooking.flow.reminders": "Returns",
+  "rebooking.remindersHint": "Clients whose 3-week cycle from last visit ends in 0–4 days and have no upcoming booking.",
   "rebooking.step.slot": "1. Pick a free window",
   "rebooking.step.audience": "2. Choose recipients",
   "rebooking.step.message": "3. Review message",
