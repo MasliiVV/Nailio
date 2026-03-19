@@ -194,6 +194,7 @@ describe('SmartRebookingPage', () => {
 
     expect(screen.getByText('rebooking.flow.slot')).toBeInTheDocument();
     expect(screen.getByText('rebooking.flow.cycle')).toBeInTheDocument();
+    expect(screen.queryByText('rebooking.flow.reminders')).not.toBeInTheDocument();
     expect(screen.getByText('rebooking.step.slot')).toBeInTheDocument();
     expect(screen.getByText('rebooking.showDetails')).toBeInTheDocument();
     expect(screen.queryByText('rebooking.heatmap')).not.toBeInTheDocument();
@@ -282,7 +283,7 @@ describe('SmartRebookingPage', () => {
         2,
         expect.objectContaining({
           campaignType: 'cycle_followup',
-          clientIds: expect.arrayContaining(['client-1', 'client-2']),
+          clientIds: ['client-1'],
           slotOptions: [
             { date: '2026-03-17', startTime: '10:00', endTime: '11:00' },
             { date: '2026-03-18', startTime: '13:00', endTime: '14:00' },

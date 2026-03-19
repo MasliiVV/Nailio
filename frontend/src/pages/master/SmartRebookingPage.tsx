@@ -1,9 +1,8 @@
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarClock, Clock3, History, Send, Sparkles, Users, Wand2 } from 'lucide-react';
 import {
-  Avatar,
   Badge,
   BottomSheet,
   Button,
@@ -27,23 +26,16 @@ import type {
   RebookingCampaignType,
   RebookingEmptySlot,
   RebookingRecommendation,
-  ReturnReminderClient,
 } from '@/types';
 import styles from './SmartRebookingPage.module.css';
-
-const CYCLE_FILTERS = ['all', 'due_soon', 'visits_3_plus', 'morning', 'favorite_service'] as const;
 
 const MAX_SLOT_RECIPIENTS = 8;
 const MAX_CYCLE_SLOT_OPTIONS = 3;
 
-type CycleFilterKey = (typeof CYCLE_FILTERS)[number];
 type PickerMode = 'slot' | 'cycle' | null;
-
-type ActiveFlow = RebookingCampaignType | 'reminders';
 
 export function SmartRebookingPage() {
   const intl = useIntl();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedMode = searchParams.get('mode');
   const requestedSlot = searchParams.get('slot');
@@ -51,15 +43,10 @@ export function SmartRebookingPage() {
   const [selectedDate, setSelectedDate] = useState(
     searchParams.get('date') || formatDateKey(new Date()),
   );
-  const [activeFlow, setActiveFlow] = useState<ActiveFlow>(
-    requestedMode === 'reminders'
-      ? 'reminders'
-      : requestedMode === 'cycle'
-        ? 'cycle_followup'
-        : 'slot_fill',
+  const [activeFlow, setActiveFlow] = useState<RebookingCampaignType>(
+    requestedMode === 'cycle' ? 'cycle_followup' : 'slot_fill',
   );
   const [selectedSlotKey, setSelectedSlotKey] = useState('');
-  const [cycleFilter, setCycleFilter] = useState<CycleFilterKey>('all');
   const [slotSelectedClientIds, setSlotSelectedClientIds] = useState<string[]>([]);
   const [cycleSelectedClientIds, setCycleSelectedClientIds] = useState<string[]>([]);
   const [cycleSelectedSlotKeys, setCycleSelectedSlotKeys] = useState<string[]>([]);
@@ -84,6 +71,7 @@ export function SmartRebookingPage() {
   const sendCycleCampaign = useSendRebookingCampaign();
 
   const allClients = useMemo(() => clientsData?.items || [], [clientsData?.items]);
+  const returnReminders = useMemo(() => remindersData || [], [remindersData]);
 
   const telegramClients = useMemo(
     () => allClients.filter((client) => Boolean(client.telegramId)),
@@ -100,14 +88,6 @@ export function SmartRebookingPage() {
       availableSlots.find((slot) => `${slot.date}-${slot.startTime}` === selectedSlotKey) || null,
     [availableSlots, selectedSlotKey],
   );
-
-  const filteredRecommendations = useMemo(() => {
-    const items = data?.recommendations || [];
-    if (cycleFilter === 'all') {
-      return items;
-    }
-    return items.filter((item) => item.segments.includes(cycleFilter));
-  }, [cycleFilter, data?.recommendations]);
 
   const cycleSlotPool = useMemo(() => data?.emptySlots || [], [data?.emptySlots]);
 
@@ -146,18 +126,33 @@ export function SmartRebookingPage() {
     [allClients, slotSelectedClientIds],
   );
 
-  const recommendationMap = useMemo(
-    () => new Map((data?.recommendations || []).map((item) => [item.clientId, item])),
-    [data?.recommendations],
+  const returnReminderMap = useMemo(
+    () => new Map(returnReminders.map((item) => [item.id, item])),
+    [returnReminders],
   );
 
   const cycleSelectedRecipients = useMemo(
     () =>
       cycleSelectedClientIds
-        .map((clientId) => {
-          const recommended = recommendationMap.get(clientId);
-          if (recommended) {
-            return recommended;
+        .map((clientId): RebookingRecommendation | null => {
+          const reminder = returnReminderMap.get(clientId);
+          if (reminder) {
+            return {
+              clientId: reminder.id,
+              firstName: reminder.firstName,
+              lastName: reminder.lastName,
+              telegramId: reminder.telegramId || null,
+              lastVisitAt: reminder.lastVisitAt,
+              expectedReturnDate: reminder.expectedReturnDate,
+              averageCycleDays: data?.defaultCycleDays || 21,
+              visitCount: reminder.stats?.totalBookings || 0,
+              ltv: reminder.stats?.totalSpent || 0,
+              priority: 'medium' as const,
+              priorityScore: 0,
+              reason: buildReturnReminderReason(reminder, intl),
+              segments: [],
+              favoriteService: null,
+            };
           }
 
           const client = allClients.find((entry) => entry.id === clientId);
@@ -190,7 +185,7 @@ export function SmartRebookingPage() {
       cycleSelectedClientIds,
       data?.defaultCycleDays,
       intl,
-      recommendationMap,
+      returnReminderMap,
       selectedDate,
     ],
   );
@@ -227,52 +222,47 @@ export function SmartRebookingPage() {
 
   const cyclePickerItems = useMemo(() => {
     const normalizedSearch = pickerSearch.trim().toLowerCase();
-    const filteredIds = new Set(filteredRecommendations.map((item) => item.clientId));
+    const reminderIds = new Set(returnReminders.map((item) => item.id));
 
     return allClients
       .filter((client) => {
         if (!normalizedSearch) return true;
-        const recommendation = recommendationMap.get(client.id);
+        const reminder = returnReminderMap.get(client.id);
         const fullName = `${client.firstName} ${client.lastName || ''}`.toLowerCase();
         return (
           fullName.includes(normalizedSearch) ||
-          recommendation?.reason.toLowerCase().includes(normalizedSearch) ||
-          recommendation?.favoriteService?.name.toLowerCase().includes(normalizedSearch)
+          buildReturnReminderReason(reminder, intl).toLowerCase().includes(normalizedSearch)
         );
       })
       .map((client) => {
-        const recommendation = recommendationMap.get(client.id);
+        const reminder = returnReminderMap.get(client.id);
 
         return {
           id: client.id,
           title: `${client.firstName} ${client.lastName || ''}`.trim(),
           subtitle: client.telegramId
-            ? recommendation?.reason || intl.formatMessage({ id: 'rebooking.manualRecipient' })
+            ? reminder
+              ? buildReturnReminderReason(reminder, intl)
+              : intl.formatMessage({ id: 'rebooking.manualRecipient' })
             : intl.formatMessage({ id: 'rebooking.manualRecipientNoTelegram' }),
           checked: cycleSelectedClientIds.includes(client.id),
-          badge: recommendation?.priority,
-          muted: !filteredIds.has(client.id),
+          badge: reminder
+            ? reminder.daysUntilReturn <= 1
+              ? ('high' as const)
+              : ('medium' as const)
+            : undefined,
+          muted: !reminderIds.has(client.id),
           disabled: !client.telegramId,
           onToggle: () => toggleArrayValue(client.id, setCycleSelectedClientIds),
         };
       });
-  }, [
-    allClients,
-    cycleSelectedClientIds,
-    filteredRecommendations,
-    intl,
-    pickerSearch,
-    recommendationMap,
-  ]);
+  }, [allClients, cycleSelectedClientIds, intl, pickerSearch, returnReminderMap, returnReminders]);
 
   useEffect(() => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('date', selectedDate);
-      next.set(
-        'mode',
-        activeFlow === 'reminders' ? 'reminders' : activeFlow === 'slot_fill' ? 'slot' : 'cycle',
-      );
+      next.set('mode', activeFlow === 'slot_fill' ? 'slot' : 'cycle');
       if (selectedSlotKey) {
         next.set('slot', selectedSlotKey.split('-').slice(1).join('-'));
       } else {
@@ -334,7 +324,7 @@ export function SmartRebookingPage() {
   }, [slotSuggestedIds]);
 
   useEffect(() => {
-    const recommendedIds = (data?.recommendations || []).map((item) => item.clientId);
+    const reminderIds = returnReminders.map((item) => item.id);
 
     setCycleSelectedClientIds((prev) => {
       const validIds = prev.filter((clientId) =>
@@ -344,9 +334,9 @@ export function SmartRebookingPage() {
         return validIds;
       }
 
-      return recommendedIds;
+      return reminderIds;
     });
-  }, [allClients, data?.recommendations]);
+  }, [allClients, returnReminders]);
 
   useEffect(() => {
     setPickerSearch('');
@@ -372,7 +362,7 @@ export function SmartRebookingPage() {
         slotOptions: cycleSlotOptions,
       }),
     );
-  }, [cycleFilter, cycleSelectedSlotKeys, data]);
+  }, [cycleSelectedSlotKeys, data]);
 
   const slotDisabled = !selectedSlot || slotSelectedClientIds.length === 0 || !slotMessage.trim();
   const cycleDisabled =
@@ -479,10 +469,9 @@ export function SmartRebookingPage() {
         tabs={[
           { id: 'slot_fill', label: intl.formatMessage({ id: 'rebooking.flow.slot' }) },
           { id: 'cycle_followup', label: intl.formatMessage({ id: 'rebooking.flow.cycle' }) },
-          { id: 'reminders', label: intl.formatMessage({ id: 'rebooking.flow.reminders' }) },
         ]}
         activeId={activeFlow}
-        onChange={(id) => setActiveFlow(id as ActiveFlow)}
+        onChange={(id) => setActiveFlow(id as RebookingCampaignType)}
       />
 
       {isLoading && <SkeletonList count={4} />}
@@ -687,7 +676,7 @@ export function SmartRebookingPage() {
                     <div>
                       <h2>{intl.formatMessage({ id: 'rebooking.step.segment' })}</h2>
                       <p className={styles.helperText}>
-                        {intl.formatMessage({ id: 'rebooking.cycleSuggestedHint' })}
+                        {intl.formatMessage({ id: 'rebooking.remindersHint' })}
                       </p>
                     </div>
                     <Badge variant="secondary">
@@ -698,39 +687,21 @@ export function SmartRebookingPage() {
                     </Badge>
                   </div>
 
-                  <div className={styles.filterRow}>
-                    {CYCLE_FILTERS.map((filter) => (
-                      <button
-                        key={filter}
-                        className={`${styles.filterChip} ${cycleFilter === filter ? styles.filterChipActive : ''}`}
-                        onClick={() => setCycleFilter(filter)}
-                      >
-                        {intl.formatMessage({
-                          id:
-                            filter === 'all'
-                              ? 'rebooking.filter.all'
-                              : `rebooking.filter.${filter}`,
-                        })}
-                      </button>
-                    ))}
-                  </div>
-
-                  {filteredRecommendations.length === 0 ? (
+                  {remindersLoading ? (
+                    <SkeletonList count={3} />
+                  ) : returnReminders.length === 0 ? (
                     <EmptyState
-                      icon={<Sparkles size={40} />}
-                      title={intl.formatMessage({ id: 'rebooking.noClientsMatch' })}
+                      icon={<History size={40} />}
+                      title={intl.formatMessage({ id: 'master.returnRemindersEmpty' })}
                     />
                   ) : (
                     <Card className={styles.summaryCard}>
                       <div className={styles.summaryTitle}>
-                        <Sparkles size={16} />
-                        {intl.formatMessage({ id: 'rebooking.suggestedAudience' })}
+                        <History size={16} />
+                        {intl.formatMessage({ id: 'master.returnReminders' })}
                       </div>
                       <div className={styles.summaryText}>
-                        {intl.formatMessage(
-                          { id: 'rebooking.cycleSummary' },
-                          { count: data.defaultCycleDays },
-                        )}
+                        {intl.formatMessage({ id: 'rebooking.remindersHint' })}
                       </div>
                       <div className={styles.previewList}>
                         {cycleSelectedRecipients.slice(0, 4).map((item) => (
@@ -738,7 +709,6 @@ export function SmartRebookingPage() {
                             key={item.clientId}
                             title={`${item.firstName} ${item.lastName || ''}`.trim()}
                             subtitle={item.reason}
-                            badge={item.priority}
                           />
                         ))}
                       </div>
@@ -870,72 +840,6 @@ export function SmartRebookingPage() {
                 </Card>
               </section>
             </>
-          )}
-
-          {activeFlow === 'reminders' && (
-            <section className={styles.section}>
-              <Card className={styles.stepCard}>
-                <div className={styles.sectionHeader}>
-                  <div>
-                    <h2>{intl.formatMessage({ id: 'master.returnReminders' })}</h2>
-                    <p className={styles.helperText}>
-                      {intl.formatMessage({ id: 'rebooking.remindersHint' })}
-                    </p>
-                  </div>
-                </div>
-
-                {remindersLoading && <SkeletonList count={3} />}
-
-                {!remindersLoading && (remindersData || []).length === 0 && (
-                  <EmptyState
-                    icon={<History size={40} />}
-                    title={intl.formatMessage({ id: 'master.returnRemindersEmpty' })}
-                  />
-                )}
-
-                {!remindersLoading && (remindersData || []).length > 0 && (
-                  <div className={styles.reminderList}>
-                    {(remindersData || []).map((client: ReturnReminderClient) => (
-                      <Card
-                        key={client.id}
-                        className={styles.reminderCard}
-                        onClick={() => {
-                          getTelegram()?.HapticFeedback.impactOccurred('light');
-                          navigate(`/master/clients/${client.id}`);
-                        }}
-                      >
-                        <Avatar name={`${client.firstName} ${client.lastName || ''}`} size="md" />
-                        <div className={styles.reminderInfo}>
-                          <div className={styles.clientName}>
-                            {client.firstName} {client.lastName || ''}
-                          </div>
-                          <div className={styles.metaLine}>
-                            {client.lastVisitAt &&
-                              intl.formatMessage(
-                                { id: 'clients.lastVisit' },
-                                {
-                                  date: new Date(client.lastVisitAt).toLocaleDateString('uk-UA', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  }),
-                                },
-                              )}
-                          </div>
-                        </div>
-                        <Badge variant={client.daysUntilReturn <= 1 ? 'destructive' : 'warning'}>
-                          {client.daysUntilReturn <= 0
-                            ? intl.formatMessage({ id: 'master.returnOverdue' })
-                            : intl.formatMessage(
-                                { id: 'master.returnDaysLeft' },
-                                { days: client.daysUntilReturn },
-                              )}
-                        </Badge>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            </section>
           )}
 
           <section className={styles.section}>
@@ -1184,6 +1088,39 @@ function PickerRow({
       {subtitle && <div className={styles.metaLine}>{subtitle}</div>}
     </Card>
   );
+}
+
+function buildReturnReminderReason(
+  reminder:
+    | {
+        daysUntilReturn: number;
+        lastVisitAt: string | null;
+      }
+    | undefined,
+  intl: ReturnType<typeof useIntl>,
+) {
+  if (!reminder) {
+    return intl.formatMessage({ id: 'rebooking.manualRecipient' });
+  }
+
+  const timingLabel =
+    reminder.daysUntilReturn <= 0
+      ? intl.formatMessage({ id: 'master.returnOverdue' })
+      : intl.formatMessage({ id: 'master.returnDaysLeft' }, { days: reminder.daysUntilReturn });
+
+  if (!reminder.lastVisitAt) {
+    return timingLabel;
+  }
+
+  return `${intl.formatMessage(
+    { id: 'clients.lastVisit' },
+    {
+      date: new Date(reminder.lastVisitAt).toLocaleDateString('uk-UA', {
+        day: 'numeric',
+        month: 'short',
+      }),
+    },
+  )} · ${timingLabel}`;
 }
 
 function formatDateKey(date: Date) {

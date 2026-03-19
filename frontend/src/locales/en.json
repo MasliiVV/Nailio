@@ -161,7 +161,6 @@
   "rebooking.sendCyclePromo": "Send reminder",
   "rebooking.flow.slot": "Fill a free window",
   "rebooking.flow.cycle": "Remind clients",
-  "rebooking.flow.reminders": "Returns",
   "rebooking.remindersHint": "Clients whose 3-week cycle from last visit ends in 0–4 days and have no upcoming booking.",
   "rebooking.step.slot": "1. Pick a free window",
   "rebooking.step.audience": "2. Choose recipients",

@@ -326,27 +326,3 @@
     flex-direction: column;
   }
 }
-
-/* ── Return Reminders ── */
-
-.reminderList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.reminderCard {
-  display: flex !important;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md) var(--space-lg) !important;
-  cursor: pointer;
-}
-
-.reminderInfo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}

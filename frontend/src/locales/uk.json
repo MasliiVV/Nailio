@@ -161,7 +161,6 @@
   "rebooking.sendCyclePromo": "Надіслати нагадування",
   "rebooking.flow.slot": "Заповнити вікно",
   "rebooking.flow.cycle": "Нагадати клієнтам",
-  "rebooking.flow.reminders": "Повернення",
   "rebooking.remindersHint": "Клієнти, у яких 3-тижневий термін від останнього запису закінчується через 0–4 дні, і вони ще не записані.",
   "rebooking.step.slot": "1. Обери вільне вікно",
   "rebooking.step.audience": "2. Кому надіслати",
