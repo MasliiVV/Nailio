@@ -21,6 +21,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=dependencies /app/prisma ./prisma
 COPY package*.json ./
+RUN mkdir -p /app/uploads/logos && chown -R node:node /app/uploads
 
 USER node
 EXPOSE 3000
