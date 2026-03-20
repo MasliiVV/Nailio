@@ -2,7 +2,14 @@
 // docs/backlog.md #25 — Bot auto-setup
 // docs/telegram/bot-architecture.md — Full bot lifecycle
 
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import { readFileSync } from 'fs';
@@ -36,6 +43,7 @@ export class BotService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cryptoService: BotCryptoService,
+    @Inject(forwardRef(() => TenantsService))
     private readonly tenantsService: TenantsService,
     private readonly configService: ConfigService,
   ) {
