@@ -480,9 +480,10 @@
   "settings.welcomeMessage": "Привітальне повідомлення",
   "settings.primaryColor": "Основний колір",
 
-  "branding.logoUrl": "Логотип",
+  "branding.logoUrl": "Логотип міні-апи та бота",
   "branding.upload.tap": "Натисніть, щоб завантажити",
   "branding.upload.hint": "JPG, PNG або WebP · до 5 МБ",
+  "branding.upload.syncNote": "Якщо Telegram-бот уже підключений, цей логотип автоматично оновиться і в міні-апі, і в профілі бота.",
   "branding.upload.invalidType": "Підтримуються лише JPG, PNG та WebP",
   "branding.upload.tooLarge": "Файл завеликий — максимум 5 МБ",
   "branding.upload.failed": "Не вдалося завантажити. Спробуйте ще раз",

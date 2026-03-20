@@ -1,11 +1,12 @@
 // docs/backlog.md #102 — Tenant settings API
 // docs/architecture/multi-tenancy.md — Tenant management
 
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BotService } from '../telegram/bot.service';
 import { UpdateBrandingDto, UpdateGeneralSettingsDto } from './dto/tenants.dto';
 
 @Injectable()
@@ -13,7 +14,11 @@ export class TenantsService {
   private readonly logger = new Logger(TenantsService.name);
   private readonly uploadsDir = join(process.cwd(), 'uploads', 'logos');
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => BotService))
+    private readonly botService: BotService,
+  ) {
     // Ensure uploads directory exists
     if (!existsSync(this.uploadsDir)) {
       mkdirSync(this.uploadsDir, { recursive: true });
@@ -199,13 +204,19 @@ export class TenantsService {
    */
   async uploadLogo(tenantId: string, file: Express.Multer.File) {
     const tenant = await this.findById(tenantId);
+    const logoUrl = `/uploads/logos/${file.filename}`;
+
+    try {
+      await this.botService.syncProfilePhotoFromFile(tenantId, file);
+    } catch (error) {
+      this.removeLogoFile(logoUrl);
+      throw error;
+    }
 
     // Delete previous logo file if exists
     if (tenant.logoUrl) {
       this.removeLogoFile(tenant.logoUrl);
     }
-
-    const logoUrl = `/uploads/logos/${file.filename}`;
 
     const updated = await this.prisma.tenant.update({
       where: { id: tenantId },
@@ -229,6 +240,10 @@ export class TenantsService {
    */
   async deleteLogo(tenantId: string) {
     const tenant = await this.findById(tenantId);
+
+    if (tenant.logoUrl) {
+      await this.botService.removeProfilePhoto(tenantId);
+    }
 
     if (tenant.logoUrl) {
       this.removeLogoFile(tenant.logoUrl);

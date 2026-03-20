@@ -5,6 +5,9 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
+import { readFileSync } from 'fs';
+import { basename, extname } from 'path';
+import sharp from 'sharp';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BotCryptoService } from './bot-crypto.service';
 import { TenantsService } from '../tenants/tenants.service';
@@ -15,6 +18,12 @@ interface TelegramBotInfo {
   is_bot: boolean;
   first_name: string;
   username: string;
+}
+
+interface PreparedProfilePhoto {
+  buffer: Buffer;
+  fileName: string;
+  mimeType: string;
 }
 
 @Injectable()
@@ -254,7 +263,94 @@ export class BotService {
     };
   }
 
+  /**
+   * Sync bot profile photo from uploaded branding asset.
+   * If no bot is connected for the tenant, this is a no-op.
+   */
+  async syncProfilePhotoFromFile(tenantId: string, file: Express.Multer.File): Promise<void> {
+    const bot = await this.findByTenantId(tenantId);
+    if (!bot) {
+      return;
+    }
+
+    const token = await this.getDecryptedToken(bot.id);
+    const preparedPhoto = await this.prepareProfilePhoto(file);
+
+    const formData = new FormData();
+    formData.append(
+      'photo',
+      JSON.stringify({
+        type: 'static',
+        photo: 'attach://profile_photo',
+      }),
+    );
+    formData.append(
+      'profile_photo',
+      new Blob([this.toArrayBuffer(preparedPhoto.buffer)], { type: preparedPhoto.mimeType }),
+      preparedPhoto.fileName,
+    );
+
+    await this.callTelegramApiMultipart(token, 'setMyProfilePhoto', formData);
+    this.logger.log(`Bot profile photo synced for tenant ${tenantId}`);
+  }
+
+  /**
+   * Remove the bot profile photo.
+   * If no bot is connected for the tenant, this is a no-op.
+   */
+  async removeProfilePhoto(tenantId: string): Promise<void> {
+    const bot = await this.findByTenantId(tenantId);
+    if (!bot) {
+      return;
+    }
+
+    const token = await this.getDecryptedToken(bot.id);
+    await this.callTelegramApi(token, 'removeMyProfilePhoto');
+    this.logger.log(`Bot profile photo removed for tenant ${tenantId}`);
+  }
+
   // ─── Private Helpers ───
+
+  private async prepareProfilePhoto(file: Express.Multer.File): Promise<PreparedProfilePhoto> {
+    const inputBuffer = readFileSync(file.path);
+    const fileName = this.toJpegFileName(file.originalname);
+
+    if (file.mimetype === 'image/jpeg') {
+      return {
+        buffer: inputBuffer,
+        fileName,
+        mimeType: 'image/jpeg',
+      };
+    }
+
+    const convertedBuffer = await sharp(inputBuffer)
+      .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+      .flatten({ background: '#ffffff' })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+
+    return {
+      buffer: convertedBuffer,
+      fileName,
+      mimeType: 'image/jpeg',
+    };
+  }
+
+  private toJpegFileName(originalName: string): string {
+    const baseName = basename(originalName, extname(originalName))
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return `${baseName || 'logo'}.jpg`;
+  }
+
+  private toArrayBuffer(buffer: Buffer): ArrayBuffer {
+    return buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength,
+    ) as ArrayBuffer;
+  }
 
   private async callTelegramApi<T = unknown>(
     token: string,
@@ -267,6 +363,27 @@ export class BotService {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const data = (await response.json()) as { ok: boolean; result: T; description?: string };
+
+    if (!data.ok) {
+      throw new BadRequestException(`Telegram API error: ${data.description || 'Unknown error'}`);
+    }
+
+    return data.result;
+  }
+
+  private async callTelegramApiMultipart<T = unknown>(
+    token: string,
+    method: string,
+    body: FormData,
+  ): Promise<T> {
+    const url = `${this.telegramApiUrl}/bot${token}/${method}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      body,
     });
 
     const data = (await response.json()) as { ok: boolean; result: T; description?: string };

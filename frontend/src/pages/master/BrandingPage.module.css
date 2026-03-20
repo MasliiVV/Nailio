@@ -112,6 +112,14 @@
   line-height: 1.4;
 }
 
+.syncNote {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin: calc(var(--space-xs) * -1) 0 0;
+  line-height: 1.45;
+}
+
 .fileError {
   font-size: var(--font-size-sm);
   color: var(--color-destructive);

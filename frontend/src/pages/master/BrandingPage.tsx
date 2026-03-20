@@ -3,6 +3,7 @@ import { useIntl } from 'react-intl';
 import { Check, Camera, Trash2, Upload } from 'lucide-react';
 import { useAuth, useSettings, useUpdateBranding, useUploadLogo, useDeleteLogo } from '@/hooks';
 import { Button, Input, Card, PageHeader } from '@/components/ui';
+import { ApiRequestError } from '@/lib/api';
 import { getTelegram } from '@/lib/telegram';
 import styles from './BrandingPage.module.css';
 
@@ -87,8 +88,12 @@ export function BrandingPage() {
       setLogoUrl(result.logoUrl || '');
       syncTenant(result);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
-    } catch {
-      setFileError(intl.formatMessage({ id: 'branding.upload.failed' }));
+    } catch (error) {
+      setFileError(
+        error instanceof ApiRequestError
+          ? error.message
+          : intl.formatMessage({ id: 'branding.upload.failed' }),
+      );
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     }
   };
@@ -99,9 +104,15 @@ export function BrandingPage() {
     try {
       const result = await deleteLogo.mutateAsync();
       setLogoUrl('');
+      setFileError('');
       syncTenant(result);
       getTelegram()?.HapticFeedback.notificationOccurred('success');
-    } catch {
+    } catch (error) {
+      setFileError(
+        error instanceof ApiRequestError
+          ? error.message
+          : intl.formatMessage({ id: 'branding.upload.failed' }),
+      );
       getTelegram()?.HapticFeedback.notificationOccurred('error');
     }
   };
@@ -183,6 +194,9 @@ export function BrandingPage() {
           </button>
 
           <p className={styles.logoHint}>{intl.formatMessage({ id: 'branding.upload.hint' })}</p>
+          <p className={styles.syncNote}>
+            {intl.formatMessage({ id: 'branding.upload.syncNote' })}
+          </p>
 
           {fileError && <p className={styles.fileError}>{fileError}</p>}
 

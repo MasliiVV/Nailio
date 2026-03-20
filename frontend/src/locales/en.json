@@ -385,9 +385,10 @@
   "settings.welcomeMessage": "Welcome message",
   "settings.primaryColor": "Primary color",
 
-  "branding.logoUrl": "Logo",
+  "branding.logoUrl": "Mini app and bot logo",
   "branding.upload.tap": "Tap to upload",
   "branding.upload.hint": "JPG, PNG or WebP · up to 5 MB",
+  "branding.upload.syncNote": "If a Telegram bot is already connected, this logo is updated automatically in both the mini app and the bot profile.",
   "branding.upload.invalidType": "Only JPG, PNG and WebP are supported",
   "branding.upload.tooLarge": "File is too large — 5 MB max",
   "branding.upload.failed": "Upload failed. Please try again",

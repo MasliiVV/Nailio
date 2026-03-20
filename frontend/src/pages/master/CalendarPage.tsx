@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Plus,
@@ -79,7 +78,6 @@ function minutesToTime(totalMinutes: number): string {
 
 export function CalendarPage() {
   const intl = useIntl();
-  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
   const [manualBookingDate, setManualBookingDate] = useState(formatDateKey(new Date()));
   const { data: bookingsData, isLoading } = useBookings({
@@ -308,11 +306,6 @@ export function CalendarPage() {
     () => (dayScheduleData?.slots || []).filter((slot) => slot.booking),
     [dayScheduleData?.slots],
   );
-  const freeDaySlots = useMemo(
-    () =>
-      (dayScheduleData?.slots || []).filter((slot) => !slot.booking && !slot.locked).slice(0, 8),
-    [dayScheduleData?.slots],
-  );
   const normalizedDayDraftSlots = dayDraftIsDayOff ? [] : normalizeSlotTimes(dayDraftSlots);
   const impactedBookings = bookedDaySlots.filter(
     (slot) => !normalizedDayDraftSlots.includes(slot.time),
@@ -447,6 +440,10 @@ export function CalendarPage() {
     <div className="page animate-fade-in">
       <PageHeader title={intl.formatMessage({ id: 'master.calendar' })} />
 
+      <div className={styles.datePickerWrap}>
+        <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={60} />
+      </div>
+
       <div className={styles.headerActionWrap}>
         <button
           className={styles.addBtn}
@@ -455,10 +452,6 @@ export function CalendarPage() {
         >
           {intl.formatMessage({ id: 'calendar.recordAction' })}
         </button>
-      </div>
-
-      <div className={styles.datePickerWrap}>
-        <DatePicker selectedDate={selectedDate} onSelect={setSelectedDate} daysAhead={60} />
       </div>
 
       <div className={styles.dayEditorActionWrap}>
@@ -470,12 +463,6 @@ export function CalendarPage() {
         </Button>
       </div>
 
-      <div className={styles.dayEditorActionWrap}>
-        <Button fullWidth onClick={() => navigate(`/master/rebooking?date=${selectedDate}`)}>
-          {intl.formatMessage({ id: 'rebooking.runForDate' })}
-        </Button>
-      </div>
-
       {isLoading && <SkeletonList count={5} />}
 
       {!isLoading && sorted.length === 0 && (
@@ -484,36 +471,6 @@ export function CalendarPage() {
           title={intl.formatMessage({ id: 'master.noBookingsToday' })}
           description={formatDateDisplay(`${selectedDate}T00:00:00`)}
         />
-      )}
-
-      {!isLoading && freeDaySlots.length > 0 && (
-        <div className={styles.freeSlotSection}>
-          <>
-            <div className={styles.freeSlotHeader}>
-              <h3>{intl.formatMessage({ id: 'rebooking.calendarQuickPromo' })}</h3>
-            </div>
-            <div className={styles.freeSlotGrid}>
-              <>
-                {freeDaySlots.map((slot) => (
-                  <button
-                    key={slot.time}
-                    className={styles.freeSlotCard}
-                    onClick={() =>
-                      navigate(`/master/rebooking?date=${selectedDate}&slot=${slot.time}`)
-                    }
-                  >
-                    <>
-                      <span className={styles.freeSlotTime}>{slot.time}</span>
-                      <span className={styles.freeSlotLabel}>
-                        {intl.formatMessage({ id: 'rebooking.runSlotPromo' })}
-                      </span>
-                    </>
-                  </button>
-                ))}
-              </>
-            </div>
-          </>
-        </div>
       )}
 
       {sorted.map((booking) => (
