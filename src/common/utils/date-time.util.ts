@@ -47,3 +47,7 @@ export function getLocalDateString(date: Date, timezone: string): string {
 export function buildTelegramUserLink(telegramId: bigint): string {
   return `<a href="tg://user?id=${telegramId}">Зв’язатися в Telegram</a>`;
 }
+
+export function buildTelegramUserUrl(telegramId: bigint): string {
+  return `tg://user?id=${telegramId}`;
+}

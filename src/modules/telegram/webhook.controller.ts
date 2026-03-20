@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '../../common/decorators';
+import { AuthService } from '../auth/auth.service';
 import { BotService } from './bot.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -23,7 +24,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { renderTemplate, TemplateVariables } from '../notifications/templates';
 import { ConversationState, ConversationStateService } from './conversation-state.service';
 import { TelegramApiService } from './telegram-api.service';
-import { buildTelegramUserLink, formatBookingDateTime } from '../../common/utils/date-time.util';
+import {
+  buildTelegramUserLink,
+  buildTelegramUserUrl,
+  formatBookingDateTime,
+} from '../../common/utils/date-time.util';
 
 interface TelegramUpdate {
   update_id: number;
@@ -54,6 +59,7 @@ export class WebhookController {
     private readonly notificationsService: NotificationsService,
     private readonly conversationStateService: ConversationStateService,
     private readonly telegramApiService: TelegramApiService,
+    private readonly authService: AuthService,
   ) {}
 
   /**
@@ -619,7 +625,16 @@ export class WebhookController {
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
         clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
-      await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
+      await this.sendPlatformMessageWithKeyboard(platformBotToken, Number(masterTelegramId), text, {
+        inline_keyboard: [
+          [
+            {
+              text: 'Зв’язатися в Telegram',
+              url: buildTelegramUserUrl(booking.client.user.telegramId),
+            },
+          ],
+        ],
+      });
     }
 
     this.logger.log(`Client confirmed on-time for booking ${bookingId}`);
@@ -665,7 +680,16 @@ export class WebhookController {
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
         clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
-      await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
+      await this.sendPlatformMessageWithKeyboard(platformBotToken, Number(masterTelegramId), text, {
+        inline_keyboard: [
+          [
+            {
+              text: 'Зв’язатися в Telegram',
+              url: buildTelegramUserUrl(booking.client.user.telegramId),
+            },
+          ],
+        ],
+      });
     }
 
     this.logger.log(`Client informed running late for booking ${bookingId}`);
@@ -833,7 +857,21 @@ export class WebhookController {
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
           clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
         });
-        await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
+        await this.sendPlatformMessageWithKeyboard(
+          platformBotToken,
+          Number(masterTelegramId),
+          text,
+          {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Зв’язатися в Telegram',
+                  url: buildTelegramUserUrl(booking.client.user.telegramId),
+                },
+              ],
+            ],
+          },
+        );
       }
 
       this.logger.log(`Client accepted suggested time ${suggestedTime} for booking ${bookingId}`);
@@ -891,7 +929,16 @@ export class WebhookController {
         clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
         clientTelegramLink: this.buildTelegramLink(booking.client.user.telegramId),
       });
-      await this.sendPlatformMessage(platformBotToken, Number(masterTelegramId), text);
+      await this.sendPlatformMessageWithKeyboard(platformBotToken, Number(masterTelegramId), text, {
+        inline_keyboard: [
+          [
+            {
+              text: 'Зв’язатися в Telegram',
+              url: buildTelegramUserUrl(booking.client.user.telegramId),
+            },
+          ],
+        ],
+      });
     }
 
     this.logger.log(`Client declined suggested time for booking ${bookingId}`);
@@ -1174,6 +1221,12 @@ export class WebhookController {
           text,
           {
             inline_keyboard: [
+              [
+                {
+                  text: 'Зв’язатися в Telegram',
+                  url: buildTelegramUserUrl(booking.client.user.telegramId),
+                },
+              ],
               [{ text: '💬 Відповісти клієнту', callback_data: `reply:${state.bookingId}` }],
             ],
           },
@@ -1402,12 +1455,18 @@ export class WebhookController {
     const message = update.message;
     if (!message?.text) return;
 
-    const command = message.text.split(' ')[0].toLowerCase();
+    const [rawCommand, rawArgument] = message.text.trim().split(/\s+/, 2);
+    const command = rawCommand.toLowerCase();
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
     const miniAppUrl = this.configService.get<string>('MINI_APP_URL', 'https://app.platform.com');
 
     switch (command) {
       case '/start':
+        if (rawArgument?.startsWith('adminlogin_')) {
+          await this.handleAdminBrowserLogin(message.chat.id, message.from, rawArgument);
+          break;
+        }
+
         await this.sendPlatformMessageWithKeyboard(
           platformBotToken,
           message.chat.id,
@@ -1435,6 +1494,23 @@ export class WebhookController {
         );
         break;
 
+      case '/admin':
+        if (!rawArgument) {
+          await this.sendPlatformMessage(
+            platformBotToken,
+            message.chat.id,
+            'Щоб підтвердити вхід у веб-адмінку, відкрийте посилання з браузера або надішліть /admin CODE.',
+          );
+          break;
+        }
+
+        await this.handleAdminBrowserLogin(
+          message.chat.id,
+          message.from,
+          `adminlogin_${rawArgument}`,
+        );
+        break;
+
       default:
         await this.sendPlatformMessage(
           platformBotToken,
@@ -1443,6 +1519,45 @@ export class WebhookController {
         );
         break;
     }
+  }
+
+  private async handleAdminBrowserLogin(
+    chatId: number,
+    from: { id: number; first_name: string; username?: string },
+    payload: string,
+  ): Promise<void> {
+    const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
+    const code = payload.replace(/^adminlogin_/, '').trim();
+
+    const result = await this.authService.approveAdminWebLogin(code, {
+      id: from.id,
+      first_name: from.first_name,
+      username: from.username,
+    });
+
+    if (result === 'approved') {
+      await this.sendPlatformMessage(
+        platformBotToken,
+        chatId,
+        '✅ Вхід у веб-адмінку підтверджено. Поверніться в браузер — сторінка увійде автоматично.',
+      );
+      return;
+    }
+
+    if (result === 'forbidden') {
+      await this.sendPlatformMessage(
+        platformBotToken,
+        chatId,
+        '⛔️ Для цього Telegram-акаунта немає доступу до platform admin.',
+      );
+      return;
+    }
+
+    await this.sendPlatformMessage(
+      platformBotToken,
+      chatId,
+      '⌛️ Цей код входу вже прострочився або недійсний. Поверніться в браузер і створіть новий.',
+    );
   }
 
   /**

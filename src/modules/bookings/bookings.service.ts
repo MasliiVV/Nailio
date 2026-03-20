@@ -25,6 +25,7 @@ import {
   buildDateTimeInTimezone,
   formatBookingDateTime,
   formatTimeInTimezone,
+  buildTelegramUserUrl,
 } from '../../common/utils/date-time.util';
 import {
   CreateBookingDto,
@@ -980,7 +981,7 @@ export class BookingsService {
 
     const platformBotToken = this.configService.getOrThrow<string>('PLATFORM_BOT_TOKEN');
     const clientName = `${client.firstName} ${client.lastName || ''}`.trim();
-    const clientTelegramLink = `<a href="tg://user?id=${client.user.telegramId}">Зв’язатися в Telegram</a>`;
+    const clientTelegramUrl = buildTelegramUserUrl(client.user.telegramId);
 
     let text: string;
     let replyMarkup: Record<string, unknown> | undefined;
@@ -1006,12 +1007,17 @@ export class BookingsService {
         price: booking.priceAtBooking,
         clientName,
         clientPhone: client.phone || undefined,
-        clientTelegramLink,
         reason: dto.message,
       });
 
       replyMarkup = {
         inline_keyboard: [
+          [
+            {
+              text: 'Зв’язатися в Telegram',
+              url: clientTelegramUrl,
+            },
+          ],
           [
             {
               text: '💬 Відповісти клієнту',
@@ -1046,7 +1052,7 @@ export class BookingsService {
 
       // General message without booking context
       text =
-        `💬 Повідомлення від клієнта <b>${clientName}</b> (${clientTelegramLink})\n` +
+        `💬 Повідомлення від клієнта <b>${clientName}</b>\n` +
         `📱 ${client.phone || 'Не вказано'}${bookingContext}\n\n` +
         `📝 ${dto.message}`;
 
@@ -1055,8 +1061,8 @@ export class BookingsService {
           inline_keyboard: [
             [
               {
-                text: '💬 Відповісти клієнту',
-                url: `tg://user?id=${client.user.telegramId.toString()}`,
+                text: 'Зв’язатися в Telegram',
+                url: clientTelegramUrl,
               },
             ],
           ],

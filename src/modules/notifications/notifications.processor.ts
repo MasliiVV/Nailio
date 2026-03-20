@@ -21,7 +21,7 @@ import { PrismaService, TENANT_ID_KEY } from '../../prisma/prisma.service';
 import { BotCryptoService } from '../telegram/bot-crypto.service';
 import { QUEUE_NAMES, NotificationJobData } from '../../common/bullmq/tenant-context';
 import { renderTemplate, TemplateVariables } from './templates';
-import { buildTelegramUserLink, formatBookingDateTime } from '../../common/utils/date-time.util';
+import { buildTelegramUserUrl, formatBookingDateTime } from '../../common/utils/date-time.util';
 
 @Injectable()
 @Processor(QUEUE_NAMES.NOTIFICATIONS)
@@ -153,7 +153,6 @@ export class NotificationsProcessor extends WorkerHost {
           cancellationWindow: (settings.cancellation_window_hours as number) || 24,
           clientName: `${booking.client.firstName} ${booking.client.lastName || ''}`.trim(),
           clientPhone: booking.client.phone || undefined,
-          clientTelegramLink: buildTelegramUserLink(booking.client.user.telegramId),
           reason: booking.cancelReason || undefined,
         };
 
@@ -188,6 +187,12 @@ export class NotificationsProcessor extends WorkerHost {
                 {
                   text: '❌ Відхилити',
                   callback_data: `reject:${bookingId}`,
+                },
+              ],
+              [
+                {
+                  text: 'Зв’язатися в Telegram',
+                  url: buildTelegramUserUrl(booking.client.user.telegramId),
                 },
               ],
               [
@@ -259,6 +264,12 @@ export class NotificationsProcessor extends WorkerHost {
           // Master gets restore button on cancellation
           replyMarkup = {
             inline_keyboard: [
+              [
+                {
+                  text: 'Зв’язатися в Telegram',
+                  url: buildTelegramUserUrl(booking.client.user.telegramId),
+                },
+              ],
               [
                 {
                   text: '♻️ Відновити запис',
