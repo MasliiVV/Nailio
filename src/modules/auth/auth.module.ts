@@ -1,7 +1,7 @@
 // docs/api/authentication.md — Telegram initData → HMAC-SHA256 → JWT
 // docs/backlog.md #15-#19
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -26,7 +26,7 @@ import { TelegramModule } from '../telegram/telegram.module';
       }),
     }),
     TenantsModule,
-    TelegramModule,
+    forwardRef(() => TelegramModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, TelegramAuthService, JwtStrategy],

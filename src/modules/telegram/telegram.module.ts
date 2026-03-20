@@ -12,7 +12,7 @@ import { TelegramApiService } from './telegram-api.service';
 import { ConversationStateService } from './conversation-state.service';
 
 @Module({
-  imports: [TenantsModule, forwardRef(() => NotificationsModule)],
+  imports: [forwardRef(() => TenantsModule), forwardRef(() => NotificationsModule)],
   controllers: [BotController, WebhookController],
   providers: [BotService, BotCryptoService, TelegramApiService, ConversationStateService],
   exports: [BotService, BotCryptoService, TelegramApiService, ConversationStateService],
